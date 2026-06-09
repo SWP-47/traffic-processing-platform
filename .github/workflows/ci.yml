@@ -4,7 +4,7 @@ name: CI Placeholder (Stub)
 on:
   pull_request:
     branches: [ develop, general ]
-  workflow_dispatch: # <-- ADD THIS LINE: Allows manual triggering from GitHub UI
+  workflow_dispatch: #  Allows manual triggering from GitHub UI
 
 jobs:
   # ---------------------------------------------------------

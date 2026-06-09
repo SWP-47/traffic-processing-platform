@@ -1,10 +1,10 @@
-# .github/workflows/ci-stub.yml
+# .github/workflows/ci.yml
 name: CI Placeholder (Stub)
 
-# Запускаем проверку при каждом Pull Request в develop или general
 on:
   pull_request:
     branches: [ develop, general ]
+  workflow_dispatch: # <-- ADD THIS LINE: Allows manual triggering from GitHub UI
 
 jobs:
   # ---------------------------------------------------------

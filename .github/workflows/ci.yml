@@ -1,0 +1,109 @@
+# .github/workflows/ci.yml
+name: CI Placeholder (Stub)
+
+on:
+  pull_request:
+    branches: [ develop, general ]
+  workflow_dispatch: #  Allows manual triggering from GitHub UI
+
+jobs:
+  # ---------------------------------------------------------
+  # 1. Traffic Processor (TP)
+  # ---------------------------------------------------------
+  traffic-processor:
+    name: TP Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: traffic-processor/ # Папка компонента
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # TODO: 1: Выберите и настройте окружение. Примеры:
+      # - uses: actions/setup-python@v5  (если Python)
+      # - uses: actions/setup-go@v5      (если Go)
+      # - uses: actions/setup-node@v4    (если TypeScript/Node)
+      # - uses: ilammy/msvc-dev-cmd@v1   (если C/C++ на Windows-инструментах)
+
+      # TODO: 2: Установка зависимостей
+      # Пример для Python: run: pip install -r requirements.txt
+      # Пример для Node:  run: npm ci
+      # Пример для Go:    run: go mod download
+
+      # TODO: 3: Линтер (статический анализ кода)
+      # Пример: flake8 . / eslint . / golangci-lint run
+      # Важно: команда должна возвращать ненулевой код ошибки, если код не соответствует стандартам.
+      
+      # TODO: 4: Тесты (если уже написаны)
+      # Пример: pytest tests/ / npm run test / go test ./...
+
+      # ЗАГЛУШКА (замените на реальные команды, когда определите стек)
+      - name: Placeholder Step
+        run: echo "Замените этот шаг на линтер/тесты для Traffic Processor"
+  
+
+  # ---------------------------------------------------------
+  # 2. Communication Node (CN)
+  # ---------------------------------------------------------
+  communication-node:
+    name: CN Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: communication-node/
+    steps:
+      - uses: actions/checkout@v4
+      
+      # TODO: Настроить тот же паттерн, что и для TP, но под стек CN
+      # Обычно это тот же язык, что и TP, либо C/Rust/Python для низкоуровневой работы с сетью.
+
+      - name: Placeholder Step
+        run: echo "Замените этот шаг на линтер/тесты для Communication Node"
+
+
+  # ---------------------------------------------------------
+  # 3. Control & Status Server (CnSS)
+  # ---------------------------------------------------------
+  cnss:
+    name: CnSS Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cnss/
+    steps:
+      - uses: actions/checkout@v4
+      
+      # TODO: Настроить бэкенд-стек (FastAPI/Node.js/Go/Express/Django и т.д.)
+      # Обратите внимание: CnSS должен проверяться на корректность API-маршрутов и WebSocket-коннектов.
+      # Можно добавить шаг с интеграционным тестом, который проверяет ответ сервера.
+
+      - name: Placeholder Step
+        run: echo "Замените этот шаг на линтер/тесты для CnSS"
+
+
+  # ---------------------------------------------------------
+  # 4. Management User Interface (MUI)
+  # ---------------------------------------------------------
+  mui:
+    name: MUI Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mui/
+    steps:
+      - uses: actions/checkout@v4
+      
+      # TODO: Фронтенд-стек (React/Vue/Svelte + Vite/Webpack)
+      # Обычно достаточно: npm ci → npm run lint → npm run build
+      # npm run build важен: он гарантирует, что фронтенд собирается без ошибок перед мержем.
+
+      - name: Placeholder Step
+        run: echo "Замените этот шаг на npm ci && npm run lint && npm run build"
+
+  # ---------------------------------------------------------
+  # Сводный чек (опционально)
+  # ---------------------------------------------------------
+  # Если хотите, чтобы в PR показывалась одна галочка вместо 4-х,
+  # можно добавить job, который depends_on всех выше, но для MVP
+  # лучше оставить раздельные чеки: так понятнее, что именно сломалось.

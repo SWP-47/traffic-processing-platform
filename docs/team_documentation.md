@@ -114,7 +114,7 @@ Format: `<type>: <description>`
    git pull origin develop
    ```
 
-3. **Create Feature Branch:** Create a new branch from `develop`. **The branch name MUST start with the issue number**, followed by the prefix and description.
+3. **Create Feature Branch:** Create a new branch from `develop`. **The branch name MUST start with the `<prefix>/`**, followed by the issue number and description.
 
    ```bash
    # Example for Traffic Processor (Issue #42)

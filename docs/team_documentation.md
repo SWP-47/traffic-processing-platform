@@ -27,7 +27,7 @@ All development follows the Gitflow branching model, adapted to meet course requ
 
 * **`general`**: Production-ready code. Protected. No direct commits.
 * **`develop`**: Integration branch for features. Protected. No direct commits.
-* **`feature/<issue-number>-<prefix>-<short-description>`**: Branches from `develop`. Merges back into `develop`.
+* **`feature/<issue-number>-<short-description>`**: Branches from `develop`. Merges back into `develop`.
   * *Examples:* `feature/42-tp-packet-counter`, `docs/feature/15-update-readme`, `feature/8-websocket-timeout`
 * **`release/<version>`**: Branches from `develop` when feature-complete. Merges into `general` and `develop`.
 * **`hotfix/<issue-number>-<short-description>`**: Branches from `general` for critical production bugs. Merges into `general` and `develop`.

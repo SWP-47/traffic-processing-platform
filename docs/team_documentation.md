@@ -30,7 +30,7 @@ All development follows the Gitflow branching model.
 
 ## Team Roles and Task Instructions
 
-### Arina Martynova (Technical Writer, Translator)
+### arinamnova (Technical Writer, Translator)
 
 **Responsibilities:** Documentation management, translation, and content coordination.
 
@@ -40,7 +40,7 @@ All development follows the Gitflow branching model.
 2. **Repository Docs:** Maintain the root `README.md` and `CONTRIBUTING.md`. Ensure they accurately reflect the current project state and team standards.
 3. **Workflow:** Create branches named `docs/<topic>` from `develop`. Open Pull Requests targeting `develop` for all documentation updates.
 
-### Egor Kolesov (Backend Lead, DevOps Engineer, Project Manager)
+### jinseisieko (Backend Lead, DevOps Engineer, Project Manager)
 
 **Responsibilities:** CnSS development, Communication Node (CN) development, CI/CD pipeline, repository administration, and project tracking.
 
@@ -52,7 +52,7 @@ All development follows the Gitflow branching model.
 4. **CN Development:** Work inside the `communication-node/` directory. Establish a local connection with the TP. Receive telemetry streams and forward them to the remote CnSS using HTTP or WebSockets.
 5. **Workflow:** Create branches named `feature/cnss-<name>` or `feature/cn-<name>` from `develop`. Review and merge Pull Requests from other team members into `develop`. Create `release/` branches for MVP deployment.
 
-### Irina Kostina (Core Systems Engineer, Business Analyst)
+### Rena-ln (Core Systems Engineer, Business Analyst)
 
 **Responsibilities:** Traffic Processor (TP) development, business requirements analysis, and system architecture.
 
@@ -63,7 +63,7 @@ All development follows the Gitflow branching model.
 3. **Data Push:** Configure the TP to push aggregated telemetry data to the Communication Node (CN) at a fixed frequency (e.g., 2, 5, or 10 Hz). Ensure this processing adds no noticeable latency to the network channel.
 4. **Workflow:** Create branches named `feature/tp-<name>` from `develop`. Ensure all code passes the `TP Check` CI status before requesting a review.
 
-### Dmitrii Tochinov (Frontend Lead, UI/UX Designer)
+### Minnezing (Frontend Lead, UI/UX Designer)
 
 **Responsibilities:** Management User Interface (MUI) development and UI/UX design.
 
@@ -169,9 +169,9 @@ Before pushing, run local checks to prevent failing the remote CI pipeline.
 
 1. **Wait for CI Checks**: Monitor the "Checks" section at the bottom of the PR. The PR cannot be merged until the specific component check passes (e.g., `TP Check`, `MUI Check`).
 2. **Request Review**: Assign a reviewer based on component ownership:
-   * Irina's TP code -> Reviewed by Egor.
-   * Dmitrii's MUI code -> Reviewed by Egor (for API integration) or Irina (for logic alignment).
-   * Arina's docs -> Reviewed by Egor or any team member.
+   * Rena-ln's TP code -> Reviewed by jinseisieko.
+   * Dmitrii's MUI code -> Reviewed by jinseisieko (for API integration) or Rena-ln (for logic alignment).
+   * Arina's docs -> Reviewed by jinseisieko or any team member.
 3. **Address Feedback**: If the reviewer requests changes, make the updates locally, commit, and push. GitHub will automatically update the PR.
 4. **Merge**: Once approved and all CI checks are green, the reviewer (or the author, if permitted) clicks **Squash and Merge**. This keeps the `develop` history clean.
 5. **Cleanup**:

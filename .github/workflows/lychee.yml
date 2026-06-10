@@ -9,9 +9,9 @@ jobs:
   linkChecker:
     runs-on: ubuntu-latest
     permissions:
-      contents: read      # Required to checkout code
-      issues: write       # Required to post comment (optional but recommended)
-      pull-requests: write # Required to post comment on PR
+      contents: read
+      issues: write
+      pull-requests: write
     steps:
       # 1. Restore lychee cache (to avoid hitting rate limits and speed up CI)
       - name: Restore lychee cache
@@ -22,27 +22,23 @@ jobs:
           key: cache-lychee-${{ github.sha }}
           restore-keys: cache-lychee-
 
-      # 2. Checkout repository
-      - uses: actions/checkout@v5
+      # 2. Checkout repository (using stable v4)
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       # 3. Run Lychee link checker
       - name: Link Checker
         id: lychee
         uses: lycheeverse/lychee-action@v2
         with:
-          # Arguments:
-          # --cache: Use cache to speed up subsequent runs
-          # --verbose: Show detailed output
-          # --no-progress: Disable progress bar (cleaner CI logs)
-          # --fail: Exit with non-zero code if broken links are found (CRITICAL for CI)
-          # './**/*.md': Check all Markdown files in the repo (including docs/ and reports/)
+          # Arguments passed directly to the lychee binary
           args: >-
             --cache
             --max-cache-age 1d
             --verbose
             --no-progress
-            --fail
             './**/*.md'
+          fail: true 
         env:
           # Use GITHUB_TOKEN to avoid rate limits when checking links to GitHub repositories
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

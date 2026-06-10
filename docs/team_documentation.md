@@ -48,26 +48,26 @@ All development follows the Gitflow branching model, adapted to meet course requ
 
 ### @jinseisieko (Backend Lead, DevOps Engineer, Project Manager)
 
-**Responsibilities:** CnSS development, Communication Node (CN) development, CI/CD pipeline, repository administration, and project tracking.
+**Responsibilities:** CnSS development, CI/CD pipeline, repository administration, and project tracking.
 
 **Task Instructions:**
 
 1. **Project Tracking:** Manage the GitHub Project Board. Create issues for all requirements. Move issues through Kanban columns (`Backlog`, `To Do`, `In Progress`, `In Review`, `Done`).
 2. **DevOps:** Manage repository settings, branch protection rules, and GitHub Actions (including Lychee link checking). Maintain the `.github/workflows/` directory.
 3. **CnSS Development:** Work inside the `cnss/` directory. Build the server to accept incoming data streams from the CN. Implement in-memory storage for traffic counters. Expose an API/WebSocket endpoint for the MUI.
-4. **CN Development:** Work inside the `communication-node/` directory. Establish local connection with the TP, receive telemetry, and forward to remote CnSS.
-5. **Workflow:** Create branches named `feature/<issue-number>-<name>` from `develop`. Review and merge PRs. Create `release/` branches for MVP deployment.
+4. **Workflow:** Create branches named `feature/<issue-number>-<name>` from `develop`. Review and merge PRs. Create `release/` branches for MVP deployment.
 
 ### @Rena-ln (Core Systems Engineer, Business Analyst)
 
-**Responsibilities:** Traffic Processor (TP) development, business requirements analysis, and system architecture.
+**Responsibilities:** Traffic Processor (TP) development, business requirements analysis, Communication Node (CN) development, and system architecture.
 
 **Task Instructions:**
 
 1. **TP Development:** Work inside the `traffic-processor/` directory. Implement the TP as a transparent inline bridge.
 2. **Telemetry Logic:** Implement basic channel activity checks and logic to count packets/bytes per second.
 3. **Data Push:** Configure the TP to push aggregated telemetry to the CN at a fixed frequency (e.g., 2, 5, or 10 Hz) without adding noticeable latency.
-4. **Workflow:** Create branches named `feature/<issue-number>-<name>` from `develop`. Ensure all code passes CI checks before requesting a review.
+4. **CN Development:** Work inside the `communication-node/` directory. Establish local connection with the TP, receive telemetry, and forward to remote CnSS.
+5. **Workflow:** Create branches named `feature/<issue-number>-<name>` from `develop`. Ensure all code passes CI checks before requesting a review.
 
 ### @Minnezing (Frontend Lead, UI/UX Designer)
 

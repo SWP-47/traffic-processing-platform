@@ -1,0 +1,42 @@
+name: Course Task / PBI
+description: General task, chore, documentation update, or course requirement.
+title: "[Task]: "
+labels: ["task", "chore"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for non-feature work, such as DevOps setup, documentation, research, or general course milestones.
+  - type: dropdown
+    id: task_type
+    attributes:
+      label: Issue Type
+      description: What kind of task is this?
+      options:
+        - DevOps / CI/CD
+        - Documentation
+        - Research / Spike
+        - Repository Administration
+        - Course Milestone / Admin
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Clearly describe the task and its context within the project (e.g., monorepo component affected).
+    validations:
+      required: true
+  - type: textarea
+    id: completion_criteria
+    attributes:
+      label: Completion / Acceptance Criteria
+      description: What defines "Done" for this task?
+      value: |
+        - [ ] Task objective achieved
+        - [ ] Relevant documentation updated (e.g., README, docs/)
+        - [ ] PR follows team Gitflow and Conventional Commit guidelines
+        - [ ] CHANGELOG.md updated (if user-visible)
+    validations:
+      required: true

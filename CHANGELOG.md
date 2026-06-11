@@ -1,0 +1,49 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+
+- Initial monorepo structure and component directories (TP, CN, CnSS, MUI). ([#1](https://github.com/jinseisieko/traffic-processing-platform/issues/1))
+- GitHub Issue Forms for User Stories, Course Tasks, and Bug Reports. ([#2](https://github.com/jinseisieko/traffic-processing-platform/issues/2))
+- Pull Request template with issue linking and changelog verification checklist. ([#2](https://github.com/jinseisieko/traffic-processing-platform/issues/2))
+- Basic bidirectional packet counting logic in Traffic Processor (TP). ([#3](https://github.com/jinseisieko/traffic-processing-platform/issues/3))
+
+### Changed
+
+- N/A
+
+### Deprecated
+
+- N/A
+
+### Removed
+
+- N/A
+
+### Fixed
+
+- N/A
+
+### Security
+
+- N/A
+
+<!-- 
+RELEASE TEMPLATE (For Release Manager use only):
+When creating a release (e.g., v0.1.0), copy the [Unreleased] section below, 
+rename it to the version and date, and create a fresh [Unreleased] section above it.
+
+## [0.1.0] - 2026-06-11
+
+### Added
+- ... (entries from Unreleased) ...
+
+[Unreleased]: https://github.com/jinseisieko/traffic-processing-platform/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/jinseisieko/traffic-processing-platform/releases/tag/v0.1.0
+-->

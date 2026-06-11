@@ -100,6 +100,30 @@ Format: `<type>: <description>`
 3. All PRs must pass required CI status checks (including **Lychee Link Check**) before merging.
 4. Use descriptive titles and link the PR to the relevant GitHub Issue using `Closes #<issue-number>`.
 
+### Changelog Maintenance
+
+The project maintains a `CHANGELOG.md` file in the repository root following the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) principles. The changelog is curated, chronologically ordered, and designed for humans.
+
+**Categories:**
+Every user-visible change must be categorized under one of the following:
+
+* `Added` for new features.
+* `Changed` for changes in existing functionality.
+* `Deprecated` for soon-to-be removed features.
+* `Removed` for now removed features.
+* `Fixed` for any bug fixes.
+* `Security` in case of vulnerabilities.
+
+**Rules:**
+
+1. **Issue-Linked Entries:** Every entry under `## [Unreleased]` must link to the relevant GitHub issue.
+   * *Example:* `- Added bidirectional packet counter to TP. ([#42](https://github.com/org/repo/issues/42))`
+2. **Internal Changes:** Refactoring, CI updates, or documentation fixes that do not affect the end-user do not require a changelog entry.
+3. **Release Process:** When creating a SemVer release (e.g., `v0.1.0`), the Release Manager (@jinseisieko) must:
+   * Change the `## [Unreleased]` header to the new version and current ISO 8601 date (e.g., `## [0.1.0] - 2026-06-11`).
+   * Create a new, empty `## [Unreleased]` section at the very top of the file.
+   * Ensure the release is linked to the corresponding MVP milestone in the assignment report.
+
 ### Developer Working Script: Standard Operating Procedure
 
 > Follow this sequence for every new task.
@@ -141,6 +165,7 @@ Format: `<type>: <description>`
    ```
 
    *Allowed types: `feat`, `fix`, `docs`, `ci`, `chore`. `refactor`*
+4. **Update Changelog:** If the change is user-visible, add an entry under `## [Unreleased]` in `CHANGELOG.md` using the correct category and linking the GitHub issue.
 
 #### 3. Pre-Push Verification & Sanitization Check
 
@@ -168,6 +193,7 @@ Before pushing, run local checks and verify no sensitive data is included:
    * Description: Briefly explain changes, link issue (`Closes #42`).
    * **Changelog:** Check exactly one box: either "Added/updated user-visible entry in CHANGELOG.md" OR "Not applicable (internal change)".
    * **Testing:** Document automated/manual testing performed.
+   * **Changelog:** Check exactly one box in the PR template: either "Added/updated user-visible entry in CHANGELOG.md" OR "Not applicable (internal change)".
 4. **Update Project Board:** Move the issue to the `In Review` column.
 
 #### 5. Review and Merge
@@ -180,6 +206,7 @@ Before pushing, run local checks and verify no sensitive data is included:
 3. **Address Feedback:** If changes are requested, update locally, commit, and push.
 4. **Merge:** Once approved and CI is green, the reviewer clicks **Merge pull request** (Create a merge commit).
    > ⚠️ **DO NOT use Squash and Merge or Rebase and Merge.** Course requirements strictly mandate using Merge commits to preserve history.
+   * **Verify Changelog:** Before clicking Merge, the reviewer must verify that the `CHANGELOG.md` was updated (if applicable) and the PR template changelog checkbox is correctly filled.
 5. **Cleanup:**
    * Delete the remote feature branch (GitHub prompts this after merge).
    * Delete the local branch: `git branch -d feature/42-tp-packet-counter`

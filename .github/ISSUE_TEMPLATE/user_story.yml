@@ -1,0 +1,52 @@
+name: User Story
+description: Define a new feature or requirement from a user's perspective.
+title: "[User Story]: "
+labels: ["user story", "feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please fill out this template to define a user story. This helps the team understand the "who", "what", and "why" of the feature.
+  - type: input
+    id: persona
+    attributes:
+      label: User Role / Persona
+      description: Who is this feature for? (e.g., System Admin, Network Operator, Automated Script)
+      placeholder: e.g., Network Operator
+    validations:
+      required: true
+  - type: input
+    id: action
+    attributes:
+      label: Desired Action
+      description: What does the user want to do?
+      placeholder: e.g., view real-time bidirectional packet counts
+    validations:
+      required: true
+  - type: input
+    id: value
+    attributes:
+      label: Expected Value
+      description: Why is this valuable? What problem does it solve?
+      placeholder: e.g., so that I can quickly identify network congestion
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Detailed Description
+      description: Provide any additional context, edge cases, or component-specific details (e.g., MUI, CnSS, TP, CN).
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Define the conditions that must be met for this story to be considered complete. Use a checklist format.
+      value: |
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+        - [ ] Relevant CI checks pass
+        - [ ] CHANGELOG.md updated (if user-visible)
+    validations:
+      required: true

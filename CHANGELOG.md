@@ -9,10 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Initial monorepo structure and component directories (TP, CN, CnSS, MUI). ([#1](https://github.com/jinseisieko/traffic-processing-platform/issues/1))
-- GitHub Issue Forms for User Stories, Course Tasks, and Bug Reports. ([#2](https://github.com/jinseisieko/traffic-processing-platform/issues/2))
-- Pull Request template with issue linking and changelog verification checklist. ([#2](https://github.com/jinseisieko/traffic-processing-platform/issues/2))
-- Basic bidirectional packet counting logic in Traffic Processor (TP). ([#3](https://github.com/jinseisieko/traffic-processing-platform/issues/3))
+- Initial monorepo structure and component directories (TP, CN, CnSS, MUI). ([#3](https://github.com/jinseisieko/traffic-processing-platform/issues/3))
+- GitHub Issue Forms for User Stories, Course Tasks, and Bug Reports. ([#6](https://github.com/jinseisieko/traffic-processing-platform/issues/6))
+- Pull Request template with issue linking and changelog verification checklist. ([#6](https://github.com/jinseisieko/traffic-processing-platform/issues/6))
 
 ### Changed
 

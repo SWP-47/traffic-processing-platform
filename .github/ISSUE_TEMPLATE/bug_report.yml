@@ -1,0 +1,66 @@
+name: Bug Report
+description: Report a defect, unexpected behavior, or regression.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please provide as much detail as possible to help us reproduce and fix the issue. Ensure no sensitive data (e.g., real names, private IPs, `.env` contents) is included.
+  - type: textarea
+    id: problem_description
+    attributes:
+      label: Problem Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction_steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we see this bug ourselves?
+      value: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Scroll down to '...'
+        4. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected Behavior
+      description: What should have happened?
+    validations:
+      required: true
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: Actual Behavior
+      description: What actually happened? Include error messages or logs if applicable.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Provide details about the environment where the bug occurred.
+      value: |
+        - Component: (e.g., MUI, CnSS, Traffic Processor, Communication Node)
+        - OS: 
+        - Browser/Node/Python Version: 
+        - Branch/Commit: 
+    validations:
+      required: true
+  - type: textarea
+    id: fix_acceptance_criteria
+    attributes:
+      label: Acceptance Criteria for the Fix
+      description: What must be true to consider this bug resolved?
+      value: |
+        - [ ] Bug is no longer reproducible
+        - [ ] Root cause identified and addressed
+        - [ ] Regression tests added (if applicable)
+        - [ ] CHANGELOG.md updated under "Fixed"
+    validations:
+      required: true

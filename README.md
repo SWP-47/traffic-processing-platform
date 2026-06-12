@@ -1,20 +1,61 @@
 # Traffic Processing Platform
 
-## Project Description
+## Project Overview
 
-A modular, transparent network traffic monitoring system. It seamlessly forwards packets in both directions without noticeable latency or detection, while collecting real-time telemetry (packet/byte counts, channel activity) and broadcasting it to a remote, auto-updating web dashboard accessible from anywhere.
+This is a monorepo containing minimally intrusive network traffic monitoring system. It consists of four distinct components designed to capture, process, forward, and visualize network telemetry in real-time without degrading network performance:
+
+- **`traffic-processor/`**: Core packet counting and telemetry engine (transparent inline bridge).
+- **`communication-node/`**: Local data forwarding node.
+- **`cnss/`**: Control and Status Server (Backend) aggregating data via API/WebSocket.
+- **`mui/`**: Management User Interface (Frontend) for real-time visualization.
 
 ## Local Setup Instructions
 
+### Prerequisites
+
+- **Git**
+- **Python** (3.8+)
+- **Node.js** (18+) and **npm**
+
+### 1. Clone the Repository
+
 ```bash
-git clone <repo-url> && cd traffic-processing-platform
+git clone https://github.com/<your-org>/traffic-processing-platform.git
+cd traffic-processing-platform
 ```
 
-## Documentation
+### 2. Component Setup & Execution
 
-- [Team Workflow & Guidelines](./docs/team_documentation.md)
+*Note: Run each component in a separate terminal window. Work strictly within your assigned directory.*
 
-## Deployment / Runnable Artifact
+#### **Traffic Processor**
 
-- **MUI Dashboard:**
-- **CnSS API:**
+```bash
+# Traffic Processor instructions
+```
+
+#### **Communication node**
+
+```bash
+# Communication node instructions
+```
+
+#### **Control and Status Server (CnSS)**
+
+```bash
+# Control and Status Server (CnSS) instructions
+```
+
+#### **Management User Interface (MUI)**
+
+```bash
+# Management User Interface instructions
+```
+
+## Links and Reports
+
+- **Main Documentation**: [View Main Documentation](docs/README.md) *(Placeholder)*
+- **Current Deployment / Runnable Artifacts**: [View Deployment] *(Placeholder)*
+- **Week 2 Reports**:
+  - [Week 2 Overview](reports/week2/README.md)
+  - [MVP v0 Report](reports/week2/mvp-v0-report.md)

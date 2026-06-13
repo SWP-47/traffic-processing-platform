@@ -37,7 +37,7 @@
   background: linear-gradient(0deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.4)), linear-gradient(360deg, #6539E8 30px, #59A4E6 60px, #F1A1DC 100px);
   background-repeat: no-repeat;
   background-position: left bottom;
-  transition: height 0.2s ease;
+  transition: height 0.5s ease;
 }
 
 .name {

@@ -1,0 +1,106 @@
+{
+  "info": {
+    "name": "Traffic Processing Platform API",
+    "description": "API collection for CnSS REST and WebSocket endpoints. Includes placeholders for environment variables.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "REST Endpoints",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://{{cnss_host}}/api/v1/health",
+              "protocol": "https",
+              "host": ["{{cnss_host}}"],
+              "path": ["api", "v1", "health"]
+            },
+            "description": "Verify operational status of all modular components."
+          }
+        },
+        {
+          "name": "Channel Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://{{cnss_host}}/api/v1/channel/status",
+              "protocol": "https",
+              "host": ["{{cnss_host}}"],
+              "path": ["api", "v1", "channel", "status"]
+            },
+            "description": "REST fallback for channel activity indicator."
+          }
+        }
+      ]
+    },
+    {
+      "name": "WebSocket Endpoints",
+      "item": [
+        {
+          "name": "Real-time Telemetry Stream",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "wss://{{cnss_host}}:{{cnss_ws_port}}/api/v1/ws/telemetry?token={{access_token}}",
+              "protocol": "wss",
+              "host": ["{{cnss_host}}:{{cnss_ws_port}}"],
+              "path": ["api", "v1", "ws", "telemetry"],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}"
+                }
+              ]
+            },
+            "description": "Connect to this WebSocket endpoint to receive real-time telemetry updates. Postman supports WebSocket connections natively."
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "cnss_host",
+      "value": "cnss.example.com",
+      "type": "string"
+    },
+    {
+      "key": "cnss_udp_port",
+      "value": "5140",
+      "type": "string"
+    },
+    {
+      "key": "cnss_ws_port",
+      "value": "8443",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "eyJhbG...",
+      "type": "string"
+    },
+    {
+      "key": "channel_id",
+      "value": "primary-bridge-01",
+      "type": "string"
+    }
+  ]
+}

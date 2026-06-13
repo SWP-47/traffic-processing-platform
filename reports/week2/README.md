@@ -51,7 +51,7 @@ Our team strictly follows the Gitflow branching model with mandatory merge commi
  *The screenshot below demonstrates an approved review, required CI checks passing, and a merge commit.*  
   ![Example Reviewed PR](./images/example-reviewed-pr.png)
 
-*   🔗 **Lychee Configuration:** [`.github/workflows/lychee.yml`](../../.github/workflows/README.md)
+*   🔗 **Lychee Configuration:** [`.github/workflows/lychee.yml`](../../.github/workflows/lychee.yml)
 *   🔗 [Latest Successful Lychee Run](https://github.com/SWP-47/traffic-processing-platform/actions/runs/27464347659)
 *   **Excluded Lychee Links & Manual Verification:**  
   *[PLACEHOLDER: List any localhost, private, or dynamic links excluded from Lychee, and confirm they were manually verified. E.g., "Localhost API endpoints were excluded and manually verified via Postman."]*

@@ -1,0 +1,24 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# 1. Создание непривилегированного пользователя для безопасности (Best Practice)
+RUN useradd -m -u 1000 cnssuser
+
+# 2. Установка зависимостей
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 3. Копирование только необходимого кода (без тестов и dev-файлов)
+COPY app/ ./app/
+
+# 4. Назначение прав владельцу
+RUN chown -R cnssuser:cnssuser /app
+
+# 5. Переключение на непривилегированного пользователя
+USER cnssuser
+
+EXPOSE 8000
+
+# Production запуск с несколькими воркерами для обработки конкурентных запросов
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]

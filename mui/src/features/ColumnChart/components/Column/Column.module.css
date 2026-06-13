@@ -1,0 +1,46 @@
+.column {
+  flex: 1;
+  max-width: 80px;
+}
+
+.data {
+  background: var(--color-surface-hover);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  position: relative;
+
+  height: 125px;
+
+  border-radius: 40px;
+
+  overflow: hidden;
+}
+
+.value {
+  font-weight: bold;
+  flex-grow: 0;
+
+  z-index: 2;
+}
+
+.data_representation {
+  position: absolute;
+  width: 100%;
+
+  bottom: 0;
+
+  border-radius: inherit;
+
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.4)), linear-gradient(360deg, #6539E8 30px, #59A4E6 60px, #F1A1DC 100px);
+  background-repeat: no-repeat;
+  background-position: left bottom;
+  transition: height 0.2s ease;
+}
+
+.name {
+  text-align: center;
+  margin-top: 10px;
+}

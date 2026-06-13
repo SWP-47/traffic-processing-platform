@@ -1,0 +1,50 @@
+services:
+  # =========================================
+  # PRODUCTION
+  # =========================================
+  mui:
+    image: mui:prod
+    container_name: mui
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    ports:
+      - "80:80"
+    
+    restart: unless-stopped
+
+    profiles:
+      - prod
+  
+
+  # =========================================
+  # DEVELOPMENT
+  # =========================================
+  mui-dev:
+    image: mui:dev
+    container_name: mui-dev
+
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+
+    ports:
+      - "5173:5173"
+
+    develop:
+      watch:
+        - action: rebuild
+          path: ./package.json
+
+        - action: sync
+          path: .
+          target: /app
+          ignore:
+            - nginx.conf
+    
+    restart: unless-stopped
+    
+    profiles:
+      - dev

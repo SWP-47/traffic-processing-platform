@@ -1,6 +1,6 @@
 # Customer Meeting Summary
 
-**Date:** June 12, 2026    
+**Date:** June 12, 2026
 
 ## Participants
 

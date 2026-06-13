@@ -13,9 +13,9 @@
 
 1. **Draft User Stories Document**: Initial list of requirements with unique IDs and MoSCoW priorities.
 2. **Technical Architecture Diagram**: Proposed MVP setup illustrating the Traffic Processor (FPGA + Laptop), Communication Node, and CnSS Server.
-![system-architecture-diagram](/reports/week2/images/system-architecture-diagram.png)
+![system-architecture-diagram](images/system-architecture-diagram.png)
 3. **Management User Interface (MUI) Mockup**: Proposed MVP dashboard, including channel activity indicators, Rx/Tx rate graphs, host statistics, packet metadata views, and security monitoring concepts.
-![mui-mvp-dashboard-prototype](/reports/week2/images/mui-mvp-dashboard-prototype.png)
+![mui-mvp-dashboard-prototype](images/mui-mvp-dashboard-prototype.png)
 
 ## Discussion Points
 

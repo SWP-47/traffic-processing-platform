@@ -5,15 +5,17 @@ services:
       dockerfile: Dockerfile.prod
     ports:
       - "8000:8000"
-    restart: always
+    restart: always # Automatic restart on crash or VM reboot
     environment:
       - ENV=production
       - PORT=8000
+    # Strict health check without installing curl in slim image
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
+    # Resource limits (optional, but recommended for VM)
     deploy:
       resources:
         limits:

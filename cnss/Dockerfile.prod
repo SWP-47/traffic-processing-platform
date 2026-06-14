@@ -1,0 +1,24 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# 1. Create unprivileged user for security (Best Practice)
+RUN useradd -m -u 1000 cnssuser
+
+# 2. Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 3. Copy only necessary code (no tests or dev files)
+COPY app/ ./app/
+
+# 4. Assign ownership permissions
+RUN chown -R cnssuser:cnssuser /app
+
+# 5. Switch to unprivileged user
+USER cnssuser
+
+EXPOSE 8000
+
+# Production run with multiple workers to handle concurrent requests
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]

@@ -1,0 +1,27 @@
+.status_indicator {
+  padding: 40px 60px;
+
+  display: flex;
+  justify-content: space-between;
+
+  border-radius: var(--card-border-radius);
+
+  transition: background .3s;
+}
+
+.active {
+  box-shadow: 0px 0px 40px rgba(96, 93, 148, 0.33);
+  background: var(--gradient-main);
+}
+
+.error {
+  background: color-mix(in srgb, var(--color-fail) 30%, transparent);
+}
+
+.channel_id {
+  font-weight: bold;
+}
+
+.channel_status {
+  font-weight: lighter;
+}

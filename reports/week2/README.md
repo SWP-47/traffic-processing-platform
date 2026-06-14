@@ -43,10 +43,11 @@ We have designed the foundational interface and architecture for the MVP v1 scop
 
 ## 3. MVP v0 Foundation
 
-🔗 [MVP v0 Report and Smoke-Check Scenario](./mvp-v0-report.md)  
-🔗 **[PLACEHOLDER: Deployed MVP v0 URL or Runnable Artifact Link]**  
-🔗 **[PLACEHOLDER: Public Video Demonstration Link (< 2 minutes)]**  
-🔗 [Local Setup Instructions](../../README.md)
+- [MVP v0 Report and Smoke-Check Scenario](./mvp-v0-report.md)  
+- [Deployed backend link](http://10.93.26.186:8000/health)
+- [Deployed frontend link](http://10.93.26.186/)
+- [Public Video Demonstration Link](https://disk.yandex.ru/i/E_LcHKsMMonegg)
+- [Local Setup Instructions](../../README.md)*
 
 ---
 
@@ -80,8 +81,11 @@ The provided interface artifacts directly address the following stable User Stor
 
 The MVP v0 foundation targets the core plumbing required to support:
 
-- **US-004:** Modular integration (separate `traffic-processor`, `communication-node`, and `cnss` directories).
-- **US-009:** Basic bidirectional packet passing logic in the TP.
+* US-001: Channel Activity Indicator
+* US-002: Basic Network Usage Statistics
+* US-004: Modular Platform Integration
+* US-014: Remote MUI Access
+* US-015: Real-time MUI Dashboard Updates
 
 ---
 

@@ -15,7 +15,7 @@ This is the minimal technical foundation (MVP v0) for the CnSS component. It cur
 
 ## Prerequisites
 
-- [Docker](https://docs.docker.com/get-docker/)
+- [Docker](https://docs.docker.com/get-started/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
 
 ---

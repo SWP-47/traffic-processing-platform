@@ -109,5 +109,5 @@ make stop
 - **Main Documentation**: [View Main Documentation](docs/README.md) *(Placeholder)*
 - **Current Deployment / Runnable Artifacts**: [View Deployment] *(Placeholder)*
 - **Week 2 Reports**:
-  - [Week 2 Overview](reports/week2/README.md)
+  - [Week 2 Report](reports/week2/README.md)
   - [MVP v0 Report](reports/week2/mvp-v0-report.md)

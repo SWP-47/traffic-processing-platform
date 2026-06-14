@@ -37,6 +37,8 @@ jobs:
             --max-cache-age 1d
             --verbose
             --no-progress
+            --exclude-all-private
+            --exclude '10\.93\.26\.186'
             './**/*.md'
           fail: true 
         env:

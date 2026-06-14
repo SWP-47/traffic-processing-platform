@@ -1,0 +1,10 @@
+services:
+  cnss-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Override command to run pytest
+    command: pytest tests/ -v --tb=short
+    environment:
+      - ENV=test
+    # Do not mount volume so tests run on code from the image (avoids permission and cache issues)

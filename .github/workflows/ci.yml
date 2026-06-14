@@ -1,5 +1,5 @@
 # .github/workflows/ci.yml
-name: CI Placeholder (Stub)
+name: CI
 
 on:
   pull_request:
@@ -62,7 +62,7 @@ jobs:
         run: echo "Замените этот шаг на линтер/тесты для Communication Node"
 
 
-  # ---------------------------------------------------------
+# ---------------------------------------------------------
   # 3. Control & Status Server (CnSS)
   # ---------------------------------------------------------
   cnss:
@@ -72,14 +72,29 @@ jobs:
       run:
         working-directory: cnss/
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
       
-      # TODO: Настроить бэкенд-стек (FastAPI/Node.js/Go/Express/Django и т.д.)
-      # Обратите внимание: CnSS должен проверяться на корректность API-маршрутов и WebSocket-коннектов.
-      # Можно добавить шаг с интеграционным тестом, который проверяет ответ сервера.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
 
-      - name: Placeholder Step
-        run: echo "Замените этот шаг на линтер/тесты для CnSS"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Lint code (Black & Flake8)
+        run: |
+          black --check .
+          flake8 .
+
+      - name: Run integration tests
+        # Эта команда запустит наши новые тесты для /health endpoint
+        # Если тесты не пройдут, CI вернет ошибку и заблокирует мерж PR
+        run: pytest tests/ -v
 
 
   # ---------------------------------------------------------

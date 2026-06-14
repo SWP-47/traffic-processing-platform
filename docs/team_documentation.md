@@ -9,70 +9,76 @@ traffic-processing-platform/
 ├── .github/               # CI/CD workflows, issue templates, PR templates
 ├── cnss/                  # Control and Status Server (Backend)
 ├── communication-node/    # Communication Node (Local data forwarding)
-├── docs/                  # Architecture diagrams, interview transcripts, reports
+├── docs/                  # Architecture diagrams, sanitized reports, setup instructions
+├── reports/               # All reports
 ├── mui/                   # Management User Interface (Frontend)
 ├── scripts/               # DevOps, setup, and deployment scripts
 ├── traffic-processor/     # Traffic Processor (Core packet counting/telemetry)
-├── .gitignore             # Global ignore rules
+├── .gitignore             # Global ignore rules (includes .env, *.pcap, *.mp4, etc.)
 ├── LICENSE                # MIT License
-└── README.md              # Project overview and quick start guide
+├── CHANGELOG.md           # Project changelog following Keep a Changelog format
+├── ATTRIBUTION.md         # Third-party/customer asset attribution (if applicable)
+└── README.md              # Project overview, local setup, and deployment links
 ```
 
 ## Git Workflow (Gitflow)
 
-All development follows the Gitflow branching model.
+All development follows the Gitflow branching model, adapted to meet course requirements.
 
 * **`general`**: Production-ready code. Protected. No direct commits.
 * **`develop`**: Integration branch for features. Protected. No direct commits.
-* **`feature/<name>`**: Branches from `develop`. Merges back into `develop`.
+* **`feature/<issue-number>-<short-description>`**: Branches from `develop`. Merges back into `develop`.
+  * *Examples:* `feature/42-tp-packet-counter`, `docs/15-update-readme`, `feature/8-websocket-timeout`
 * **`release/<version>`**: Branches from `develop` when feature-complete. Merges into `general` and `develop`.
-* **`hotfix/<name>`**: Branches from `general` for critical production bugs. Merges into `general` and `develop`.
+* **`hotfix/<issue-number>-<short-description>`**: Branches from `general` for critical production bugs. Merges into `general` and `develop`.
+
+> **⚠️ CRITICAL COURSE REQUIREMENT:** Squash and Rebase merging are **disabled** in repository settings. All merges must use **Merge commits** to preserve history.
 
 ## Team Roles and Task Instructions
 
-### Arina Martynova (Technical Writer, Translator)
+### @arinamnova (Technical Writer, Translator)
 
 **Responsibilities:** Documentation management, translation, and content coordination.
 
 **Task Instructions:**
 
-1. **Documentation:** Maintain the `docs/` directory. Upload and format the interview transcript, AI usage report, and architecture diagrams.
-2. **Repository Docs:** Maintain the root `README.md` and `CONTRIBUTING.md`. Ensure they accurately reflect the current project state and team standards.
-3. **Workflow:** Create branches named `docs/<topic>` from `develop`. Open Pull Requests targeting `develop` for all documentation updates.
+1. **Documentation:** Maintain the `docs/` and `reports/` directory. Ensure all transcripts and reports are **sanitized** (no real names, no private recording links).
+2. **Repository Docs:** Maintain the root `README.md`, `CHANGELOG.md`, and `CONTRIBUTING.md`. Ensure they accurately reflect the current project state.
+3. **Workflow:** Create branches named `docs/<issue-number>-<topic>` from `develop`. Open Pull Requests targeting `develop` for all documentation updates.
 
-### Egor Kolesov (Backend Lead, DevOps Engineer, Project Manager)
+### @jinseisieko (Backend Lead, DevOps Engineer, Project Manager)
 
-**Responsibilities:** CnSS development, Communication Node (CN) development, CI/CD pipeline, repository administration, and project tracking.
-
-**Task Instructions:**
-
-1. **Project Tracking:** Manage the GitHub Project Board. Create issues for all MVP requirements identified in the interview transcript. Move issues through the Kanban columns (`Backlog`, `To Do`, `In Progress`, `In Review`, `Done`).
-2. **DevOps:** Manage repository settings, branch protection rules, and GitHub Actions. Maintain the `.github/workflows/` directory. Replace CI stub checks with actual linting and testing commands once the technology stack is finalized.
-3. **CnSS Development:** Work inside the `cnss/` directory. Build the server to accept incoming data streams from the CN. Implement in-memory storage for the latest traffic counter values. Expose an API or WebSocket endpoint to serve near real-time data to the MUI.
-4. **CN Development:** Work inside the `communication-node/` directory. Establish a local connection with the TP. Receive telemetry streams and forward them to the remote CnSS using HTTP or WebSockets.
-5. **Workflow:** Create branches named `feature/cnss-<name>` or `feature/cn-<name>` from `develop`. Review and merge Pull Requests from other team members into `develop`. Create `release/` branches for MVP deployment.
-
-### Irina Kostina (Core Systems Engineer, Business Analyst)
-
-**Responsibilities:** Traffic Processor (TP) development, business requirements analysis, and system architecture.
+**Responsibilities:** CnSS development, CI/CD pipeline, repository administration, and project tracking.
 
 **Task Instructions:**
 
-1. **TP Development:** Work inside the `traffic-processor/` directory. Implement the TP as a transparent inline bridge that passes network packets in both directions.
-2. **Telemetry Logic:** Implement basic channel activity checks. Write the logic to count packets and bytes per second.
-3. **Data Push:** Configure the TP to push aggregated telemetry data to the Communication Node (CN) at a fixed frequency (e.g., 2, 5, or 10 Hz). Ensure this processing adds no noticeable latency to the network channel.
-4. **Workflow:** Create branches named `feature/tp-<name>` from `develop`. Ensure all code passes the `TP Check` CI status before requesting a review.
+1. **Project Tracking:** Manage the GitHub Project Board. Create issues for all requirements. Move issues through Kanban columns (`Backlog`, `To Do`, `In Progress`, `In Review`, `Done`).
+2. **DevOps:** Manage repository settings, branch protection rules, and GitHub Actions (including Lychee link checking). Maintain the `.github/workflows/` directory.
+3. **CnSS Development:** Work inside the `cnss/` directory. Build the server to accept incoming data streams from the CN. Implement in-memory storage for traffic counters. Expose an API/WebSocket endpoint for the MUI.
+4. **Workflow:** Create branches named `feature/<issue-number>-<name>` from `develop`. Review and merge PRs. Create `release/` branches for MVP deployment.
 
-### Dmitrii Tochinov (Frontend Lead, UI/UX Designer)
+### @Rena-ln (Core Systems Engineer, Business Analyst)
+
+**Responsibilities:** Traffic Processor (TP) development, business requirements analysis, Communication Node (CN) development, and system architecture.
+
+**Task Instructions:**
+
+1. **TP Development:** Work inside the `traffic-processor/` directory. Implement the TP as a transparent inline bridge.
+2. **Telemetry Logic:** Implement basic channel activity checks and logic to count packets/bytes per second.
+3. **Data Push:** Configure the TP to push aggregated telemetry to the CN at a fixed frequency (e.g., 2, 5, or 10 Hz) without adding noticeable latency.
+4. **CN Development:** Work inside the `communication-node/` directory. Establish local connection with the TP, receive telemetry, and forward to remote CnSS.
+5. **Workflow:** Create branches named `feature/<issue-number>-<name>` from `develop`. Ensure all code passes CI checks before requesting a review.
+
+### @Minnezing (Frontend Lead, UI/UX Designer)
 
 **Responsibilities:** Management User Interface (MUI) development and UI/UX design.
 
 **Task Instructions:**
 
-1. **MUI Development:** Work inside the `mui/` directory. Build a web-based interface accessible to authorized users over the internet.
-2. **UI Components:** Implement a binary visual cue (Red/Green light) to show channel activity status. Implement two distinct counters or real-time graphs displaying data/packet volume for Direction A and Direction B.
-3. **Integration:** Connect the frontend to the CnSS API or WebSocket endpoint. Configure the interface to automatically refresh and update displayed values upon receiving new data.
-4. **Workflow:** Create branches named `feature/mui-<name>` from `develop`. Ensure the frontend builds successfully and passes the `MUI Check` CI status before requesting a review.
+1. **MUI Development:** Work inside the `mui/` directory. Build a web-based interface accessible to authorized users.
+2. **UI Components:** Implement a binary visual cue (Red/Green light) for channel activity. Implement two distinct counters/graphs for Direction A and Direction B packet volume.
+3. **Integration:** Connect the frontend to the CnSS API/WebSocket. Configure auto-refresh upon receiving new data.
+4. **Workflow:** Create branches named `feature/<issue-number>-<name>` from `develop`. Ensure the frontend builds successfully and passes CI before requesting a review.
 
 ## Development Guidelines
 
@@ -81,108 +87,135 @@ All development follows the Gitflow branching model.
 Use Conventional Commits for all commit messages.
 Format: `<type>: <description>`
 
-* `feat`: A new feature (e.g., `feat: add packet counter to TP`)
+* `feat`: A new feature (e.g., `feat: add bidirectional byte counter to TP`)
 * `fix`: A bug fix (e.g., `fix: resolve websocket timeout in CnSS`)
 * `docs`: Documentation only changes (e.g., `docs: update README with MVP goals`)
-* `ci`: CI/CD configuration changes (e.g., `ci: add placeholder workflow`)
-* `chore`: Maintenance tasks (e.g., `chore: add .gitkeep to empty directories`)
+* `ci`: CI/CD configuration changes (e.g., `ci: configure lychee link checker`)
+* `chore`: Maintenance tasks (e.g., `chore: update .gitignore for .env files`)
 
 ### Pull Requests
 
 1. Ensure your branch is up to date with `develop` before opening a PR.
-2. All PRs targeting `develop` or `general` require at least one approving review.
-3. All PRs must pass the required CI status checks (`TP Check`, `CN Check`, `CnSS Check`, `MUI Check`) before merging.
-4. Use descriptive titles and link the PR to the relevant GitHub Issue.
+2. All PRs targeting `develop` or `general` require **at least one approving review** from another team member. Authors cannot approve their own PRs.
+3. All PRs must pass required CI status checks (including **Lychee Link Check**) before merging.
+4. Use descriptive titles and link the PR to the relevant GitHub Issue using `Closes #<issue-number>`.
+
+### Changelog Maintenance
+
+The project maintains a `CHANGELOG.md` file in the repository root following the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) principles. The changelog is curated, chronologically ordered, and designed for humans.
+
+**Categories:**
+Every user-visible change must be categorized under one of the following:
+
+* `Added` for new features.
+* `Changed` for changes in existing functionality.
+* `Deprecated` for soon-to-be removed features.
+* `Removed` for now removed features.
+* `Fixed` for any bug fixes.
+* `Security` in case of vulnerabilities.
+
+**Rules:**
+
+1. **Issue-Linked Entries:** Every entry under `## [Unreleased]` must link to the relevant GitHub issue.
+   * *Example:* `- Added bidirectional packet counter to TP. ([#42](https://github.com/org/repo/issues/42))`
+2. **Internal Changes:** Refactoring, CI updates, or documentation fixes that do not affect the end-user do not require a changelog entry.
+3. **Release Process:** When creating a SemVer release (e.g., `v0.1.0`), the Release Manager (@jinseisieko) must:
+   * Change the `## [Unreleased]` header to the new version and current ISO 8601 date (e.g., `## [0.1.0] - 2026-06-11`).
+   * Create a new, empty `## [Unreleased]` section at the very top of the file.
+   * Ensure the release is linked to the corresponding MVP milestone in the assignment report.
 
 ### Developer Working Script: Standard Operating Procedure
 
 > Follow this sequence for every new task.
 
-#### Task Pickup and Branching
+#### 1. Task Pickup and Branching
 
-1. **Select a Task**: Go to the GitHub Project Board. Move an issue from `Backlog` or `To Do` to `In Progress`. Assign it to yourself.
-2. **Sync Local Repository**: Ensure your local `develop` branch is up to date with the remote repository.
+1. **Select a Task:** Go to the GitHub Project Board. Move an issue from `Backlog` or `To Do` to `In Progress`. Assign it to yourself.
+2. **Sync Local Repository:** Ensure your local `develop` branch is up to date.
 
    ```bash
    git checkout develop
    git pull origin develop
    ```
 
-3. **Create Feature Branch**: Create a new branch specifically for this task, branching from `develop`. Use the naming convention `feature/<component>-<description>`.
+3. **Create Feature Branch:** Create a new branch from `develop`. **The branch name MUST start with the `<prefix>/`**, followed by the issue number and description.
 
    ```bash
-   # Example for Traffic Processor
-   git checkout -b feature/tp-packet-counter
+   # Example for Traffic Processor (Issue #42)
+   git checkout -b feature/42-tp-packet-counter
    
-   # Example for MUI
-   git checkout -b feature/mui-activity-light
+   # Example for Documentation (Issue #15)
+   git checkout -b docs/15-update-readme
    ```
 
-#### Local Development
+#### 2. Local Development
 
-1. **Navigate to Component Directory**: Work strictly within your assigned directory to maintain monorepo boundaries.
+1. **Navigate to Component Directory:** Work strictly within your assigned directory to maintain monorepo boundaries.
 
    ```bash
    cd traffic-processor/  # or mui/, cnss/, communication-node/
    ```
 
-2. **Write Code**: Implement the feature according to the issue requirements and integration points defined in the documentation.
-3. **Commit Changes**: Use Conventional Commits. Keep commits small and focused on a single logical change.
+2. **Write Code:** Implement the feature according to the issue requirements.
+3. **Commit Changes:** Use Conventional Commits. Keep commits small and focused.
 
    ```bash
    git add .
    git commit -m "feat: implement bidirectional byte counter logic"
    ```
 
-   *Allowed types: `feat`, `fix`, `docs`, `ci`, `chore`.*
+   *Allowed types: `feat`, `fix`, `docs`, `ci`, `chore`. `refactor`*
+4. **Update Changelog:** If the change is user-visible, add an entry under `## [Unreleased]` in `CHANGELOG.md` using the correct category and linking the GitHub issue.
 
-#### Pre-Push Verification
+#### 3. Pre-Push Verification & Sanitization Check
 
-Before pushing, run local checks to prevent failing the remote CI pipeline.
+Before pushing, run local checks and verify no sensitive data is included:
 
-1. **Format and Lint**: Run the linter/formatter for your specific stack.
+1. **Format and Lint:**
    * *Python (TP/CN/CnSS)*: `black .` then `flake8 .`
    * *Node/React (MUI)*: `npm run lint`
-2. **Local Build/Test**: Ensure the component compiles or passes basic unit tests.
-   * *MUI*: `npm run build`
-   * *Python*: `pytest` (if tests exist)
-3. **Commit Fixes**: If the linter or build fails, fix the issues and amend or create a new commit.
+2. **Sanitization Check:** Ensure NO `.env` files, NO real names (use roles/usernames), and NO private recording links are being committed.
+3. **Local Build/Test:** Ensure the component compiles (`npm run build` or `pytest`).
 
-#### Push and Pull Request
+#### 4. Push and Pull Request
 
-1. **Push Branch**: Push your local feature branch to the remote repository.
+1. **Push Branch:** Push your local feature branch to the remote repository.
 
    ```bash
-   git push -u origin feature/tp-packet-counter
+   git push -u origin feature/42-tp-packet-counter
    ```
 
-2. **Open Pull Request**: Go to GitHub and create a new Pull Request.
-   * **Base branch**: `develop`
-   * **Compare branch**: Your `feature/...` branch.
-3. **Fill PR Template**:
-   * Title: Use Conventional Commit format (e.g., `feat(tp): add packet counter logic`).
-   * Description: Briefly explain what was changed and why.
-   * Link the Issue: Add `Closes #<issue-number>` in the description to automatically close the task upon merge.
-4. **Update Project Board**: Move the issue to the `In Review` column.
+2. **Open Pull Request:** Go to GitHub and create a new PR.
+   * **Base branch:** `develop`
+   * **Compare branch:** Your `feature/<issue-number>-...` branch.
+3. **Fill PR Template:**
+   * Title: Use Conventional Commit format.
+   * Description: Briefly explain changes, link issue (`Closes #42`).
+   * **Changelog:** Check exactly one box: either "Added/updated user-visible entry in CHANGELOG.md" OR "Not applicable (internal change)".
+   * **Testing:** Document automated/manual testing performed.
+   * **Changelog:** Check exactly one box in the PR template: either "Added/updated user-visible entry in CHANGELOG.md" OR "Not applicable (internal change)".
+4. **Update Project Board:** Move the issue to the `In Review` column.
 
-#### Review and Merge
+#### 5. Review and Merge
 
-1. **Wait for CI Checks**: Monitor the "Checks" section at the bottom of the PR. The PR cannot be merged until the specific component check passes (e.g., `TP Check`, `MUI Check`).
-2. **Request Review**: Assign a reviewer based on component ownership:
-   * Irina's TP code -> Reviewed by Egor.
-   * Dmitrii's MUI code -> Reviewed by Egor (for API integration) or Irina (for logic alignment).
-   * Arina's docs -> Reviewed by Egor or any team member.
-3. **Address Feedback**: If the reviewer requests changes, make the updates locally, commit, and push. GitHub will automatically update the PR.
-4. **Merge**: Once approved and all CI checks are green, the reviewer (or the author, if permitted) clicks **Squash and Merge**. This keeps the `develop` history clean.
-5. **Cleanup**:
+1. **Wait for CI Checks:** Monitor the "Checks" section. The PR cannot be merged until all checks (including Lychee) are green.
+2. **Request Review:** Assign a reviewer based on component ownership:
+   * @Rena-ln's TP code -> Reviewed by @jinseisieko.
+   * @Minnezing's MUI code -> Reviewed by @jinseisieko (API) or @Rena-ln (logic).
+   * @arinamnova's docs -> Reviewed by @jinseisieko or any team member.
+3. **Address Feedback:** If changes are requested, update locally, commit, and push.
+4. **Merge:** Once approved and CI is green, the reviewer clicks **Merge pull request** (Create a merge commit).
+   > ⚠️ **DO NOT use Squash and Merge or Rebase and Merge.** Course requirements strictly mandate using Merge commits to preserve history.
+   * **Verify Changelog:** Before clicking Merge, the reviewer must verify that the `CHANGELOG.md` was updated (if applicable) and the PR template changelog checkbox is correctly filled.
+5. **Cleanup:**
    * Delete the remote feature branch (GitHub prompts this after merge).
-   * Delete the local branch: `git branch -d feature/tp-packet-counter`
+   * Delete the local branch: `git branch -d feature/42-tp-packet-counter`
    * Move the issue on the Project Board to `Done`.
 
-#### Integration Validation (Post-Merge)
+#### 6. Integration Validation (Post-Merge)
 
-Because this is a tightly coupled monorepo, after merging a feature into `develop`, verify that it does not break adjacent components:
+Because this is a tightly coupled monorepo, after merging into `develop`, verify adjacent components:
 
 * If TP telemetry format changed, verify CN can still parse it.
-* If CnSS API changed, verify MUI still receives and renders the data correctly.
-* If a breaking change is found, immediately create a `fix/<component>-<description>` branch from `develop` and repeat Phases 2-5.
+* If CnSS API changed, verify MUI still receives and renders data correctly.
+* If a breaking change is found, immediately create a `fix/<issue-number>-<description>` branch from `develop` and repeat Phases 2-5.

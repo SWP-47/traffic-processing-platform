@@ -1,0 +1,7 @@
+# Main dependencies for Traffic Processor to work
+scapy==2.5.0
+python-dotenv==1.0.1
+
+# Pre-Push Verification tools
+black==23.12.1
+flake8==7.0.0

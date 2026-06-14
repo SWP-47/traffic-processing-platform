@@ -1,0 +1,211 @@
+openapi: 3.0.3
+info:
+  title: Traffic Processing Platform API
+  description: |
+    API documentation for the Control and Status Server (CnSS).
+    
+    ## Ingestion (CN to CnSS)
+    - **Protocol**: UDP
+    - **Endpoint**: `{{cnss_host}}:{{cnss_udp_port}}`
+    - **Payload Schema**: `TelemetryBatch` (defined in components/schemas)
+    
+    ## WebSocket Stream (CnSS to MUI)
+    - **Endpoint**: `wss://{{cnss_host}}:{{cnss_ws_port}}/api/v1/ws/telemetry`
+    - **Auth**: Query parameter `?token={{access_token}}` or `Sec-WebSocket-Protocol: bearer.{{access_token}}`
+    - **Payload Schema**: `TelemetryUpdate` (defined in components/schemas)
+  version: 1.0.0
+
+servers:
+  - url: https://{{cnss_host}}
+    description: CnSS REST Server
+  - url: wss://{{cnss_host}}:{{cnss_ws_port}}
+    description: CnSS WebSocket Server
+
+paths:
+  /api/v1/health:
+    get:
+      summary: System Health Check
+      description: Verify operational status of all modular components.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: System is healthy or degraded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "healthy"
+                components:
+                  traffic_processor: "active"
+                  communication_node: "active"
+                  cnss: "active"
+                timestamp: "2026-06-13T12:00:00Z"
+        '503':
+          description: System is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "unhealthy"
+                components:
+                  traffic_processor: "error"
+                  communication_node: "active"
+                  cnss: "active"
+                timestamp: "2026-06-13T12:00:00Z"
+
+  /api/v1/channel/status:
+    get:
+      summary: Channel Activity Status
+      description: REST fallback for channel activity indicator. The MUI should primarily use the WebSocket stream.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Channel status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelStatusResponse'
+              example:
+                channel_id: "primary-bridge-01"
+                is_active: true
+                last_activity_timestamp: "2026-06-13T12:00:00Z"
+
+  /api/v1/ws/telemetry:
+    get:
+      summary: Real-time Telemetry Stream (WebSocket)
+      description: |
+        Upgrades to WebSocket for real-time push stream.
+        Auth via query parameter `?token={{access_token}}` or `Sec-WebSocket-Protocol: bearer.{{access_token}}`.
+      parameters:
+        - in: query
+          name: token
+          schema:
+            type: string
+          description: Bearer token for authentication
+      responses:
+        '101':
+          description: Switching Protocols to WebSocket
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    TelemetryBatch:
+      type: object
+      description: Payload sent from CN to CnSS over UDP.
+      properties:
+        channel_id:
+          type: string
+          example: "{{channel_id}}"
+        sequence:
+          type: integer
+          example: 1042
+        window_ms:
+          type: integer
+          example: 500
+        direction_a:
+          type: object
+          properties:
+            packets:
+              type: integer
+              example: 150
+        direction_b:
+          type: object
+          properties:
+            packets:
+              type: integer
+              example: 140
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-06-13T12:00:00Z"
+          
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          example: "healthy"
+        components:
+          type: object
+          properties:
+            traffic_processor:
+              type: string
+              enum: [active, inactive, error]
+              example: "active"
+            communication_node:
+              type: string
+              enum: [active, inactive, error]
+              example: "active"
+            cnss:
+              type: string
+              enum: [active, inactive, error]
+              example: "active"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-06-13T12:00:00Z"
+
+    ChannelStatusResponse:
+      type: object
+      properties:
+        channel_id:
+          type: string
+          example: "{{channel_id}}"
+        is_active:
+          type: boolean
+          example: true
+        last_activity_timestamp:
+          type: string
+          format: date-time
+          example: "2026-06-13T12:00:00Z"
+          
+    TelemetryUpdate:
+      type: object
+      description: Payload pushed from CnSS to MUI over WebSocket.
+      properties:
+        type:
+          type: string
+          example: "telemetry_update"
+        channel_id:
+          type: string
+          example: "{{channel_id}}"
+        is_active:
+          type: boolean
+          example: true
+        window_ms:
+          type: integer
+          example: 500
+        metrics:
+          type: object
+          properties:
+            direction_a:
+              type: object
+              properties:
+                packets_per_sec:
+                  type: integer
+                  example: 300
+                packets:
+                  type: integer
+                  example: 150
+            direction_b:
+              type: object
+              properties:
+                packets_per_sec:
+                  type: integer
+                  example: 280
+                packets:
+                  type: integer
+                  example: 140
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-06-13T12:00:00Z" 

@@ -1,0 +1,15 @@
+services:
+  cnss:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount current directory for instant code change reflection (hot-reload)
+      - .:/app
+    environment:
+      - ENV=development
+      - PORT=8000
+    # Override command from Dockerfile to guarantee reload mode
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload

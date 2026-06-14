@@ -26,11 +26,18 @@ The complete list of documented, prioritized, and customer-validated user storie
 
 We have designed the foundational interface and architecture for the MVP v1 scope.
 
-- 🔗 **System Architecture Diagram:** [system-architecture-diagram.png](./images/system-architecture-diagram.png)  
+- **System Architecture Diagram:** ![system-architecture-diagram.png](./images/system-architecture-diagram.png)  
     *Describes the data flow from the Traffic Processor (FPGA + Laptop) through the Communication Node to the CnSS, as validated with the customer.*
-- 🔗 **MUI MVP Dashboard Prototype:** [mui-mvp-dashboard-prototype.png](./images/mui-mvp-dashboard-prototype.png)  
+- **Initial MUI MVP Dashboard Prototype:** ![mui-mvp-dashboard-prototype.png](./images/mui-mvp-dashboard-prototype.png)  
     *Visualizes the primary dashboard, including channel activity status, Rx/Tx rates, and protocol statistics.*
-- 🔗 **[PLACEHOLDER: Interactive Figma/Prototype Link]**
+- **Updated prototype screens based on customer feedback:**
+![Screen 1](./images/mvp-mui-dashboard-inactive.jpg)
+    *Screen 1: Inactive state (when channel is inactive)*
+![Screen 2](./images/mvp-mui-dashboard-success.jpg)
+    *Screen 2: Active state (when channel is active)*
+![Screen 3](./images/mvp-mui-dashboard-error.jpg)
+    *Screen 3: Error state (error when connecting to the server)*
+- 🔗 [Figma Prototype Link](https://www.figma.com/design/pbN9YeX8NosxN7wQgAeXbe/Traffic-Processor-App?node-id=119-268&t=CWDKMx5dmF0WB8DI-1)
 
 ---
 
@@ -39,7 +46,7 @@ We have designed the foundational interface and architecture for the MVP v1 scop
 🔗 [MVP v0 Report and Smoke-Check Scenario](./mvp-v0-report.md)  
 🔗 **[PLACEHOLDER: Deployed MVP v0 URL or Runnable Artifact Link]**  
 🔗 **[PLACEHOLDER: Public Video Demonstration Link (< 2 minutes)]**  
-🔗 **[PLACEHOLDER: Local Setup Instructions (Root README.md)]**
+🔗 [Local Setup Instructions](../../README.md)
 
 ---
 
@@ -55,8 +62,7 @@ Our team strictly follows the Gitflow branching model with mandatory merge commi
 
 - 🔗 **Lychee Configuration:** [`.github/workflows/lychee.yml`](../../.github/workflows/lychee.yml)
 - 🔗 [Latest Successful Lychee Run](https://github.com/SWP-47/traffic-processing-platform/actions/runs/27464347659)
-- **Excluded Lychee Links & Manual Verification:**  
-  *[PLACEHOLDER: List any localhost, private, or dynamic links excluded from Lychee, and confirm they were manually verified. E.g., "Localhost API endpoints were excluded and manually verified via Postman."]*
+- **Excluded Lychee Links & Manual Verification:**  not applicable.
 
 ---
 
@@ -66,9 +72,9 @@ Our team strictly follows the Gitflow branching model with mandatory merge commi
 
 The provided interface artifacts directly address the following stable User Story IDs:
 
-- **US-001 & US-015:** Addressed by the "Channel Activity" indicator (Red/Green status) and real-time auto-updating design in the MUI prototype.
-- **US-002 & US-011:** Addressed by the Rx/Tx Rate counters and throughput statistics display. *(Customer feedback noted: Tx/Rx numbers will be made larger/higher contrast, and byte counting may be refined alongside US-011).*
-- **US-014:** Addressed by the web-based nature of the MUI, designed for remote access.
+- [US-001:](user-stories.md#us-001-channel-activity-indicator) Addressed by the "Channel Activity" indicator
+- [US-002:](user-stories.md#us-002-basic-network-usage-statistics) Addressed by the Rx/Tx Rate counters
+- [US-014:](user-stories.md#us-014-remote-mui-access) Addressed by the web-based nature of the MUI, designed for remote access.
 
 ### MVP v0 Coverage
 
@@ -76,7 +82,6 @@ The MVP v0 foundation targets the core plumbing required to support:
 
 - **US-004:** Modular integration (separate `traffic-processor`, `communication-node`, and `cnss` directories).
 - **US-009:** Basic bidirectional packet passing logic in the TP.
-    *(See [MVP v0 Report](./mvp-v0-report.md) for detailed smoke-check mapping).*
 
 ---
 

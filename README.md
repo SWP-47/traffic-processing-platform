@@ -49,7 +49,22 @@ cd traffic-processing-platform
 #### **Management User Interface (MUI)**
 
 ```bash
-# Management User Interface instructions
+# Navigate to the MUI directory
+cd mui/
+
+# Run Docker with development server (Vite + Hot reload)
+# Access at http://localhost:5173 by default
+make dev
+
+# Run Docker with production server (Nginx)
+# Access at http://localhost:80 by default
+make prod
+
+# Follow Docker logs
+make logs
+
+# Stop MUI containers
+make stop
 ```
 
 ## Links and Reports

@@ -76,7 +76,7 @@ python3 .\demo_1\cn_packet_counter.py
 
 #### **Control and Status Server (CnSS)**
 
-#### Local Development (Dev Build)
+##### Local Development (Dev Build)
 
 Use this configuration for active local development. It includes hot-reload capabilities to reflect code changes instantly.
 
@@ -102,7 +102,7 @@ Use this configuration for active local development. It includes hot-reload capa
 
 ---
 
-#### Production Deployment (VM Build)
+##### Production Deployment (VM Build)
 
 Use this configuration for deploying the service on a production Virtual Machine. It is optimized for security (non-root user) and performance (multiple Uvicorn workers).
 

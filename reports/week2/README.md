@@ -63,7 +63,12 @@ Our team strictly follows the Gitflow branching model with mandatory merge commi
 
 - 🔗 **Lychee Configuration:** [`.github/workflows/lychee.yml`](../../.github/workflows/lychee.yml)
 - 🔗 [Latest Successful Lychee Run](https://github.com/SWP-47/traffic-processing-platform/actions/runs/27464347659)
-- **Excluded Lychee Links & Manual Verification:**  not applicable.
+- **Excluded Lychee Links & Manual Verification:**  
+    - exclude-all-private
+    - exclude '10\.93\.26\.186'
+
+All private is excluded because Lychee cannot access it. '10\.93\.26\.186' is excluded because '10\.93\.26\.186' in local university network.
+
 
 ---
 

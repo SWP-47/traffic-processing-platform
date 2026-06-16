@@ -1,14 +1,18 @@
-name: 📖 User Story
-description: Template for migrating and creating User Stories (PBIs)
-title: "[US-XXX] Short summary of the user story"
-labels: ["user-story"]
+name: ⚙️ PBI
+description: Template for technical tasks, DevOps, documentation, or refactoring
+title: "[PBI] Short descriptive title"
+labels: ["pbi", "technical"]
 body:
-  - type: textarea
-    id: statement
+  - type: dropdown
+    id: pbi_type
     attributes:
-      label: User Story Statement
-      description: "As a [role], I want [feature], so that [benefit]."
-      placeholder: "As a system administrator, I want to see a simple indicator of channel activity, so that I can quickly see if a connection is active."
+      label: PBI Type
+      options:
+        - Infrastructure / DevOps
+        - Documentation
+        - Refactoring
+        - Testing
+        - Architecture / Design
     validations:
       required: true
   - type: dropdown
@@ -31,15 +35,17 @@ body:
     validations:
       required: true
   - type: textarea
-    id: notes
+    id: description
     attributes:
-      label: Notes, Constraints, Assumptions, Open Questions
-      description: "Any additional context from Assignment 2 or refinement."
+      label: Description & Context
+      description: "What needs to be done and why? Link to related User Stories if applicable."
+    validations:
+      required: true
   - type: textarea
     id: acceptance_criteria
     attributes:
       label: Acceptance Criteria
-      description: "At least 3 ACs required for MVP v1 PBIs. Use the Given/When/Then format."
+      description: "Define clear completion criteria using Given/When/Then format."
       value: |
         #### AC 1
         > **Given** [initial context], **When** [action occurs]
@@ -48,15 +54,10 @@ body:
         #### AC 2
         > **Given** [initial context], **When** [action occurs]
         - [ ] **Then** [expected outcome]
-
-        #### AC 3
-        > **Given** [initial context], **When** [action occurs]
-        - [ ] **Then** [expected outcome]
     validations:
       required: true
   - type: input
     id: reviewer
     attributes:
       label: Assigned Reviewer
-      description: "GitHub username of the team member who will review this PBI"
       placeholder: "@username"

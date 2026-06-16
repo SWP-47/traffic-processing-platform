@@ -1,42 +1,28 @@
-name: Course Task / PBI
-description: General task, chore, documentation update, or course requirement.
-title: "[Task]: "
-labels: ["task", "chore"]
+name: 🎓 Course Task
+description: Template for assignment administration, reports, and process tasks
+title: "[Course Task] Short description of the administrative task"
+labels: ["course-task", "administration"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Use this template for non-feature work, such as DevOps setup, documentation, research, or general course milestones.
-  - type: dropdown
-    id: task_type
-    attributes:
-      label: Issue Type
-      description: What kind of task is this?
-      options:
-        - DevOps / CI/CD
-        - Documentation
-        - Research / Spike
-        - Repository Administration
-        - Course Milestone / Admin
-        - Other
-    validations:
-      required: true
   - type: textarea
     id: description
     attributes:
-      label: Description
-      description: Clearly describe the task and its context within the project (e.g., monorepo component affected).
+      label: Task Objective
+      description: "What needs to be delivered for this course requirement?"
     validations:
       required: true
   - type: textarea
-    id: completion_criteria
+    id: checklist
     attributes:
-      label: Completion / Acceptance Criteria
-      description: What defines "Done" for this task?
+      label: Completion Checklist
+      description: "Check off items as they are completed."
       value: |
         - [ ] Task objective achieved
-        - [ ] Relevant documentation updated (e.g., README, docs/)
-        - [ ] PR follows team Gitflow and Conventional Commit guidelines
-        - [ ] CHANGELOG.md updated (if user-visible)
+        - [ ] Added to `reports/week3/README.md` index (if applicable)
     validations:
       required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes and Constraints
+      description: "Any additional context, limitations, or specific instructions for this task."
+      # Отсутствие блока validations делает это поле необязательным (optional)

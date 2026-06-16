@@ -3,14 +3,6 @@ description: Template for migrating and creating User Stories (PBIs)
 title: "[US-XXX] Short summary of the user story"
 labels: ["user-story"]
 body:
-  - type: input
-    id: stable_id
-    attributes:
-      label: Stable User Story ID
-      description: "e.g., US-001. Do not change or reuse stable IDs."
-      placeholder: "US-001"
-    validations:
-      required: true
   - type: textarea
     id: statement
     attributes:
@@ -30,32 +22,12 @@ body:
         - Won't Have
     validations:
       required: true
-  - type: dropdown
-    id: req_status
-    attributes:
-      label: Requirement Status
-      options:
-        - Active
-        - Removed
-    validations:
-      required: true
-  - type: dropdown
-    id: mvp_version
-    attributes:
-      label: MVP Version
-      description: "Required for Assignment 3 tracking"
-      options:
-        - MVP v1
-        - MVP v2
-        - MVP v3
-        - N/A (Backlog)
-    validations:
-      required: true
-  - type: dropdown
+  - type: input
     id: story_points
     attributes:
       label: Story Points
-      options: ["1", "2", "3", "5", "8", "13", "?"]
+      description: "Enter an integer value (e.g., 1, 2, 3, 5, 8)"
+      placeholder: "3"
     validations:
       required: true
   - type: textarea

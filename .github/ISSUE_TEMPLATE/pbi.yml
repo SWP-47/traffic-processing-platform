@@ -26,22 +26,12 @@ body:
         - Won't Have
     validations:
       required: true
-  - type: dropdown
-    id: mvp_version
-    attributes:
-      label: MVP Version
-      options:
-        - MVP v1
-        - MVP v2
-        - MVP v3
-        - N/A (Backlog)
-    validations:
-      required: true
-  - type: dropdown
+  - type: input
     id: story_points
     attributes:
       label: Story Points
-      options: ["1", "2", "3", "5", "8", "13", "?"]
+      description: "Enter an integer value (e.g., 1, 2, 3, 5, 8)"
+      placeholder: "3"
     validations:
       required: true
   - type: textarea

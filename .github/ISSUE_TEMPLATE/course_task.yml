@@ -3,17 +3,6 @@ description: Template for assignment administration, reports, and process tasks
 title: "[Course Task] Short description of the administrative task"
 labels: ["course-task", "administration"]
 body:
-  - type: dropdown
-    id: assignment
-    attributes:
-      label: Related Assignment
-      options:
-        - Assignment 1
-        - Assignment 2
-        - Assignment 3
-        - Assignment 4
-    validations:
-      required: true
   - type: textarea
     id: description
     attributes:
@@ -25,15 +14,15 @@ body:
     id: checklist
     attributes:
       label: Completion Checklist
-      description: "Check off artifacts as they are created and linked."
+      description: "Check off items as they are completed."
       value: |
         - [ ] Task objective achieved
-        - [ ] Artifact created/updated (link below)
         - [ ] Added to `reports/week3/README.md` index (if applicable)
     validations:
       required: true
-  - type: input
-    id: artifact_link
+  - type: textarea
+    id: notes
     attributes:
-      label: Link to Artifact
-      description: "e.g., reports/week3/README.md or docs/user-stories.md"
+      label: Notes and Constraints
+      description: "Any additional context, limitations, or specific instructions for this task."
+      # Отсутствие блока validations делает это поле необязательным (optional)

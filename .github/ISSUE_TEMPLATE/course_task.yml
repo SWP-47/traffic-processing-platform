@@ -1,42 +1,39 @@
-name: Course Task / PBI
-description: General task, chore, documentation update, or course requirement.
-title: "[Task]: "
-labels: ["task", "chore"]
+name: 🎓 Course Task
+description: Template for assignment administration, reports, and process tasks
+title: "[Course Task] Short description of the administrative task"
+labels: ["course-task", "administration"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Use this template for non-feature work, such as DevOps setup, documentation, research, or general course milestones.
   - type: dropdown
-    id: task_type
+    id: assignment
     attributes:
-      label: Issue Type
-      description: What kind of task is this?
+      label: Related Assignment
       options:
-        - DevOps / CI/CD
-        - Documentation
-        - Research / Spike
-        - Repository Administration
-        - Course Milestone / Admin
-        - Other
+        - Assignment 1
+        - Assignment 2
+        - Assignment 3
+        - Assignment 4
     validations:
       required: true
   - type: textarea
     id: description
     attributes:
-      label: Description
-      description: Clearly describe the task and its context within the project (e.g., monorepo component affected).
+      label: Task Objective
+      description: "What needs to be delivered for this course requirement?"
     validations:
       required: true
   - type: textarea
-    id: completion_criteria
+    id: checklist
     attributes:
-      label: Completion / Acceptance Criteria
-      description: What defines "Done" for this task?
+      label: Completion Checklist
+      description: "Check off artifacts as they are created and linked."
       value: |
         - [ ] Task objective achieved
-        - [ ] Relevant documentation updated (e.g., README, docs/)
-        - [ ] PR follows team Gitflow and Conventional Commit guidelines
-        - [ ] CHANGELOG.md updated (if user-visible)
+        - [ ] Artifact created/updated (link below)
+        - [ ] Added to `reports/week3/README.md` index (if applicable)
     validations:
       required: true
+  - type: input
+    id: artifact_link
+    attributes:
+      label: Link to Artifact
+      description: "e.g., reports/week3/README.md or docs/user-stories.md"

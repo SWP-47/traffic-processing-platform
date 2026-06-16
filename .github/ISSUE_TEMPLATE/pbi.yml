@@ -1,0 +1,73 @@
+name: ⚙️ PBI
+description: Template for technical tasks, DevOps, documentation, or refactoring
+title: "[PBI] Short descriptive title"
+labels: ["pbi", "technical"]
+body:
+  - type: dropdown
+    id: pbi_type
+    attributes:
+      label: PBI Type
+      options:
+        - Infrastructure / DevOps
+        - Documentation
+        - Refactoring
+        - Testing
+        - Architecture / Design
+    validations:
+      required: true
+  - type: dropdown
+    id: moscow
+    attributes:
+      label: MoSCoW Priority
+      options:
+        - Must Have
+        - Should Have
+        - Could Have
+        - Won't Have
+    validations:
+      required: true
+  - type: dropdown
+    id: mvp_version
+    attributes:
+      label: MVP Version
+      options:
+        - MVP v1
+        - MVP v2
+        - MVP v3
+        - N/A (Backlog)
+    validations:
+      required: true
+  - type: dropdown
+    id: story_points
+    attributes:
+      label: Story Points
+      options: ["1", "2", "3", "5", "8", "13", "?"]
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description & Context
+      description: "What needs to be done and why? Link to related User Stories if applicable."
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria
+      description: "Define clear completion criteria using Given/When/Then format."
+      value: |
+        #### AC 1
+        > **Given** [initial context], **When** [action occurs]
+        - [ ] **Then** [expected outcome]
+
+        #### AC 2
+        > **Given** [initial context], **When** [action occurs]
+        - [ ] **Then** [expected outcome]
+    validations:
+      required: true
+  - type: input
+    id: reviewer
+    attributes:
+      label: Assigned Reviewer
+      placeholder: "@username"

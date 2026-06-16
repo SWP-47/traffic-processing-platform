@@ -1,52 +1,90 @@
-name: User Story
-description: Define a new feature or requirement from a user's perspective.
-title: "[User Story]: "
-labels: ["user story", "feature"]
+name: 📖 User Story
+description: Template for migrating and creating User Stories (PBIs)
+title: "[US-XXX] Short summary of the user story"
+labels: ["user-story"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Please fill out this template to define a user story. This helps the team understand the "who", "what", and "why" of the feature.
   - type: input
-    id: persona
+    id: stable_id
     attributes:
-      label: User Role / Persona
-      description: Who is this feature for? (e.g., System Admin, Network Operator, Automated Script)
-      placeholder: e.g., Network Operator
-    validations:
-      required: true
-  - type: input
-    id: action
-    attributes:
-      label: Desired Action
-      description: What does the user want to do?
-      placeholder: e.g., view real-time bidirectional packet counts
-    validations:
-      required: true
-  - type: input
-    id: value
-    attributes:
-      label: Expected Value
-      description: Why is this valuable? What problem does it solve?
-      placeholder: e.g., so that I can quickly identify network congestion
+      label: Stable User Story ID
+      description: "e.g., US-001. Do not change or reuse stable IDs."
+      placeholder: "US-001"
     validations:
       required: true
   - type: textarea
-    id: description
+    id: statement
     attributes:
-      label: Detailed Description
-      description: Provide any additional context, edge cases, or component-specific details (e.g., MUI, CnSS, TP, CN).
+      label: User Story Statement
+      description: "As a [role], I want [feature], so that [benefit]."
+      placeholder: "As a system administrator, I want to see a simple indicator of channel activity, so that I can quickly see if a connection is active."
     validations:
       required: true
+  - type: dropdown
+    id: moscow
+    attributes:
+      label: MoSCoW Priority
+      options:
+        - Must Have
+        - Should Have
+        - Could Have
+        - Won't Have
+    validations:
+      required: true
+  - type: dropdown
+    id: req_status
+    attributes:
+      label: Requirement Status
+      options:
+        - Active
+        - Removed
+    validations:
+      required: true
+  - type: dropdown
+    id: mvp_version
+    attributes:
+      label: MVP Version
+      description: "Required for Assignment 3 tracking"
+      options:
+        - MVP v1
+        - MVP v2
+        - MVP v3
+        - N/A (Backlog)
+    validations:
+      required: true
+  - type: dropdown
+    id: story_points
+    attributes:
+      label: Story Points
+      options: ["1", "2", "3", "5", "8", "13", "?"]
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes, Constraints, Assumptions, Open Questions
+      description: "Any additional context from Assignment 2 or refinement."
   - type: textarea
     id: acceptance_criteria
     attributes:
       label: Acceptance Criteria
-      description: Define the conditions that must be met for this story to be considered complete. Use a checklist format.
+      description: "At least 3 ACs required for MVP v1 PBIs. Use the Given/When/Then format."
       value: |
-        - [ ] Criterion 1
-        - [ ] Criterion 2
-        - [ ] Relevant CI checks pass
-        - [ ] CHANGELOG.md updated (if user-visible)
+        #### AC 1
+        > **Given** [initial context], **When** [action occurs]
+        - [ ] **Then** [expected outcome]
+
+        #### AC 2
+        > **Given** [initial context], **When** [action occurs]
+        - [ ] **Then** [expected outcome]
+
+        #### AC 3
+        > **Given** [initial context], **When** [action occurs]
+        - [ ] **Then** [expected outcome]
     validations:
       required: true
+  - type: input
+    id: reviewer
+    attributes:
+      label: Assigned Reviewer
+      description: "GitHub username of the team member who will review this PBI"
+      placeholder: "@username"

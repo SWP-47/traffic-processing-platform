@@ -56,22 +56,6 @@ so that my internet access is not disrupted.
 
 ---
 
-## US-007: Uninterrupted Internet Access
-
-**Requirement Status:** Active
-
-**MoSCoW priority:** Must Have
-
-As an end user,\
-I want the traffic analyzer to operate without disrupting my internet access,\
-so that my connectivity to external resources remains fully functional and uninterrupted.
-
-> The analyzer's operation must not break, drop, or disrupt the user's ability to access the internet or external resources.
->
-> Latency mitigation should be handled via the architecture defined in US-009 (e.g., direct wire/media passing) rather than strict speed benchmarks.
-
----
-
 ## US-009: Seamless Bidirectional Packet Passing
 
 **Requirement Status:** Active
@@ -274,6 +258,24 @@ so that I can detect suspicious or unauthorized tunneling activity.
 
 ---
 
+## US-007: Uninterrupted Internet Access
+
+**Requirement Status:** Removed
+
+**Previous MoSCoW priority:** Must Have
+
+As an end user,\
+I want the traffic analyzer to operate without disrupting my internet access,\
+so that my connectivity to external resources remains fully functional and uninterrupted.
+
+> The analyzer's operation must not break, drop, or disrupt the user's ability to access the internet or external resources.
+>
+> Latency mitigation should be handled via the architecture defined in US-009 (e.g., direct wire/media passing) rather than strict speed benchmarks.
+
+**Reason:** This user story was determined to duplicate US-009. The latter was chosen to keep as it provided a more detailed description of the user story.
+
+---
+
 ## Initial proposed MVP v1 scope
 
 All "Must Have" user stories:
@@ -282,6 +284,5 @@ All "Must Have" user stories:
 * [US-002: Basic Network Usage Statistics](#us-002-basic-network-usage-statistics)
 * [US-004: Modular Platform Integration](#us-004-modular-platform-integration)
 * [US-005: Invisible Traffic Analyzer Deployment](#us-005-invisible-traffic-analyzer-deployment)
-* [US-007: Uninterrupted Internet Access](#us-007-uninterrupted-internet-access)
 * [US-009: Seamless Bidirectional Packet Passing](#us-009-seamless-bidirectional-packet-passing)
 * [US-014: Remote MUI Access](#us-014-remote-mui-access)

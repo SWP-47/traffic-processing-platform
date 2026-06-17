@@ -11,8 +11,9 @@ info:
     
     ## WebSocket Stream (CnSS to MUI)
     - **Endpoint**: `wss://{{cnss_host}}:{{cnss_ws_port}}/api/v1/ws/telemetry`
-    - **Auth**: Query parameter `?token={{access_token}}` or `Sec-WebSocket-Protocol: bearer.{{access_token}}`
+    - **Auth**: Query parameter `?token={{access_token}}`
     - **Payload Schema**: `TelemetryUpdate` (defined in components/schemas)
+    - **Keep-Alive**: CnSS sends periodic `ping` frames. MUI must respond with `pong`.
   version: 1.0.0
 
 servers:
@@ -41,7 +42,7 @@ paths:
                   traffic_processor: "active"
                   communication_node: "active"
                   cnss: "active"
-                timestamp: "2026-06-13T12:00:00Z"
+                timestamp: "2026-06-17T12:00:00Z"
         '503':
           description: System is unhealthy
           content:
@@ -54,7 +55,7 @@ paths:
                   traffic_processor: "error"
                   communication_node: "active"
                   cnss: "active"
-                timestamp: "2026-06-13T12:00:00Z"
+                timestamp: "2026-06-17T12:00:00Z"
 
   /api/v1/channel/status:
     get:
@@ -72,20 +73,30 @@ paths:
               example:
                 channel_id: "primary-bridge-01"
                 is_active: true
-                last_activity_timestamp: "2026-06-13T12:00:00Z"
+                last_activity_timestamp: "2026-06-17T12:00:00Z"
 
   /api/v1/ws/telemetry:
     get:
       summary: Real-time Telemetry Stream (WebSocket)
       description: |
         Upgrades to WebSocket for real-time push stream.
-        Auth via query parameter `?token={{access_token}}` or `Sec-WebSocket-Protocol: bearer.{{access_token}}`.
+        Auth via query parameter `?token={{access_token}}`.
+        
+        **Connection Lifecycle:**
+        1. MUI opens WebSocket connection.
+        2. CnSS validates token. On failure, closes with code `4001` (invalid_token).
+        3. CnSS pushes `telemetry_update` frames (2-10 Hz).
+        4. **Keep-Alive:** CnSS sends periodic `ping` frames. MUI must respond with `pong`. If no `pong` is received, CnSS closes the connection to prevent memory leaks.
+        5. If no telemetry from CN for 5000ms, CnSS sends `is_active: false`.
+        
+        *Security Note: CnSS MUST NOT log the full request URL to prevent token leakage.*
       parameters:
         - in: query
           name: token
           schema:
             type: string
           description: Bearer token for authentication
+          required: true
       responses:
         '101':
           description: Switching Protocols to WebSocket
@@ -103,20 +114,20 @@ components:
       properties:
         channel_id:
           type: string
-          example: "{{channel_id}}"
+          example: "primary-bridge-01"
         sequence:
           type: integer
           example: 1042
         window_ms:
           type: integer
           example: 500
-        direction_a:
+        direction_out:
           type: object
           properties:
             packets:
               type: integer
               example: 150
-        direction_b:
+        direction_in:
           type: object
           properties:
             packets:
@@ -125,7 +136,7 @@ components:
         timestamp:
           type: string
           format: date-time
-          example: "2026-06-13T12:00:00Z"
+          example: "2026-06-17T12:00:00Z"
           
     HealthResponse:
       type: object
@@ -152,21 +163,21 @@ components:
         timestamp:
           type: string
           format: date-time
-          example: "2026-06-13T12:00:00Z"
+          example: "2026-06-17T12:00:00Z"
 
     ChannelStatusResponse:
       type: object
       properties:
         channel_id:
           type: string
-          example: "{{channel_id}}"
+          example: "primary-bridge-01"
         is_active:
           type: boolean
           example: true
         last_activity_timestamp:
           type: string
           format: date-time
-          example: "2026-06-13T12:00:00Z"
+          example: "2026-06-17T12:00:00Z"
           
     TelemetryUpdate:
       type: object
@@ -177,35 +188,47 @@ components:
           example: "telemetry_update"
         channel_id:
           type: string
-          example: "{{channel_id}}"
+          example: "primary-bridge-01"
         is_active:
           type: boolean
           example: true
         window_ms:
           type: integer
           example: 500
+        dropped_batches:
+          type: integer
+          description: Number of lost UDP datagrams between the previous and current batch.
+          example: 0
         metrics:
           type: object
           properties:
-            direction_a:
+            direction_out:
               type: object
               properties:
                 packets_per_sec:
-                  type: integer
-                  example: 300
+                  type: number
+                  format: float
+                  example: 300.0
                 packets:
                   type: integer
                   example: 150
-            direction_b:
+            direction_in:
               type: object
               properties:
                 packets_per_sec:
-                  type: integer
-                  example: 280
+                  type: number
+                  format: float
+                  example: 280.0
                 packets:
                   type: integer
                   example: 140
         timestamp:
           type: string
           format: date-time
-          example: "2026-06-13T12:00:00Z" 
+          description: Original timestamp from the CN batch.
+          example: "2026-06-17T12:00:00Z"
+        received_at:
+          type: string
+          format: date-time
+          description: Server time at CnSS when the UDP datagram was received.
+          example: "2026-06-17T12:00:00.050Z"

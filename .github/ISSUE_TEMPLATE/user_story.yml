@@ -11,25 +11,6 @@ body:
       placeholder: "As a system administrator, I want to see a simple indicator of channel activity, so that I can quickly see if a connection is active."
     validations:
       required: true
-  - type: dropdown
-    id: moscow
-    attributes:
-      label: MoSCoW Priority
-      options:
-        - Must Have
-        - Should Have
-        - Could Have
-        - Won't Have
-    validations:
-      required: true
-  - type: input
-    id: story_points
-    attributes:
-      label: Story Points
-      description: "Enter an integer value (e.g., 1, 2, 3, 5, 8)"
-      placeholder: "3"
-    validations:
-      required: true
   - type: textarea
     id: notes
     attributes:
@@ -42,16 +23,13 @@ body:
       description: "At least 3 ACs required for MVP v1 PBIs. Use the Given/When/Then format."
       value: |
         #### AC 1
-        > **Given** [initial context], **When** [action occurs]
-        - [ ] **Then** [expected outcome]
+        - [ ] ...
 
         #### AC 2
-        > **Given** [initial context], **When** [action occurs]
-        - [ ] **Then** [expected outcome]
+        - [ ] ...
 
         #### AC 3
-        > **Given** [initial context], **When** [action occurs]
-        - [ ] **Then** [expected outcome]
+        - [ ] ...
     validations:
       required: true
   - type: input

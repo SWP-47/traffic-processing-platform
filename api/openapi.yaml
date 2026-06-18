@@ -9,12 +9,16 @@ info:
     - **Endpoint**: `{{cnss_host}}:{{cnss_udp_port}}`
     - **Payload Schema**: `TelemetryBatch` (defined in components/schemas)
     
+    ## Authentication
+    - **Endpoint**: `POST /api/v1/auth/login`
+    - **Mechanism**: JWT Bearer Token. The token contains `role` and `scope` claims for per-channel access control.
+    
     ## WebSocket Stream (CnSS to MUI)
     - **Endpoint**: `wss://{{cnss_host}}:{{cnss_ws_port}}/api/v1/ws/telemetry`
-    - **Auth**: Query parameter `?token={{access_token}}`
+    - **Auth**: Query parameters `?token={{access_token}}&channel_id={{channel_id}}`
     - **Payload Schema**: `TelemetryUpdate` (defined in components/schemas)
     - **Keep-Alive**: CnSS sends periodic `ping` frames. MUI must respond with `pong`.
-  version: 1.0.0
+  version: 1.1.0
 
 servers:
   - url: https://{{cnss_host}}
@@ -23,46 +27,92 @@ servers:
     description: CnSS WebSocket Server
 
 paths:
+  /api/v1/auth/login:
+    post:
+      summary: User Authentication
+      description: Authenticate user and issue JWT token with role and scope information.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Bad request (missing fields)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /api/v1/health:
     get:
       summary: System Health Check
-      description: Verify operational status of all modular components.
+      description: Verify operational status of the CnSS and aggregate channel statistics.
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: System is healthy or degraded
+          description: System is healthy
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
-              example:
-                status: "healthy"
-                components:
-                  traffic_processor: "active"
-                  communication_node: "active"
-                  cnss: "active"
-                timestamp: "2026-06-17T12:00:00Z"
         '503':
           description: System is unhealthy
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
-              example:
-                status: "unhealthy"
-                components:
-                  traffic_processor: "error"
-                  communication_node: "active"
-                  cnss: "active"
-                timestamp: "2026-06-17T12:00:00Z"
 
-  /api/v1/channel/status:
+  /api/v1/channels:
     get:
-      summary: Channel Activity Status
-      description: REST fallback for channel activity indicator. The MUI should primarily use the WebSocket stream.
+      summary: List Accessible Channels
+      description: |
+        List all channels accessible to the authenticated user. 
+        For `viewer`, the list is filtered by JWT `scope`. 
+        For `admin`, all known channels are returned.
       security:
         - bearerAuth: []
+      responses:
+        '200':
+          description: List of channels
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/channel/{channel_id}/status:
+    get:
+      summary: Specific Channel Activity Status
+      description: REST fallback for a specific channel's activity indicator.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: channel_id
+          required: true
+          schema:
+            type: string
+          description: Identifier of the channel to query.
       responses:
         '200':
           description: Channel status
@@ -70,24 +120,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ChannelStatusResponse'
-              example:
-                channel_id: "primary-bridge-01"
-                is_active: true
-                last_activity_timestamp: "2026-06-17T12:00:00Z"
+        '403':
+          description: Forbidden (user has no access to this channel)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/v1/ws/telemetry:
     get:
       summary: Real-time Telemetry Stream (WebSocket)
       description: |
-        Upgrades to WebSocket for real-time push stream.
-        Auth via query parameter `?token={{access_token}}`.
+        Upgrades to WebSocket for real-time push stream, scoped to a specific channel.
+        Auth via query parameters `?token={{access_token}}&channel_id={{channel_id}}`.
         
-        **Connection Lifecycle:**
-        1. MUI opens WebSocket connection.
+        **Connection Lifecycle & Close Codes:**
+        1. MUI opens WebSocket connection with `token` and `channel_id`.
         2. CnSS validates token. On failure, closes with code `4001` (invalid_token).
-        3. CnSS pushes `telemetry_update` frames (2-10 Hz).
-        4. **Keep-Alive:** CnSS sends periodic `ping` frames. MUI must respond with `pong`. If no `pong` is received, CnSS closes the connection to prevent memory leaks.
-        5. If no telemetry from CN for 5000ms, CnSS sends `is_active: false`.
+        3. CnSS checks if the `channel_id` query parameter is present in the URL. On failure, closes with code `4002` (missing_channel).
+        4. CnSS checks access to `channel_id` via JWT scope. On failure, closes with code `4003` (channel_forbidden).
+        5. CnSS checks if the provided `channel_id` value exists in the registry. On failure, closes with code `4004` (channel_not_found).
+        6. CnSS pushes `telemetry_update` frames (2-10 Hz).
+        7. **Keep-Alive:** CnSS sends periodic `ping` frames. MUI must respond with `pong`.
+        8. If no telemetry from CN for 5000ms, CnSS sends `is_active: false`.
         
         *Security Note: CnSS MUST NOT log the full request URL to prevent token leakage.*
       parameters:
@@ -96,6 +157,12 @@ paths:
           schema:
             type: string
           description: Bearer token for authentication
+          required: true
+        - in: query
+          name: channel_id
+          schema:
+            type: string
+          description: Identifier of the channel to subscribe to
           required: true
       responses:
         '101':
@@ -108,15 +175,122 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: "admin"
+        password:
+          type: string
+          format: password
+          example: "secretpassword"
+
+    LoginResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: JWT token for authenticated requests.
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        token_type:
+          type: string
+          example: "Bearer"
+        expires_in:
+          type: integer
+          description: Token lifetime in seconds.
+          example: 86400
+        issued_at:
+          type: string
+          format: date-time
+          example: "2026-06-18T12:00:00Z"
+        role:
+          type: string
+          enum: [admin, viewer]
+          example: "admin"
+        scope:
+          type: array
+          items:
+            type: string
+          description: List of accessible channel_ids.
+          example: ["bridge-berlin-01", "bridge-prague-01"]
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "invalid_credentials"
+        message:
+          type: string
+          example: "Invalid username or password."
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          example: "healthy"
+        components:
+          type: object
+          properties:
+            cnss:
+              type: string
+              enum: [active, inactive, error]
+              example: "active"
+        channels_active:
+          type: integer
+          description: Number of channels currently reporting telemetry.
+          example: 3
+        channels_total:
+          type: integer
+          description: Total number of channels known to CnSS.
+          example: 4
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-06-17T12:00:00Z"
+
+    ChannelsResponse:
+      type: object
+      properties:
+        channels:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChannelStatusResponse'
+        total:
+          type: integer
+          example: 2
+
+    ChannelStatusResponse:
+      type: object
+      properties:
+        channel_id:
+          type: string
+          example: "bridge-berlin-01"
+        is_active:
+          type: boolean
+          example: true
+        last_activity_timestamp:
+          type: string
+          format: date-time
+          example: "2026-06-17T12:00:00Z"
+          
     TelemetryBatch:
       type: object
       description: Payload sent from CN to CnSS over UDP.
       properties:
         channel_id:
           type: string
-          example: "primary-bridge-01"
+          description: Identifier of the monitored channel/bridge. Used by CnSS to route the batch.
+          example: "bridge-berlin-01"
         sequence:
           type: integer
+          description: Monotonically increasing sequence number per channel.
           example: 1042
         window_ms:
           type: integer
@@ -138,47 +312,6 @@ components:
           format: date-time
           example: "2026-06-17T12:00:00Z"
           
-    HealthResponse:
-      type: object
-      properties:
-        status:
-          type: string
-          enum: [healthy, degraded, unhealthy]
-          example: "healthy"
-        components:
-          type: object
-          properties:
-            traffic_processor:
-              type: string
-              enum: [active, inactive, error]
-              example: "active"
-            communication_node:
-              type: string
-              enum: [active, inactive, error]
-              example: "active"
-            cnss:
-              type: string
-              enum: [active, inactive, error]
-              example: "active"
-        timestamp:
-          type: string
-          format: date-time
-          example: "2026-06-17T12:00:00Z"
-
-    ChannelStatusResponse:
-      type: object
-      properties:
-        channel_id:
-          type: string
-          example: "primary-bridge-01"
-        is_active:
-          type: boolean
-          example: true
-        last_activity_timestamp:
-          type: string
-          format: date-time
-          example: "2026-06-17T12:00:00Z"
-          
     TelemetryUpdate:
       type: object
       description: Payload pushed from CnSS to MUI over WebSocket.
@@ -188,7 +321,7 @@ components:
           example: "telemetry_update"
         channel_id:
           type: string
-          example: "primary-bridge-01"
+          example: "bridge-berlin-01"
         is_active:
           type: boolean
           example: true
@@ -197,7 +330,7 @@ components:
           example: 500
         dropped_batches:
           type: integer
-          description: Number of lost UDP datagrams between the previous and current batch.
+          description: Number of lost UDP datagrams between the previous and current batch for this channel.
           example: 0
         metrics:
           type: object

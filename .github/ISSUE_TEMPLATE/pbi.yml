@@ -3,37 +3,6 @@ description: Template for technical tasks, DevOps, documentation, or refactoring
 title: "[PBI] Short descriptive title"
 labels: ["pbi", "technical"]
 body:
-  - type: dropdown
-    id: pbi_type
-    attributes:
-      label: PBI Type
-      options:
-        - Infrastructure / DevOps
-        - Documentation
-        - Refactoring
-        - Testing
-        - Architecture / Design
-    validations:
-      required: true
-  - type: dropdown
-    id: moscow
-    attributes:
-      label: MoSCoW Priority
-      options:
-        - Must Have
-        - Should Have
-        - Could Have
-        - Won't Have
-    validations:
-      required: true
-  - type: input
-    id: story_points
-    attributes:
-      label: Story Points
-      description: "Enter an integer value (e.g., 1, 2, 3, 5, 8)"
-      placeholder: "3"
-    validations:
-      required: true
   - type: textarea
     id: description
     attributes:
@@ -48,12 +17,11 @@ body:
       description: "Define clear completion criteria using Given/When/Then format."
       value: |
         #### AC 1
-        > **Given** [initial context], **When** [action occurs]
-        - [ ] **Then** [expected outcome]
+        - [ ] ...
 
         #### AC 2
-        > **Given** [initial context], **When** [action occurs]
-        - [ ] **Then** [expected outcome]
+        - [ ] ...
+        
     validations:
       required: true
   - type: input

@@ -1,4 +1,4 @@
-# Customer Meeting Transcript
+# Customer Review Transcript
 
 > The meeting audio recording was transcribed using TurboScribe and translated from Russian to English using Qwen3.7-Plus, as reported in [LLM Report](llm-report.md). The final transcript was manually checked by @arinamnova.
 

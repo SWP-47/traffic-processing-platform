@@ -230,9 +230,9 @@ sequenceDiagram
 | Code | Reason | Meaning |
 |:----:|--------|---------|
 | `4001` | `invalid_token` | Token is missing, malformed, expired, or has invalid signature. |
-| `4002` | `missing_channel` | The `channel_id` query parameter is missing. |
-| `4003` | `channel_forbidden` | Token is valid, but the user does not have access to the requested channel. |
-| `4004` | `channel_not_found` | The requested `channel_id` does not exist in CnSS's registry (no CN has ever reported with this ID). |
+| 4002 | missing_channel | The `channel_id` query parameter is entirely absent from the WebSocket request URL. |
+| 4003 | channel_forbidden | Token is valid, but the user does not have access to the requested channel. |
+| 4004 | channel_not_found | The `channel_id` query parameter is present, but its value does not match any known or active channel in the CnSS registry. |
 | `1011` | `internal_error` | Unexpected server error. |
 
 - **Payload Schema (`telemetry_update`):**
@@ -346,7 +346,9 @@ The MUI must store the JWT token **exclusively in memory** (JavaScript variable)
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "token_type": "Bearer",
   "expires_in": 86400,
-  "issued_at": "2026-06-18T12:00:00Z"
+  "issued_at": "2026-06-18T12:00:00Z",
+  "role": "admin",
+  "scope": ["bridge-berlin-01", "bridge-prague-01"]
 }
 ```
 **Response 401:**

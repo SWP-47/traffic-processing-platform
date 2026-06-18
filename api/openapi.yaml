@@ -103,7 +103,7 @@ paths:
   /api/v1/channel/{channel_id}/status:
     get:
       summary: Specific Channel Activity Status
-      description: REST fallback for a specific channel's activity indicator. The MUI should primarily use the WebSocket stream.
+      description: REST fallback for a specific channel's activity indicator.
       security:
         - bearerAuth: []
       parameters:
@@ -143,9 +143,9 @@ paths:
         **Connection Lifecycle & Close Codes:**
         1. MUI opens WebSocket connection with `token` and `channel_id`.
         2. CnSS validates token. On failure, closes with code `4001` (invalid_token).
-        3. CnSS checks `channel_id` presence. On failure, closes with code `4002` (missing_channel).
+        3. CnSS checks if the `channel_id` query parameter is present in the URL. On failure, closes with code `4002` (missing_channel).
         4. CnSS checks access to `channel_id` via JWT scope. On failure, closes with code `4003` (channel_forbidden).
-        5. CnSS checks if channel exists. On failure, closes with code `4004` (channel_not_found).
+        5. CnSS checks if the provided `channel_id` value exists in the registry. On failure, closes with code `4004` (channel_not_found).
         6. CnSS pushes `telemetry_update` frames (2-10 Hz).
         7. **Keep-Alive:** CnSS sends periodic `ping` frames. MUI must respond with `pong`.
         8. If no telemetry from CN for 5000ms, CnSS sends `is_active: false`.

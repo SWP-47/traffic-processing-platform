@@ -301,22 +301,22 @@ wss://{{cnss_host}}:{{cnss_ws_port}}/api/v1/ws/telemetry?token={{access_token}}&
 **Connection Lifecycle:**
 1. MUI opens WebSocket with both `token` and `channel_id` query parameters.
 2. CnSS validates `{{access_token}}` (signature, expiration). On failure, closes with code `4001` and reason `invalid_token`.
-3. CnSS checks that `{{channel_id}}` is present. On failure, closes with code `4002` and reason `missing_channel`.
+3. CnSS checks that the `{{channel_id}}` query parameter is present in the URL. On failure, closes with code `4002` and reason `missing_channel`.
 4. CnSS checks that the JWT's `scope` permits access to `{{channel_id}}` (or user is `admin`). On failure, closes with code `4003` and reason `channel_forbidden`.
-5. CnSS checks that `{{channel_id}}` exists in its channel registry. On failure, closes with code `4004` and reason `channel_not_found`.
-6. On success, the WebSocket is added to `channels[channel_id].listeners`, and CnSS begins pushing `telemetry_update` frames for **that channel only** at the same frequency as CN ingestion (2–10 Hz).
+5. CnSS checks that the provided `{{channel_id}}` value exists in its channel registry. On failure, closes with code `4004` and reason `channel_not_found`.
+6. On success, the WebSocket is added to `channels[channel_id].listeners`, and CnSS begins pushing `telemetry_update` frames for that channel only at the same frequency as CN ingestion (2–10 Hz).
 7. MUI may send a `ping` frame; CnSS responds with `pong`.
 8. If no telemetry is received from the CN for this channel for `activity_timeout_ms` (default: 5000), CnSS sends an `is_active: false` update to all listeners of that channel.
 
 **WebSocket Close Codes:**
 
 | Code | Reason | Meaning |
-|:----:|--------|---------|
-| `4001` | `invalid_token` | Token is missing, malformed, expired, or has invalid signature. |
-| `4002` | `missing_channel` | The `channel_id` query parameter is missing. |
-| `4003` | `channel_forbidden` | Token is valid, but the user does not have access to the requested channel. |
-| `4004` | `channel_not_found` | The requested `channel_id` does not exist in CnSS's registry (no CN has ever reported with this ID). |
-| `1011` | `internal_error` | Unexpected server error. |
+| --- | --- | --- |
+| 4001 | invalid_token | Token is missing, malformed, expired, or has invalid signature. |
+| 4002 | missing_channel | The `channel_id` query parameter is entirely absent from the WebSocket request URL. |
+| 4003 | channel_forbidden | Token is valid, but the user does not have access to the requested channel. |
+| 4004 | channel_not_found | The `channel_id` query parameter is present, but its value does not match any known or active channel in the CnSS registry. |
+| 1011 | internal_error | Unexpected server error. |
 
 *Security Note: CnSS **MUST NOT** log the full request URL to prevent `access_token` leakage.*
 
@@ -465,7 +465,6 @@ WebSocket connections should use `wss://` (TLS) to protect telemetry data and to
 CnSS must sanitize logs. Query parameters containing tokens must be masked or omitted from access logs (e.g., replace `?token=eyJhbG...` with `?token=[REDACTED]`).
 
 ### 5.3. CN Trust Model (MVP v1)
-
-In MVP v1, CNs are **not authenticated** — the `channel_id` is a trusted assertion. CnSS accepts UDP datagrams from any source. Mitigations:
-- Network-level ACLs: CnSS should only accept UDP from known CN IP addresses.
-- Future versions: mTLS / DTLS with client certificates, with `channel_id` embedded in the certificate's Subject Alternative Name.
+In MVP v1, CNs are not authenticated — the `channel_id` is a trusted assertion. CnSS accepts UDP datagrams from any source. Mitigations:
+- **Network-level ACLs**: CnSS should only accept UDP from known CN IP addresses.
+- **Future versions**: mTLS / DTLS with client certificates, with `channel_id` embedded in the certificate's Subject Alternative Name.

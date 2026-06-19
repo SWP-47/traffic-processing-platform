@@ -43,6 +43,9 @@ services:
 
         - action: rebuild
           path: ./.env
+        
+        - action: rebuild
+          path: ./vite.config.ts
 
         - action: sync
           path: .
@@ -51,6 +54,9 @@ services:
             - nginx.conf
     
     restart: unless-stopped
+
+    env_file:
+      - .env
     
     profiles:
       - dev

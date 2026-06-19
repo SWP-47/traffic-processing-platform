@@ -1,7 +1,7 @@
 # Pull Request
 
 **Related Issue:** Closes #`<issue-number>`
-*(Replace `<issue-number>` with the actual issue number this PR resolves)*
+<!-- *(Replace `<issue-number>` with the actual issue number this PR resolves)* -->
 
 ## Summary of Changes
 <!-- Briefly explain what was changed and why. Mention the specific monorepo component(s) affected (e.g., mui/, cnss/, traffic-processor/). -->

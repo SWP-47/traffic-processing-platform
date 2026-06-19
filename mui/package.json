@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "generate:api": "openapi-typescript ../api/openapi.yaml -o ./src/api/schema.d.ts"
+    "generate:api": "openapi-typescript ../api/openapi.yaml -o ./src/api/types.d.ts",
+    "test:ts": "tsc --noEmit"
   },
   "dependencies": {
     "react": "^19.2.6",

@@ -21,6 +21,10 @@ class TelemetryUDPProtocol(asyncio.DatagramProtocol):
         )
 
     def datagram_received(self, data: bytes, addr):
+        logger.debug(
+            f"Raw UDP datagram received from {addr[0]}:{addr[1]} ({len(data)} bytes)"
+        )
+
         try:
             text = data.decode("utf-8")
             payload = json.loads(text)
@@ -32,10 +36,13 @@ class TelemetryUDPProtocol(asyncio.DatagramProtocol):
             logger.error(f"Invalid payload from {addr}: {e}. Dropping.")
             return
 
-        # Capture exact server receive time (independent of CN clock skew)
+        logger.info(
+            f"TelemetryBatch received | channel: {batch.channel_id} | "
+            f"seq: {batch.sequence} | source: {addr[0]}"
+        )
+
         server_received_at = datetime.now(timezone.utc)
 
-        # Schedule async processing on the event loop
         asyncio.create_task(self._process_batch(batch, server_received_at))
 
     async def _process_batch(self, batch: TelemetryBatch, received_at: datetime):

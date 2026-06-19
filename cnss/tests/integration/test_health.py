@@ -1,4 +1,3 @@
-# tests/integration/test_health.py
 """
 Integration tests for the /health endpoint.
 Verifies that the server responds correctly and matches the MVP v1 API specification.

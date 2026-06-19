@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- UDP listener in CnSS to ingest `TelemetryBatch` payloads from Communication Nodes on port 5140, featuring auto-channel creation and sequence tracking for dropped batch detection. ([#79](https://github.com/SWP-47/traffic-processing-platform/issues/79))
+- Repository pattern for CnSS state management (`StateStore` interface) with an initial thread-safe in-memory implementation, preparing the architecture for future database integration. ([#79](https://github.com/SWP-47/traffic-processing-platform/issues/79))
+- Centralized environment configuration using `pydantic-settings` for type-safe management of CnSS ports, logging levels, and JWT secrets. ([#79](https://github.com/SWP-47/traffic-processing-platform/issues/79))
+- Comprehensive unit and integration test suite validating UDP ingestion, state management, and sequence tracking logic. ([#79](https://github.com/SWP-47/traffic-processing-platform/issues/79))
 - Multi-channel architecture: CnSS now supports multiple Communication Nodes (CNs) and multiple MUI clients concurrently, with per-channel state management. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 - User authentication via `POST /api/v1/auth/login` with JWT tokens containing `role` and `scope` claims for per-channel access control. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 - New REST endpoint `GET /api/v1/channels` to list channels accessible to the authenticated user (filtered by JWT `scope` for `viewer` role, all channels for `admin`). ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
@@ -23,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added foundational MVP v0 structure for Control and Status Server (CnSS), including `/health` endpoint, Docker configurations (Dev/Prod/Test), integration tests, and CI workflow. ([#30](https://github.com/SWP-47/traffic-processing-platform/issues/30))
 
 ### Changed
+- Updated `docker-compose.yml` to expose and map the UDP port 5140 for telemetry ingestion. ([#79](https://github.com/SWP-47/traffic-processing-platform/issues/79))
 - WebSocket endpoint URL now requires `channel_id` query parameter: `wss://{{cnss_host}}:{{cnss_ws_port}}/api/v1/ws/telemetry?token={{access_token}}&channel_id={{channel_id}}`. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 - Channel status endpoint moved from `GET /api/v1/channel/status` to `GET /api/v1/channel/{channel_id}/status` with `channel_id` as a path parameter. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 - Health endpoint `GET /api/v1/health` now returns CnSS status and aggregate channel statistics (`channels_active`, `channels_total`) instead of individual TP/CN component statuses. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))

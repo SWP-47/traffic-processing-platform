@@ -15,6 +15,9 @@ services:
     
     restart: unless-stopped
 
+    env_file:
+      - .env
+
     profiles:
       - prod
   
@@ -37,6 +40,9 @@ services:
       watch:
         - action: rebuild
           path: ./package.json
+
+        - action: rebuild
+          path: ./.env
 
         - action: sync
           path: .

@@ -28,9 +28,11 @@ class ChannelState(BaseModel):
     # Transient field: WebSocket listeners are kept in memory only.
     listeners: Set[Any] = Field(default_factory=set, exclude=True)
 
+
 class LoginRequest(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
+
 
 class LoginResponse(BaseModel):
     access_token: str

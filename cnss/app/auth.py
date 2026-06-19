@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from .config import settings
 
-# 1. MOCK USER STORE & AUTHENTICATION
+# MOCK USER STORE & AUTHENTICATION
 
 MOCK_USERS = {
     "admin": {
@@ -61,7 +61,7 @@ def create_access_token(
     return token, settings.jwt_expiration_seconds, issued_at_iso
 
 
-# 2. TOKEN DECODING & FASTAPI DEPENDENCIES
+# TOKEN DECODING & FASTAPI DEPENDENCIES
 
 
 class TokenPayload(BaseModel):

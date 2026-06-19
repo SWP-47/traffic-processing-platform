@@ -6,6 +6,49 @@
   },
   "item": [
     {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set(\"access_token\", jsonData.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"secretpassword\"\n}"
+            },
+            "url": {
+              "raw": "https://{{cnss_host}}/api/v1/auth/login",
+              "protocol": "https",
+              "host": ["{{cnss_host}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Authenticate user and issue JWT token. On success, automatically saves the token to the `access_token` collection variable."
+          }
+        }
+      ]
+    },
+    {
       "name": "REST Endpoints",
       "item": [
         {
@@ -25,7 +68,27 @@
               "host": ["{{cnss_host}}"],
               "path": ["api", "v1", "health"]
             },
-            "description": "Verify operational status of all modular components."
+            "description": "Verify operational status of the CnSS and aggregate channel statistics."
+          }
+        },
+        {
+          "name": "List Channels",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://{{cnss_host}}/api/v1/channels",
+              "protocol": "https",
+              "host": ["{{cnss_host}}"],
+              "path": ["api", "v1", "channels"]
+            },
+            "description": "List all channels accessible to the authenticated user (filtered by JWT scope for viewers)."
           }
         },
         {
@@ -40,12 +103,12 @@
               }
             ],
             "url": {
-              "raw": "https://{{cnss_host}}/api/v1/channel/status",
+              "raw": "https://{{cnss_host}}/api/v1/channel/{{channel_id}}/status",
               "protocol": "https",
               "host": ["{{cnss_host}}"],
-              "path": ["api", "v1", "channel", "status"]
+              "path": ["api", "v1", "channel", "{{channel_id}}", "status"]
             },
-            "description": "REST fallback for channel activity indicator."
+            "description": "REST fallback for a specific channel's activity indicator."
           }
         }
       ]
@@ -59,7 +122,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "wss://{{cnss_host}}:{{cnss_ws_port}}/api/v1/ws/telemetry?token={{access_token}}",
+              "raw": "wss://{{cnss_host}}:{{cnss_ws_port}}/api/v1/ws/telemetry?token={{access_token}}&channel_id={{channel_id}}",
               "protocol": "wss",
               "host": ["{{cnss_host}}:{{cnss_ws_port}}"],
               "path": ["api", "v1", "ws", "telemetry"],
@@ -67,10 +130,14 @@
                 {
                   "key": "token",
                   "value": "{{access_token}}"
+                },
+                {
+                  "key": "channel_id",
+                  "value": "{{channel_id}}"
                 }
               ]
             },
-            "description": "Connect to this WebSocket endpoint to receive real-time telemetry updates. Postman supports WebSocket connections natively."
+            "description": "Connect to this WebSocket endpoint to receive real-time telemetry updates for a specific channel.\n\n**Connection Lifecycle & Close Codes:**\n- Auth via query parameters `?token={{access_token}}&channel_id={{channel_id}}`.\n- Close codes: `4001` (invalid_token), `4002` (missing_channel: query parameter absent), `4003` (channel_forbidden), `4004` (channel_not_found: query parameter value not in registry).\n- CnSS pushes `telemetry_update` frames (2-10 Hz).\n- **Keep-Alive:** CnSS sends periodic `ping` frames. MUI must respond with `pong`.\n- If no telemetry from CN for 5000ms, CnSS sends `is_active: false`.\n\n*Security Note: CnSS MUST NOT log the full request URL to prevent token leakage.*"
           }
         }
       ]
@@ -99,7 +166,7 @@
     },
     {
       "key": "channel_id",
-      "value": "primary-bridge-01",
+      "value": "bridge-berlin-01",
       "type": "string"
     }
   ]

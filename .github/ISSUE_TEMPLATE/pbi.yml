@@ -3,6 +3,11 @@ description: Template for technical tasks, DevOps, documentation, or refactoring
 title: "[PBI] Short descriptive title"
 labels: ["pbi", "technical"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        <!-- **Project Fields Reminder:** -->
+        <!-- Please ensure you fill out the **milestone**, **mvp version**, **story points**, **priority**, and **pbi type** in the **Project field** of the issue (located in the right sidebar). -->
   - type: textarea
     id: description
     attributes:

@@ -1,10 +1,7 @@
+# tests/integration/test_health.py
 """
 Integration tests for the /health endpoint.
-
-Verifies that:
-1. The server responds to requests.
-2. The correct HTTP status is returned.
-3. The JSON response structure matches the specification.
+Verifies that the server responds correctly and matches the MVP v1 API specification.
 """
 
 
@@ -18,35 +15,47 @@ class TestHealthEndpoint:
 
     def test_health_response_structure(self, client):
         """
-        Response must contain required fields:
-        status, message, timestamp.
+        Response must contain required MVP v1 fields:
+        status, components, channels_active, channels_total, timestamp.
         """
         response = client.get("/health")
         data = response.json()
 
         assert "status" in data
-        assert "message" in data
+        assert "components" in data
+        assert "cnss" in data["components"]
+        assert "channels_active" in data
+        assert "channels_total" in data
         assert "timestamp" in data
 
     def test_health_status_is_healthy(self, client):
         """Server status must be 'healthy' upon successful startup."""
         response = client.get("/health")
         data = response.json()
-
         assert data["status"] == "healthy"
 
-    def test_health_message_is_not_empty(self, client):
-        """Message field must be a non-empty string."""
+    def test_health_components_structure(self, client):
+        """Components field must correctly report CnSS status as 'active'."""
+        response = client.get("/health")
+        data = response.json()
+        assert isinstance(data["components"], dict)
+        assert data["components"]["cnss"] == "active"
+
+    def test_health_channels_metrics_are_integers(self, client):
+        """Channel metrics must be non-negative integers."""
         response = client.get("/health")
         data = response.json()
 
-        assert isinstance(data["message"], str)
-        assert len(data["message"]) > 0
+        assert isinstance(data["channels_active"], int)
+        assert isinstance(data["channels_total"], int)
+        assert data["channels_active"] >= 0
+        assert data["channels_total"] >= 0
+        # Active channels cannot exceed total channels
+        assert data["channels_active"] <= data["channels_total"]
 
     def test_health_timestamp_is_iso8601(self, client):
         """
-        Timestamp field must be in ISO 8601
-        format (contains 'T' and 'Z').
+        Timestamp field must be in ISO 8601 format (contains 'T' and 'Z').
         """
         response = client.get("/health")
         data = response.json()

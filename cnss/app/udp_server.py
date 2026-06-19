@@ -21,7 +21,6 @@ class TelemetryUDPProtocol(asyncio.DatagramProtocol):
         )
 
     def datagram_received(self, data: bytes, addr):
-        # AC 5: Handle invalid UTF-8 and malformed JSON gracefully
         try:
             text = data.decode("utf-8")
             payload = json.loads(text)
@@ -40,14 +39,14 @@ class TelemetryUDPProtocol(asyncio.DatagramProtocol):
         asyncio.create_task(self._process_batch(batch, server_received_at))
 
     async def _process_batch(self, batch: TelemetryBatch, received_at: datetime):
-        # 1. Update State & Calculate Drops (AC 1, 2, 3, 4)
+        # 1. Update State & Calculate Drops
         await state_store.update_channel_activity(
             channel_id=batch.channel_id,
             incoming_sequence=batch.sequence,
             server_received_at=received_at,
         )
 
-        # 2. Broadcast to WebSocket Listeners (Future MVP v1.1 step)
+        # 2. Broadcast to WebSocket Listeners
         listeners = await state_store.get_listeners(batch.channel_id)
         if listeners:
             # TODO: Construct telemetry_update payload and send to listeners

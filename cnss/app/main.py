@@ -43,6 +43,7 @@ app = FastAPI(
 
 # GLOBAL ERROR HANDLER
 
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     """
@@ -61,6 +62,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 
 # ENDPOINTS
+
 
 @app.post("/api/v1/auth/login")
 async def login(request: LoginRequest):

@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub Issue Forms for User Stories, Course Tasks, and Bug Reports. ([#6](https://github.com/SWP-47/traffic-processing-platform/issues/6))
 - Pull Request template with issue linking and changelog verification checklist. ([#6](https://github.com/SWP-47/traffic-processing-platform/issues/6))
 - Added foundational MVP v0 structure for Control and Status Server (CnSS), including `/health` endpoint, Docker configurations (Dev/Prod/Test), integration tests, and CI workflow. ([#30](https://github.com/SWP-47/traffic-processing-platform/issues/30))
+- Implemented bidirectional packet counting in Traffic Processor and aggregated UDP dispatch to Control and Status Server via Communication Node ([#77](https://github.com/SWP-47/traffic-processing-platform/issues/77))
 
 ### Changed
 - WebSocket endpoint URL now requires `channel_id` query parameter: `wss://{{cnss_host}}:{{cnss_ws_port}}/api/v1/ws/telemetry?token={{access_token}}&channel_id={{channel_id}}`. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))

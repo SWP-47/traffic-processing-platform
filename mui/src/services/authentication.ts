@@ -11,9 +11,13 @@ export interface UserData {
 };
 
 class AuthenticationService {
-    private username: string | undefined;
-    private role: Role;
     private token: string | undefined;
+
+    private state: UserData = {
+        isAuthenticated: false,
+        username: undefined,
+        role: undefined,
+    };
 
     private listeners = new Set<() => void>();
 
@@ -23,11 +27,7 @@ class AuthenticationService {
     }
 
     getSnapshot(): UserData {
-        return {
-            isAuthenticated: this.isAuthenticated(),
-            username: this.username,
-            role: this.role,
-        };
+        return this.state;
     }
 
     private notifyAll(): void {
@@ -39,11 +39,11 @@ class AuthenticationService {
     }
 
     getUsername(): string | undefined {
-        return this.username;
+        return this.state.username;
     }
 
     getRole(): Role {
-        return this.role;
+        return this.state.role;
     }
 
     getToken() : string | undefined {
@@ -60,17 +60,25 @@ class AuthenticationService {
         const { data, error } = await apiClient.POST('/api/v1/auth/login', { body: credentials });
         if (error) throw error;
 
-        this.username = credentials.username;
         this.token = data.access_token;
-        this.role = data.role;
+
+        this.state = {
+           username: credentials.username,
+           role: data.role,
+           isAuthenticated: true
+        };
 
         // implement auto renewal
         this.notifyAll();
     }
 
     logout() {
-        this.username = undefined;
-        this.role = undefined;
+        this.state = {
+            isAuthenticated: false,
+            username: undefined,
+            role: undefined
+        }
+
         this.token = undefined;
 
         this.notifyAll();

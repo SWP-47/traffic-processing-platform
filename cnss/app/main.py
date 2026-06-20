@@ -27,7 +27,9 @@ class TokenMaskingFilter(logging.Filter):
         if record.args:
             try:
                 record.msg = record.msg % record.args
-                record.args = None  # Crucial: Prevents formatter from re-applying unmasked args
+                record.args = (
+                    None  # Crucial: Prevents formatter from re-applying unmasked args
+                )
             except (TypeError, ValueError):
                 pass
 
@@ -35,7 +37,7 @@ class TokenMaskingFilter(logging.Filter):
         if isinstance(record.msg, str):
             # Matches ?token=... or &token=... up to the next space or &
             record.msg = re.sub(r"([?&]token=)[^ &\s]+", r"\1[REDACTED]", record.msg)
-            
+
         return True
 
 
@@ -250,7 +252,7 @@ async def websocket_telemetry(
 ):
     # 1. Validate Query Parameters
     if not token:
-        await websocket.accept() # Accept first to allow WS close frame
+        await websocket.accept()  # Accept first to allow WS close frame
         await websocket.close(code=4001, reason="invalid_token")
         return
     if not channel_id:

@@ -10,6 +10,12 @@ from .config import settings
 from .models import LoginRequest
 from .auth import authenticate_user, create_access_token, get_current_user, TokenPayload
 
+import asyncio
+
+from fastapi import WebSocket, WebSocketDisconnect, Query
+from .auth import get_ws_user
+from .tasks import background_timeout_and_gc_task
+
 logging.basicConfig(
     level=settings.log_level.upper(),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -27,10 +33,22 @@ async def lifespan(app: FastAPI):
     udp_transport = await start_udp_server(
         host=settings.cnss_host, port=settings.cnss_udp_port
     )
+
+    bg_task = asyncio.create_task(background_timeout_and_gc_task())
+
     yield
     if udp_transport:
         udp_transport.close()
         logger.info("UDP Telemetry Listener stopped.")
+
+    bg_task.cancel()
+    try:
+        await bg_task
+    except asyncio.CancelledError:
+        pass
+
+    if udp_transport:
+        udp_transport.close()
 
 
 app = FastAPI(
@@ -161,3 +179,50 @@ async def health_check():
         "channels_total": len(channels),
         "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     }
+
+
+@app.websocket("/api/v1/ws/telemetry")
+async def websocket_telemetry(
+    websocket: WebSocket, token: str = Query(None), channel_id: str = Query(None)
+):
+    # 1. Validate Query Parameters
+    if not token:
+        await websocket.close(code=4001, reason="invalid_token")
+        return
+    if not channel_id:
+        await websocket.close(code=4002, reason="missing_channel")
+        return
+
+    # 2. Validate Token
+    try:
+        user = await get_ws_user(token)
+    except HTTPException:
+        await websocket.close(code=4001, reason="invalid_token")
+        return
+
+    # 3. Validate Scope
+    if user.role != "admin" and channel_id not in user.scope:
+        await websocket.close(code=4003, reason="channel_forbidden")
+        return
+
+    # 4. Validate Channel Existence
+    channel = await state_store.get_channel(channel_id)
+    if not channel:
+        await websocket.close(code=4004, reason="channel_not_found")
+        return
+
+    # 5. Accept & Register Listener
+    await websocket.accept()
+    await state_store.add_listener(channel_id, websocket)
+
+    try:
+        while True:
+            # Keep connection alive, handle basic ping/pong
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        pass
+    finally:
+        # Ensure listener is removed on disconnect (Memory Leak Prevention)
+        await state_store.remove_listener(channel_id, websocket)

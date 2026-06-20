@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- MUI Login page with username/password form, client-side validation, and loading state during authentication submission. ([#114](https://github.com/SWP-47/traffic-processing-platform/issues/114))
+- Functional MUI Login page, centralized JWT token management via `AuthenticationService`, visual error feedback for invalid credentials, and automatic redirection upon successful authentication. ([#115](https://github.com/SWP-47/traffic-processing-platform/issues/115))
 - REST endpoint `GET /api/v1/health` returning CnSS operational status with aggregate channel statistics (`channels_active`, `channels_total`) and component health indicators. ([#84](https://github.com/SWP-47/traffic-processing-platform/issues/84))
 - REST endpoint `GET /api/v1/channels` listing all channels accessible to the authenticated user with `is_active` status and `last_activity_timestamp` for each channel. ([#84](https://github.com/SWP-47/traffic-processing-platform/issues/84))
 - REST endpoint `GET /api/v1/channel/{channel_id}/status` providing detailed status for a specific channel including activity state and last activity timestamp. ([#84](https://github.com/SWP-47/traffic-processing-platform/issues/84))

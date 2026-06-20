@@ -67,6 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated `openapi.yaml` and `postman_collection.json` to reflect the new multi-channel API and authentication flow. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 - Renamed telemetry traffic directions from `direction_a`/`direction_b` to `direction_out`/`direction_in` across API documentation, `openapi.yaml`, and `postman_collection.json` for improved clarity. ([#46](https://github.com/SWP-47/traffic-processing-platform/issues/46))
 - Updated WebSocket Connection Lifecycle to explicitly mandate server-initiated `ping`/`pong` mechanism for dead peer detection and memory leak prevention. ([#64](https://github.com/SWP-47/traffic-processing-platform/issues/64))
+- Changes Communication Node (CN) telemetry sender to correctly format JSON payloads and transmit UDP batches to CnSS ([#76](https://github.com/SWP-47/traffic-processing-platform/issues/76)).
 
 ### Deprecated
 

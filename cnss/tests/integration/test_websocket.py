@@ -38,7 +38,9 @@ class TestWebSocketTelemetry:
 
     def test_missing_token(self, client):
         """Missing token -> 4001 invalid_token."""
-        with client.websocket_connect("/api/v1/ws/telemetry?channel_id=test-ch") as websocket:
+        with client.websocket_connect(
+            "/api/v1/ws/telemetry?channel_id=test-ch"
+        ) as websocket:
             with pytest.raises(WebSocketDisconnect) as excinfo:
                 websocket.receive_text()
         assert excinfo.value.code == 4001
@@ -55,7 +57,9 @@ class TestWebSocketTelemetry:
     def test_missing_channel_id(self, client):
         """Missing channel_id -> 4002 missing_channel."""
         token = self._get_token("admin")
-        with client.websocket_connect(f"/api/v1/ws/telemetry?token={token}") as websocket:
+        with client.websocket_connect(
+            f"/api/v1/ws/telemetry?token={token}"
+        ) as websocket:
             with pytest.raises(WebSocketDisconnect) as excinfo:
                 websocket.receive_text()
         assert excinfo.value.code == 4002

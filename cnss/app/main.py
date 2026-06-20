@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, Request, HTTPException
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+import re
 import logging
 
 from .udp_server import start_udp_server
@@ -16,6 +17,23 @@ from fastapi import WebSocket, WebSocketDisconnect, Query
 from .auth import get_ws_user
 from .tasks import background_timeout_and_gc_task
 
+
+class TokenMaskingFilter(logging.Filter):
+    """Masks tokens in query parameters to prevent leakage in logs."""
+
+    def filter(self, record):
+        if isinstance(record.msg, str):
+            # Matches ?token=... or &token=... up to the next space or &
+            record.msg = re.sub(r"([?&]token=)[^ &\s]+", r"\1[REDACTED]", record.msg)
+        return True
+
+
+# Apply filter to Uvicorn and App loggers
+logging.getLogger("uvicorn.access").addFilter(TokenMaskingFilter())
+logging.getLogger("uvicorn.error").addFilter(TokenMaskingFilter())
+logging.getLogger("app").addFilter(TokenMaskingFilter())
+
+# Basic logging config
 logging.basicConfig(
     level=settings.log_level.upper(),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",

@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     # Logging Configuration
     log_level: str = "INFO"  # Default to INFO for safety
 
+    # Telemetry Timeouts & Garbage Collection
+    activity_timeout_ms: int = 5000
+    channel_retention_ms: int = 86400000
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

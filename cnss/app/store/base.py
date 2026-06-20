@@ -48,3 +48,13 @@ class StateStore(ABC):
     async def get_listeners(self, channel_id: str) -> Set[Any]:
         """Get a copy of the listeners set for broadcasting."""
         pass
+
+    @abstractmethod
+    async def set_channel_inactive(self, channel_id: str) -> bool:
+        """Mark a channel as inactive."""
+        pass
+
+    @abstractmethod
+    async def remove_channel(self, channel_id: str) -> bool:
+        """Remove a channel from the registry."""
+        pass

@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- OpenAPI TypeScript type generation from CnSS API schema using `openapi-typescript` for end-to-end type safety between frontend and backend. ([#60](https://github.com/SWP-47/traffic-processing-platform/issues/60))
+- Type-safe REST API client using `openapi-fetch` singleton with centralized error handling middleware and standardized `ApiError` class for HTTP error mapping. ([#60](https://github.com/SWP-47/traffic-processing-platform/issues/60))
+- Real-time telemetry WebSocket service with automatic reconnection and ping/pong protocol. ([#60](https://github.com/SWP-47/traffic-processing-platform/issues/60))
+- Vite development proxy configuration for seamless API and WebSocket forwarding during local development, eliminating CORS issues. ([#60](https://github.com/SWP-47/traffic-processing-platform/issues/60))
+- Production nginx configuration with WebSocket upgrade support. ([#60](https://github.com/SWP-47/traffic-processing-platform/issues/60))
 - `POST /api/v1/auth/login` endpoint for user authentication, issuing HS256-signed JWT tokens containing `role` and `scope` claims for per-channel access control. ([#80](https://github.com/SWP-47/traffic-processing-platform/issues/80))
 - Pydantic models (`LoginRequest`, `LoginResponse`, `TokenPayload`) for strict validation of authentication payloads and JWT claims. ([#80](https://github.com/SWP-47/traffic-processing-platform/issues/80))
 - Global `HTTPException` handler to enforce the standardized error response format (`{"error": "<code>", "message": "<text>"}`) across all REST endpoints. ([#80](https://github.com/SWP-47/traffic-processing-platform/issues/80))

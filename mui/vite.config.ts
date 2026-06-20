@@ -28,6 +28,11 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
         }
       }
+    },
+    define: {
+      'console.log': mode === "production" ? '() => {}' : undefined,
+      'console.debug': mode === "production" ? '() => {}' : undefined,
+      'console.info': mode === "production" ? '() => {}' : undefined,
     }
   }
 })

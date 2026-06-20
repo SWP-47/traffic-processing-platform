@@ -1,10 +1,15 @@
 /**
- * This file provieds TelemetryService singleton object that works with telemetry WebSocket.
- * Only one concurrent conenction can be opened.
- * After INACTIVITY_TIMEOUT ms servise updates telemetry info so that channel is inactive and metrics are zero. 
+ * This file provides TelemetryService singleton object that works with telemetry WebSocket.
+ * Only one concurrent connection can be opened.
+ * After INACTIVITY_TIMEOUT ms service updates telemetry info so that channel is inactive and metrics are zero. 
  */
 
-import type { TelemetryConnectionData, TelemetryUpdate } from "./types";
+import type { components } from "@/api/schema";
+export type TelemetryUpdate = components["schemas"]["TelemetryUpdate"];
+
+export interface TelemetryConnectionData {
+    channel_id: string
+};
 
 const WS_ERROR_CODE = {
     'invalid_token': 4001,
@@ -16,7 +21,7 @@ const WS_ERROR_CODE = {
 
 const INACTIVITY_TIMEOUT = 6000; // in ms.
 
-export class TelemetryStateManager {
+class TelemetryStateManager {
     private lastUpdate: TelemetryUpdate | null = null;
     private listeners = new Set<() => void>();
     
@@ -94,7 +99,7 @@ class TelemetryService {
     /**
      * Add new subscriber to telemery updates
      * @param callback 
-     * @returns function to unsibscribe
+     * @returns function to unsubscribe
      */
     subscribe(callback: () => void): () => void {
         return this.stateManager.subscribe(callback);
@@ -109,7 +114,7 @@ class TelemetryService {
 
     /**
      * Set token that is used when connecting to WebSocket 
-     * @param token Bareer token
+     * @param token Bearer token
      * @see /api/README.md
      */
     setAuthenticationToken(token: string): void {
@@ -120,13 +125,13 @@ class TelemetryService {
     // WebSocket handling
     /**
      * Connect to WebSocket
-     * This service handles only one conenction in a time.
-     * If new conenction was initiated, previous closes.
+     * This service handles only one connection in a time.
+     * If new connection was initiated, previous closes.
      * @param data connection data
      */
     connect(data: TelemetryConnectionData): void {
         // If connection is already established OR is not fully closed
-        // Schedule new conenction after closing of the current one.
+        // Schedule new connection after closing of the current one.
         if (this.connection) {
             this.followingConnectionData = data;
             if (this.connection.readyState != WebSocket.CLOSING) this.disconnect();    
@@ -137,6 +142,7 @@ class TelemetryService {
     }
 
     private _connect(data: TelemetryConnectionData) {
+        console.debug("[TelemetryService] Connecting to a WebSocket.", data);
         this.lastConnectionData = data;
         this.connection = new WebSocket(`/api/v1/ws/telemetry?channel_id=${data.channel_id}&token=${this.token}`);
         this.setListeners();
@@ -149,11 +155,12 @@ class TelemetryService {
         this.connection.onclose = (event) => this.onClose(event);
         this.connection.onmessage = (event) => this.onMessage(event);
         this.connection.onerror = (error) => {
-            console.error('WebSocket error:', error);
+            console.error('[TelemetryService] WebSocket error:', error);
         };
     }
 
-    onOpen() {
+    private onOpen() {
+        console.debug("[TelemetryService] Connected!");
         this.updateInactivityTimer();
         this.stopReconnection();
     }
@@ -169,6 +176,7 @@ class TelemetryService {
         }
 
         this.reconnectionTimeout = setTimeout(() => {
+            console.debug(`[TelemetryService] Reconnection attempt #${this.reconnectionAttempt}.`);
             this._connect(this.lastConnectionData!);
         }, getBackoffDelay());
     }
@@ -178,13 +186,14 @@ class TelemetryService {
      * @returns 
      */
     disconnect(): void {
+        console.debug("[TelemetryService] Disconnecting from a WebSocket.", this.lastConnectionData);
         if (!this.connection) return;
         this.stopReconnection();
         this.connection.close();
     }
     
     private onClose(event: CloseEvent) {
-        console.warn(`WebSocket closed with code ${event.code}.`);
+        console.debug(`[TelemetryService] WebSocket closed with code ${event.code}.`, this.lastConnectionData);
 
         this.connection = null;
         this.clearInactivityTimer();
@@ -215,23 +224,26 @@ class TelemetryService {
 
         // Ping/pong
         if (event.data === "ping") {
+            console.debug(`[TelemetryService] WebSocket received Ping packet.`);
             this.connection!.send("pong");
             return;
         }
 
         // TelemetryUpdate
         try {
+            console.debug(`[TelemetryService] WebSocket received telemetry update.`);
             const data = JSON.parse(event.data);
             this.stateManager.update(data);            
         } catch (e) {
-            console.error('Failed to parse telemetry:', e);
+            console.error('[TelemetryService] Failed to parse telemetry:', e);
         }
     }
 
     private updateInactivityTimer(): void {
         this.clearInactivityTimer();
 
-        this.inactivityTimer = window.setTimeout(() => {
+        this.inactivityTimer = setTimeout(() => {
+            console.debug(`[TelemetryService] Connection was idle for ${INACTIVITY_TIMEOUT / 1000} s, updating channel activity.`);
             this.stateManager.update(this.getInactiveUpdateObject());
         }, INACTIVITY_TIMEOUT);
     }

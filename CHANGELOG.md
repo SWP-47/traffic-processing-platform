@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- MUI Login page with username/password form, client-side validation, and loading state during authentication submission. ([#114](https://github.com/SWP-47/traffic-processing-platform/issues/114))
+- REST endpoint `GET /api/v1/health` returning CnSS operational status with aggregate channel statistics (`channels_active`, `channels_total`) and component health indicators. ([#84](https://github.com/SWP-47/traffic-processing-platform/issues/84))
+- REST endpoint `GET /api/v1/channels` listing all channels accessible to the authenticated user with `is_active` status and `last_activity_timestamp` for each channel. ([#84](https://github.com/SWP-47/traffic-processing-platform/issues/84))
+- REST endpoint `GET /api/v1/channel/{channel_id}/status` providing detailed status for a specific channel including activity state and last activity timestamp. ([#84](https://github.com/SWP-47/traffic-processing-platform/issues/84))
+- WebSocket endpoint `WS /api/v1/ws/telemetry` for real-time telemetry streaming with channel-scoped subscriptions and automatic event broadcasting at 2-10 Hz. ([#85](https://github.com/SWP-47/traffic-processing-platform/issues/85))
+- Channel-scoped WebSocket subscriptions allowing MUI clients to subscribe to specific channels and receive isolated `telemetry_update` events. ([#85](https://github.com/SWP-47/traffic-processing-platform/issues/85))
+- Authorization middleware validating JWT tokens on all protected REST and WebSocket endpoints with role-based access control (admin/viewer). ([#83](https://github.com/SWP-47/traffic-processing-platform/issues/83))
+- Per-channel access control enforcing scope restrictions: `admin` role bypasses scope checks (unrestricted access), `viewer` role restricted to channels in JWT `scope` array. ([#83](https://github.com/SWP-47/traffic-processing-platform/issues/83))
+- Token masking filter (`TokenMaskingFilter`) sanitizing logs to prevent JWT token leakage via query parameters, replacing tokens with `?token=[REDACTED]`. ([#86](https://github.com/SWP-47/traffic-processing-platform/issues/86))
+- WebSocket ping/pong keep-alive mechanism sending protocol-level ping frames every 30 seconds with 10-second pong timeout for dead connection detection. ([#86](https://github.com/SWP-47/traffic-processing-platform/issues/86))
+- Automatic WebSocket listener cleanup on disconnect/error to prevent memory leaks, ensuring immediate removal from `channel.listeners` sets. ([#86](https://github.com/SWP-47/traffic-processing-platform/issues/86))
+- Comprehensive integration test suite for REST endpoints (health, channels, status) validating authentication, authorization, response structure, and error handling. ([#84](https://github.com/SWP-47/traffic-processing-platform/issues/84))
+- Integration tests for WebSocket telemetry endpoint covering connection validation, channel subscriptions, broadcast isolation, and custom close codes. ([#85](https://github.com/SWP-47/traffic-processing-platform/issues/85))
+- Integration tests for JWT authorization middleware covering missing headers, expired tokens, invalid signatures, admin unrestricted access, and viewer scope enforcement. ([#83](https://github.com/SWP-47/traffic-processing-platform/issues/83))
 - Per-channel timeout detection: CnSS now monitors channel activity and automatically sets `is_active=false` if no UDP telemetry is received within `activity_timeout_ms` (default: 5000ms), implementing the Channel Activity Indicator (US-001). ([#81](https://github.com/SWP-47/traffic-processing-platform/issues/81))
 - Channel garbage collection: Inactive channels (`is_active=false`) that have zero WebSocket listeners and exceed `channel_retention_ms` (default: 24 hours) are automatically removed from the in-memory registry to prevent memory leaks. ([#81](https://github.com/SWP-47/traffic-processing-platform/issues/81))
 - Real-time state broadcasting: CnSS now pushes `telemetry_update` events to all subscribed WebSocket listeners when a channel's `is_active` state changes to `false` (timeout) or recovers to `true` (new UDP batch received), enabling real-time MUI dashboard updates (US-015). ([#81](https://github.com/SWP-47/traffic-processing-platform/issues/81))
@@ -44,6 +58,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented bidirectional packet counting in Traffic Processor and aggregated UDP dispatch to Control and Status Server via Communication Node ([#77](https://github.com/SWP-47/traffic-processing-platform/issues/77))
 
 ### Changed
+
+- All protected REST and WebSocket endpoints now require `Authorization: Bearer {{access_token}}` header or query parameter for authentication. ([#83](https://github.com/SWP-47/traffic-processing-platform/issues/83))
 - Updated `docker-compose.yml` to expose and map the UDP port 5140 for telemetry ingestion. ([#79](https://github.com/SWP-47/traffic-processing-platform/issues/79))
 - WebSocket endpoint URL now requires `channel_id` query parameter: `wss://{{cnss_host}}:{{cnss_ws_port}}/api/v1/ws/telemetry?token={{access_token}}&channel_id={{channel_id}}`. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 - Channel status endpoint moved from `GET /api/v1/channel/status` to `GET /api/v1/channel/{channel_id}/status` with `channel_id` as a path parameter. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
@@ -66,6 +82,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- Implemented log sanitization to prevent JWT token leakage in access logs via query parameter masking. ([#86](https://github.com/SWP-47/traffic-processing-platform/issues/86))
+- Added WebSocket ping/pong mechanism for dead peer detection and connection health monitoring. ([#86](https://github.com/SWP-47/traffic-processing-platform/issues/86))
+- Enforced per-channel authorization matrix with role-based access control (admin/viewer) and scope validation for all REST and WebSocket endpoints. ([#83](https://github.com/SWP-47/traffic-processing-platform/issues/83))
 - Implemented stateless JWT-based authentication (HS256) with automatic expiration checking (`exp` claim) to protect REST endpoints and prepare for WebSocket authorization. ([#80](https://github.com/SWP-47/traffic-processing-platform/issues/80))
 - Added JWT-based authentication for all REST and WebSocket endpoints to protect telemetry data and prevent unauthorized access. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 - CnSS now sanitizes access logs to prevent `access_token` leakage via query parameters. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))

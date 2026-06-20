@@ -5,13 +5,13 @@ import time
 
 UDP_IP = "127.0.0.1"
 UDP_PORT = 5140
-CHANNEL_ID = "test-bridge-01"
+CHANNEL_ID = "test-bridge-0"
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-def send_batch(seq):
+def send_batch(seq, i):
     payload = {
-        "channel_id": CHANNEL_ID,
+        "channel_id": CHANNEL_ID + f"{i}",
         "sequence": seq,
         "window_ms": 1000,
         "direction_out": {"packets": 150},
@@ -23,7 +23,7 @@ def send_batch(seq):
 
 # Отправляем 3 пакета с интервалом в 1 секунду
 for i in range(1, 4):
-    send_batch(i)
+    send_batch(i, i)
     time.sleep(1)
 
 print("UDP sending stopped. Watch the logs and WebSocket!")

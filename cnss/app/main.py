@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, Request, HTTPException
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+import re
 import logging
 
 from .udp_server import start_udp_server
@@ -16,6 +17,36 @@ from fastapi import WebSocket, WebSocketDisconnect, Query
 from .auth import get_ws_user
 from .tasks import background_timeout_and_gc_task
 
+
+class TokenMaskingFilter(logging.Filter):
+    """Masks tokens in query parameters to prevent leakage in logs."""
+
+    def filter(self, record):
+        # 1. Resolve lazy formatting (e.g., logger.info("msg %s", arg))
+        # This flattens the template and arguments into a single string.
+        if record.args:
+            try:
+                record.msg = record.msg % record.args
+                record.args = (
+                    None  # Crucial: Prevents formatter from re-applying unmasked args
+                )
+            except (TypeError, ValueError):
+                pass
+
+        # 2. Apply regex masking on the fully resolved string
+        if isinstance(record.msg, str):
+            # Matches ?token=... or &token=... up to the next space or &
+            record.msg = re.sub(r"([?&]token=)[^ &\s]+", r"\1[REDACTED]", record.msg)
+
+        return True
+
+
+# Apply filter to Uvicorn and App loggers
+logging.getLogger("uvicorn.access").addFilter(TokenMaskingFilter())
+logging.getLogger("uvicorn.error").addFilter(TokenMaskingFilter())
+logging.getLogger("app").addFilter(TokenMaskingFilter())
+
+# Basic logging config
 logging.basicConfig(
     level=settings.log_level.upper(),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -165,8 +196,42 @@ async def list_channels(user: TokenPayload = Depends(get_current_user)):
     return {"channels": response_channels, "total": len(response_channels)}
 
 
-@app.get("/health")
-async def health_check():
+@app.get("/api/v1/channel/{channel_id}/status")
+async def get_channel_status(
+    channel_id: str, user: TokenPayload = Depends(get_current_user)
+):
+    """
+    REST fallback for a specific channel's activity indicator.
+    """
+    # Check if channel exists
+    channel = await state_store.get_channel(channel_id)
+    if not channel:
+        return JSONResponse(
+            status_code=404,
+            content={"error": "not_found", "message": "Channel not found."},
+        )
+
+    # Check Authorization Matrix (Viewer scope enforcement)
+    if user.role != "admin" and channel_id not in user.scope:
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "forbidden",
+                "message": "You do not have access to this channel.",
+            },
+        )
+
+    return {
+        "channel_id": channel.channel_id,
+        "is_active": channel.is_active,
+        "last_activity_timestamp": channel.last_activity_timestamp.isoformat().replace(
+            "+00:00", "Z"
+        ),
+    }
+
+
+@app.get("/api/v1/health")
+async def health_check(user: TokenPayload = Depends(get_current_user)):
     """
     Verify operational status of the CnSS and aggregate channel statistics.
     """
@@ -187,9 +252,11 @@ async def websocket_telemetry(
 ):
     # 1. Validate Query Parameters
     if not token:
+        await websocket.accept()  # Accept first to allow WS close frame
         await websocket.close(code=4001, reason="invalid_token")
         return
     if not channel_id:
+        await websocket.accept()
         await websocket.close(code=4002, reason="missing_channel")
         return
 
@@ -197,21 +264,24 @@ async def websocket_telemetry(
     try:
         user = await get_ws_user(token)
     except HTTPException:
+        await websocket.accept()
         await websocket.close(code=4001, reason="invalid_token")
         return
 
     # 3. Validate Scope
     if user.role != "admin" and channel_id not in user.scope:
+        await websocket.accept()
         await websocket.close(code=4003, reason="channel_forbidden")
         return
 
     # 4. Validate Channel Existence
     channel = await state_store.get_channel(channel_id)
     if not channel:
+        await websocket.accept()
         await websocket.close(code=4004, reason="channel_not_found")
         return
 
-    # 5. Accept & Register Listener
+    # 5. Accept & Register Listener (Normal flow)
     await websocket.accept()
     await state_store.add_listener(channel_id, websocket)
 

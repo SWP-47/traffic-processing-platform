@@ -3,11 +3,14 @@ import time
 from datetime import datetime, timezone
 from typing import List
 
-from fastapi import Depends, HTTPException, Query
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import HTTPException, Query
+from fastapi.security import HTTPBearer
 from pydantic import BaseModel
 
 from .config import settings
+
+from fastapi import Header, status
+from fastapi.security import OAuth2PasswordBearer
 
 # MOCK USER STORE & AUTHENTICATION
 
@@ -107,16 +110,58 @@ def decode_token(token: str) -> TokenPayload:
 security = HTTPBearer(auto_error=False)
 
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-) -> TokenPayload:
-    # If credentials is None, it means the Authorization header is missing or invalid
-    if credentials is None:
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
+
+
+async def get_current_user(authorization: str = Header(default=None)) -> TokenPayload:
+    """
+    Validates the JWT token and returns the TokenPayload.
+    Enforces AC 1, AC 2.
+    """
+    # AC 1: Check for missing or malformed Authorization header
+    if not authorization:
         raise HTTPException(
-            status_code=401,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"error": "unauthorized", "message": "Invalid or expired token."},
         )
-    return decode_token(credentials.credentials)
+
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"error": "unauthorized", "message": "Invalid or expired token."},
+        )
+
+    # Decode and Validate Token (AC 2)
+    try:
+        payload = jwt.decode(
+            token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
+        )
+        sub = payload.get("sub")
+        role = payload.get("role")
+        scope = payload.get("scope", [])
+
+        if sub is None or role is None:
+            raise jwt.InvalidTokenError("Missing required claims")
+
+        return TokenPayload(
+            sub=sub,
+            iat=payload.get("iat"),
+            exp=payload.get("exp"),
+            role=role,
+            scope=scope,
+        )
+
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"error": "unauthorized", "message": "Invalid or expired token."},
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"error": "unauthorized", "message": "Invalid or expired token."},
+        )
 
 
 async def get_ws_user(token: str = Query(...)) -> TokenPayload:

@@ -219,7 +219,7 @@ sequenceDiagram
 
 ### 4.3. CnSS to MUI (WebSocket Real-time Push)
 - **Transport:** WebSocket (WSS recommended for US-014 Remote Access).
-- **Endpoint:** `wss://{{cnss_host}}:{{cnss_ws_port}}/api/v1/ws/telemetry?token={{access_token}}&channel_id={{channel_id}}`
+- **Endpoint:** `wss://{{cnss_host}}:{{cnss_http_port}}/api/v1/ws/telemetry?token={{access_token}}&channel_id={{channel_id}}`
 - **Authentication & Authorization:**
   - Token extracted from the `token` query parameter.
   - `channel_id` extracted from the `channel_id` query parameter.

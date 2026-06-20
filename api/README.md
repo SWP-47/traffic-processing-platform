@@ -6,7 +6,7 @@
 |-------------|-------------|---------|
 | `{{cnss_host}}` | CnSS server hostname/IP | `cnss.example.com` |
 | `{{cnss_udp_port}}` | UDP port for CN ingestion | `5140` |
-| `{{cnss_ws_port}}` | WebSocket port for MUI | `8443` |
+| `{{cnss_http_port}}` | WebSocket port for MUI | `8000` |
 | `{{access_token}}` | Bearer token for authenticated endpoints | `eyJhbG...` |
 | `{{channel_id}}` | Identifier for the monitored bridge | `primary-bridge-01` |
 
@@ -295,7 +295,7 @@
 
 **URL Format:**
 ```
-wss://{{cnss_host}}:{{cnss_ws_port}}/api/v1/ws/telemetry?token={{access_token}}&channel_id={{channel_id}}
+wss://{{cnss_host}}:{{cnss_http_port}}/api/v1/ws/telemetry?token={{access_token}}&channel_id={{channel_id}}
 ```
 
 **Connection Lifecycle:**
@@ -421,7 +421,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 **WebSocket Connection:**
 ```
-wss://{{cnss_host}}:{{cnss_ws_port}}/api/v1/ws/telemetry?token=eyJhbG...&channel_id=bridge-berlin-01
+wss://{{cnss_host}}:{{cnss_http_port}}/api/v1/ws/telemetry?token=eyJhbG...&channel_id=bridge-berlin-01
 ```
 
 ### 3.4. Token Storage (MUI)

@@ -1,4 +1,4 @@
-from typing import Any, Optional, Set
+from typing import Any, List, Optional, Set
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 
@@ -27,3 +27,17 @@ class ChannelState(BaseModel):
 
     # Transient field: WebSocket listeners are kept in memory only.
     listeners: Set[Any] = Field(default_factory=set, exclude=True)
+
+
+class LoginRequest(BaseModel):
+    username: Optional[str] = None
+    password: Optional[str] = None
+
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "Bearer"
+    expires_in: int
+    issued_at: str  # ISO 8601 format
+    role: str
+    scope: List[str]

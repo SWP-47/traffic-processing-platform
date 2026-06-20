@@ -26,7 +26,6 @@ class TestAuthMiddleware:
     def _get_headers(self, token):
         return {"Authorization": f"Bearer {token}"}
 
-    # AC 1: Missing Header
     def test_missing_authorization_header_returns_401(self, client):
         """Given a request without the header, Then return 401 with specific JSON."""
         response = client.get("/api/v1/channels")
@@ -34,7 +33,6 @@ class TestAuthMiddleware:
         data = response.json()
         assert data == {"error": "unauthorized", "message": "Invalid or expired token."}
 
-    # AC 2: Invalid/Expired Token
     def test_expired_token_returns_401(self, client):
         """Given an expired token, Then return 401."""
         token = self._get_token("viewer", expired=True)
@@ -49,7 +47,6 @@ class TestAuthMiddleware:
         assert response.status_code == 401
         assert response.json()["error"] == "unauthorized"
 
-    # AC 3: Admin Access (Bypass Scope)
     def test_admin_has_unrestricted_access(self, client):
         """Given a request from admin, When checking channel access, Then access is allowed regardless of scope."""
         admin_token = self._get_token("admin", scope=[]) # Empty scope, but admin
@@ -58,7 +55,6 @@ class TestAuthMiddleware:
             response = client.get("/api/v1/channels", headers=self._get_headers(admin_token))
             assert response.status_code == 200
 
-    # AC 4: Viewer Access (Allowed)
     def test_viewer_allowed_in_scope(self, client):
         """Given viewer with scope=["bridge-berlin-01"], When accessing it, Then 200."""
         viewer_token = self._get_token("viewer", scope=["bridge-berlin-01"])
@@ -69,7 +65,6 @@ class TestAuthMiddleware:
             response = client.get("/api/v1/channels", headers=self._get_headers(viewer_token))
             assert response.status_code == 200
 
-    # AC 5: Viewer Access (Forbidden)
     def test_viewer_forbidden_out_of_scope(self, client):
         """Given viewer with scope=["bridge-berlin-01"], When accessing bridge-prague, Then 403."""
         viewer_token = self._get_token("viewer", scope=["bridge-berlin-01"])
@@ -79,7 +74,6 @@ class TestAuthMiddleware:
             is_active = False
             last_activity_timestamp = datetime.now(timezone.utc)
 
-        # FIX 2: Use AsyncMock so that `await state_store.get_channel()` works correctly
         mock_store = AsyncMock()
         mock_store.get_channel.return_value = MockChannel()
         

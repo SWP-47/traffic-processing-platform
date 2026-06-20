@@ -1,9 +1,14 @@
 import { useState } from "react";
 import type { SubmitEvent } from 'react';
 import styles from './Login.module.css';
+import auth from "@/services/authentication";
+import { useNavigate } from "react-router";
+import type { ApiError } from "@/api/errors";
 
 function Login() {
+  const navigate = useNavigate();
   const [ submitting, setSubmitting ] = useState<boolean>(false);
+  const [ errorMessage, setErrorMessage ] = useState<string>('');
 
   const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -21,26 +26,35 @@ function Login() {
   }
 
   const submit = async (data: FormData) => {
-    // Test code
-    const username = data.get("username");
-    const password = data.get("password");
-    console.log(username, password);
+    const username = data.get("username") as string;
+    const password = data.get("password") as string;
 
     setSubmitting(true);
-    await new Promise(r => setTimeout(r, 2000));
-    setSubmitting(false);
+    try {
+      await auth.login({
+        username: username,
+        password: password
+      });
+
+      navigate("/");
+    } catch (e) {
+      setErrorMessage((e as ApiError).message);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
     <div className={styles.page}>
       <form className={styles.form} onSubmit={handleSubmit}>
-        <h1>Login</h1>
+        <h1 className={styles.title}>Login</h1>
         <input
           type="text"
           name="username"
           placeholder="Username"
           disabled={submitting}
           required
+          className={styles.input}
         />
         <input
           type="password"
@@ -48,13 +62,18 @@ function Login() {
           placeholder="Password"
           disabled={submitting}
           required
+          className={styles.input}
         />
+        <p className={styles.error} style={{
+          display: (errorMessage === '' ? 'none' : 'block')
+        }}>
+          {errorMessage}
+        </p>
         <button
           type="submit"
-          className="button"
-          disabled={submitting}
-        >
-          Login
+          className={`button ${styles.button}`}
+          disabled={submitting}>
+            Login
         </button>
       </form>
     </div>

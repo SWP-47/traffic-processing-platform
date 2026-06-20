@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Per-channel timeout detection: CnSS now monitors channel activity and automatically sets `is_active=false` if no UDP telemetry is received within `activity_timeout_ms` (default: 5000ms), implementing the Channel Activity Indicator (US-001). ([#81](https://github.com/SWP-47/traffic-processing-platform/issues/81))
+- Channel garbage collection: Inactive channels (`is_active=false`) that have zero WebSocket listeners and exceed `channel_retention_ms` (default: 24 hours) are automatically removed from the in-memory registry to prevent memory leaks. ([#81](https://github.com/SWP-47/traffic-processing-platform/issues/81))
+- Real-time state broadcasting: CnSS now pushes `telemetry_update` events to all subscribed WebSocket listeners when a channel's `is_active` state changes to `false` (timeout) or recovers to `true` (new UDP batch received), enabling real-time MUI dashboard updates (US-015). ([#81](https://github.com/SWP-47/traffic-processing-platform/issues/81))
+- Background asynchronous task (`background_timeout_and_gc_task`) to periodically evaluate channel timeouts and perform garbage collection without blocking the main event loop. ([#81](https://github.com/SWP-47/traffic-processing-platform/issues/81))
+- Configurable timeout and retention thresholds (`activity_timeout_ms`, `channel_retention_ms`) via environment variables in `app/config.py`. ([#81](https://github.com/SWP-47/traffic-processing-platform/issues/81))
+- Comprehensive integration and unit test suite covering Acceptance Criteria for timeout detection, channel isolation, WebSocket broadcasting on state change, and garbage collection logic. ([#81](https://github.com/SWP-47/traffic-processing-platform/issues/81))
 - `POST /api/v1/auth/login` endpoint for user authentication, issuing HS256-signed JWT tokens containing `role` and `scope` claims for per-channel access control. ([#80](https://github.com/SWP-47/traffic-processing-platform/issues/80))
 - Pydantic models (`LoginRequest`, `LoginResponse`, `TokenPayload`) for strict validation of authentication payloads and JWT claims. ([#80](https://github.com/SWP-47/traffic-processing-platform/issues/80))
 - Global `HTTPException` handler to enforce the standardized error response format (`{"error": "<code>", "message": "<text>"}`) across all REST endpoints. ([#80](https://github.com/SWP-47/traffic-processing-platform/issues/80))

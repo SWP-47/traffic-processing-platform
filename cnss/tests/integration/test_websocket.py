@@ -16,20 +16,17 @@ class TestWebSocketTelemetry:
     def test_valid_connection(self, client):
         """Valid connection adds listener and accepts."""
         test_store = InMemoryStateStore()
-        loop = asyncio.new_event_loop()
-        loop.run_until_complete(
-            test_store.update_channel_activity("test-ch", 1, datetime.now(timezone.utc))
-        )
-        loop.close()
+        
+        # Use asyncio.run for setup to avoid manual loop management/closure issues
+        asyncio.run(test_store.update_channel_activity("test-ch", 1, datetime.now(timezone.utc)))
         
         token = self._get_token("admin")
         url = f"/api/v1/ws/telemetry?token={token}&channel_id=test-ch"
         
         with patch("app.main.state_store", test_store):
             with client.websocket_connect(url) as websocket:
-                # Verify listener was added
-                listeners = loop.run_until_complete(test_store.get_listeners("test-ch"))
-                assert len(listeners) == 1
+                assert "test-ch" in test_store._channels
+                assert len(test_store._channels["test-ch"].listeners) == 1
                 
                 # Verify ping/pong keep-alive works
                 websocket.send_text("ping")
@@ -62,11 +59,7 @@ class TestWebSocketTelemetry:
         """Viewer out of scope -> 4003 channel_forbidden."""
         token = self._get_token("viewer", scope=["other-ch"])
         test_store = InMemoryStateStore()
-        loop = asyncio.new_event_loop()
-        loop.run_until_complete(
-            test_store.update_channel_activity("test-ch", 1, datetime.now(timezone.utc))
-        )
-        loop.close()
+        asyncio.run(test_store.update_channel_activity("test-ch", 1, datetime.now(timezone.utc)))
         
         with patch("app.main.state_store", test_store):
             with pytest.raises(WebSocketDisconnect) as excinfo:
@@ -91,7 +84,6 @@ class TestWebSocketTelemetry:
         test_store = InMemoryStateStore()
         await test_store.update_channel_activity("test-ch", 1, datetime.now(timezone.utc))
         
-        # Mock two listeners for the same channel
         mock_ws1 = AsyncMock()
         mock_ws2 = AsyncMock()
         await test_store.add_listener("test-ch", mock_ws1)
@@ -103,8 +95,9 @@ class TestWebSocketTelemetry:
             timestamp=datetime.now(timezone.utc)
         )
         
-        await broadcast_telemetry_update("test-ch", True, batch, 0, datetime.now(timezone.utc))
+        # Patch the state_store in the broadcast module so it uses our test_store
+        with patch("app.broadcast.state_store", test_store):
+            await broadcast_telemetry_update("test-ch", True, batch, 0, datetime.now(timezone.utc))
         
-        # Both listeners should receive the update
         mock_ws1.send_json.assert_called_once()
         mock_ws2.send_json.assert_called_once()

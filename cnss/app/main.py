@@ -165,8 +165,42 @@ async def list_channels(user: TokenPayload = Depends(get_current_user)):
     return {"channels": response_channels, "total": len(response_channels)}
 
 
-@app.get("/health")
-async def health_check():
+@app.get("/api/v1/channel/{channel_id}/status")
+async def get_channel_status(
+    channel_id: str, user: TokenPayload = Depends(get_current_user)
+):
+    """
+    REST fallback for a specific channel's activity indicator.
+    """
+    # Check if channel exists
+    channel = await state_store.get_channel(channel_id)
+    if not channel:
+        return JSONResponse(
+            status_code=404,
+            content={"error": "not_found", "message": "Channel not found."},
+        )
+
+    # Check Authorization Matrix (Viewer scope enforcement)
+    if user.role != "admin" and channel_id not in user.scope:
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "forbidden",
+                "message": "You do not have access to this channel.",
+            },
+        )
+
+    return {
+        "channel_id": channel.channel_id,
+        "is_active": channel.is_active,
+        "last_activity_timestamp": channel.last_activity_timestamp.isoformat().replace(
+            "+00:00", "Z"
+        ),
+    }
+
+
+@app.get("/api/v1/health")
+async def health_check(user: TokenPayload = Depends(get_current_user)):
     """
     Verify operational status of the CnSS and aggregate channel statistics.
     """

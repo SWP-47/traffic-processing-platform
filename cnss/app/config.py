@@ -10,9 +10,6 @@ class Settings(BaseSettings):
     # UDP Ingestion (CN to CnSS)
     cnss_udp_port: int = 5140
 
-    # WebSocket Server (CnSS to MUI)
-    cnss_ws_port: int = 8443
-
     # Security & JWT
     jwt_secret_key: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"

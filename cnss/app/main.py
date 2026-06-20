@@ -22,9 +22,20 @@ class TokenMaskingFilter(logging.Filter):
     """Masks tokens in query parameters to prevent leakage in logs."""
 
     def filter(self, record):
+        # 1. Resolve lazy formatting (e.g., logger.info("msg %s", arg))
+        # This flattens the template and arguments into a single string.
+        if record.args:
+            try:
+                record.msg = record.msg % record.args
+                record.args = None  # Crucial: Prevents formatter from re-applying unmasked args
+            except (TypeError, ValueError):
+                pass
+
+        # 2. Apply regex masking on the fully resolved string
         if isinstance(record.msg, str):
             # Matches ?token=... or &token=... up to the next space or &
             record.msg = re.sub(r"([?&]token=)[^ &\s]+", r"\1[REDACTED]", record.msg)
+            
         return True
 
 
@@ -239,9 +250,11 @@ async def websocket_telemetry(
 ):
     # 1. Validate Query Parameters
     if not token:
+        await websocket.accept() # Accept first to allow WS close frame
         await websocket.close(code=4001, reason="invalid_token")
         return
     if not channel_id:
+        await websocket.accept()
         await websocket.close(code=4002, reason="missing_channel")
         return
 
@@ -249,21 +262,24 @@ async def websocket_telemetry(
     try:
         user = await get_ws_user(token)
     except HTTPException:
+        await websocket.accept()
         await websocket.close(code=4001, reason="invalid_token")
         return
 
     # 3. Validate Scope
     if user.role != "admin" and channel_id not in user.scope:
+        await websocket.accept()
         await websocket.close(code=4003, reason="channel_forbidden")
         return
 
     # 4. Validate Channel Existence
     channel = await state_store.get_channel(channel_id)
     if not channel:
+        await websocket.accept()
         await websocket.close(code=4004, reason="channel_not_found")
         return
 
-    # 5. Accept & Register Listener
+    # 5. Accept & Register Listener (Normal flow)
     await websocket.accept()
     await state_store.add_listener(channel_id, websocket)
 

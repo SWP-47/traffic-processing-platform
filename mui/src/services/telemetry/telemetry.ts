@@ -184,8 +184,7 @@ class TelemetryService {
     }
     
     private onClose(event: CloseEvent) {
-        if (Object.values(WS_ERROR_CODE).includes(event.code))
-            console.warn(`WebSocket closed with code ${event.code}.`);
+        console.warn(`WebSocket closed with code ${event.code}.`);
 
         this.connection = null;
         this.clearInactivityTimer();

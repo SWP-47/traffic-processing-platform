@@ -53,14 +53,14 @@ class TelemetryUDPProtocol(asyncio.DatagramProtocol):
             incoming_sequence=batch.sequence,
             server_received_at=received_at,
         )
-        
-        # 2. Broadcast to WebSocket Listeners (AC 5: Notifies listeners that channel is active again)
+
+        # 2. Broadcast to WebSocket Listeners
         await broadcast_telemetry_update(
             channel_id=batch.channel_id,
             is_active=True,
             batch=batch,
             dropped_batches=dropped,
-            received_at=received_at
+            received_at=received_at,
         )
 
 

@@ -6,12 +6,13 @@ from .models import TelemetryBatch
 
 logger = logging.getLogger(__name__)
 
+
 async def broadcast_telemetry_update(
-    channel_id: str, 
-    is_active: bool, 
-    batch: TelemetryBatch = None, 
-    dropped_batches: int = 0, 
-    received_at: datetime = None
+    channel_id: str,
+    is_active: bool,
+    batch: TelemetryBatch = None,
+    dropped_batches: int = 0,
+    received_at: datetime = None,
 ):
     listeners = await state_store.get_listeners(channel_id)
     if not listeners:
@@ -30,15 +31,19 @@ async def broadcast_telemetry_update(
             "metrics": {
                 "direction_out": {
                     "packets_per_sec": batch.direction_out.packets / window_sec,
-                    "packets": batch.direction_out.packets
+                    "packets": batch.direction_out.packets,
                 },
                 "direction_in": {
                     "packets_per_sec": batch.direction_in.packets / window_sec,
-                    "packets": batch.direction_in.packets
-                }
+                    "packets": batch.direction_in.packets,
+                },
             },
             "timestamp": batch.timestamp.isoformat().replace("+00:00", "Z"),
-            "received_at": received_at.isoformat().replace("+00:00", "Z") if received_at else now_iso
+            "received_at": (
+                received_at.isoformat().replace("+00:00", "Z")
+                if received_at
+                else now_iso
+            ),
         }
     else:
         payload = {
@@ -49,10 +54,10 @@ async def broadcast_telemetry_update(
             "dropped_batches": 0,
             "metrics": {
                 "direction_out": {"packets_per_sec": 0.0, "packets": 0},
-                "direction_in": {"packets_per_sec": 0.0, "packets": 0}
+                "direction_in": {"packets_per_sec": 0.0, "packets": 0},
             },
             "timestamp": now_iso,
-            "received_at": now_iso
+            "received_at": now_iso,
         }
 
     dead_listeners = []
@@ -61,6 +66,6 @@ async def broadcast_telemetry_update(
             await ws.send_json(payload)
         except Exception:
             dead_listeners.append(ws)
-            
+
     for ws in dead_listeners:
         await state_store.remove_listener(channel_id, ws)

@@ -14,7 +14,6 @@ import asyncio
 
 from fastapi import WebSocket, WebSocketDisconnect, Query
 from .auth import get_ws_user
-from .broadcast import broadcast_telemetry_update
 from .tasks import background_timeout_and_gc_task
 
 logging.basicConfig(
@@ -47,7 +46,7 @@ async def lifespan(app: FastAPI):
         await bg_task
     except asyncio.CancelledError:
         pass
-        
+
     if udp_transport:
         udp_transport.close()
 
@@ -181,37 +180,41 @@ async def health_check():
         "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     }
 
+
 @app.websocket("/api/v1/ws/telemetry")
 async def websocket_telemetry(
-    websocket: WebSocket,
-    token: str = Query(None),
-    channel_id: str = Query(None)
+    websocket: WebSocket, token: str = Query(None), channel_id: str = Query(None)
 ):
     # 1. Validate Query Parameters
     if not token:
-        await websocket.close(code=4001, reason="invalid_token"); return
+        await websocket.close(code=4001, reason="invalid_token")
+        return
     if not channel_id:
-        await websocket.close(code=4002, reason="missing_channel"); return
-        
+        await websocket.close(code=4002, reason="missing_channel")
+        return
+
     # 2. Validate Token
     try:
         user = await get_ws_user(token)
     except HTTPException:
-        await websocket.close(code=4001, reason="invalid_token"); return
+        await websocket.close(code=4001, reason="invalid_token")
+        return
 
     # 3. Validate Scope
     if user.role != "admin" and channel_id not in user.scope:
-        await websocket.close(code=4003, reason="channel_forbidden"); return
+        await websocket.close(code=4003, reason="channel_forbidden")
+        return
 
     # 4. Validate Channel Existence
     channel = await state_store.get_channel(channel_id)
     if not channel:
-        await websocket.close(code=4004, reason="channel_not_found"); return
+        await websocket.close(code=4004, reason="channel_not_found")
+        return
 
     # 5. Accept & Register Listener
     await websocket.accept()
     await state_store.add_listener(channel_id, websocket)
-    
+
     try:
         while True:
             # Keep connection alive, handle basic ping/pong

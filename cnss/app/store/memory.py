@@ -101,6 +101,8 @@ class InMemoryStateStore(StateStore):
         async with self._lock:
             if channel_id in self._channels:
                 del self._channels[channel_id]
-                logger.info(f"Channel {channel_id} removed from registry (Garbage Collected).")
+                logger.info(
+                    f"Channel {channel_id} removed from registry (Garbage Collected)."
+                )
                 return True
             return False

@@ -29,10 +29,5 @@ export default defineConfig(({ mode }) => {
         }
       }
     },
-    define: {
-      'console.log': mode === "production" ? '() => {}' : undefined,
-      'console.debug': mode === "production" ? '() => {}' : undefined,
-      'console.info': mode === "production" ? '() => {}' : undefined,
-    }
   }
 })

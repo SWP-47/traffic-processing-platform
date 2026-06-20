@@ -5,6 +5,7 @@
  */
 
 import type { components } from "@/api/schema";
+import auth from "./authentication";
 export type TelemetryUpdate = components["schemas"]["TelemetryUpdate"];
 
 export interface TelemetryConnectionData {
@@ -79,9 +80,6 @@ class TelemetryStateManager {
 }
 
 class TelemetryService {
-    // Authentication
-    private token: string = "";
-
     // Connection
     private connection: WebSocket | null = null;
 
@@ -112,16 +110,6 @@ class TelemetryService {
         return this.stateManager.getLastUpdate();
     }
 
-    /**
-     * Set token that is used when connecting to WebSocket 
-     * @param token Bearer token
-     * @see /api/README.md
-     */
-    setAuthenticationToken(token: string): void {
-        this.token = token;
-    }
-
-
     // WebSocket handling
     /**
      * Connect to WebSocket
@@ -144,7 +132,7 @@ class TelemetryService {
     private _connect(data: TelemetryConnectionData) {
         console.debug("[TelemetryService] Connecting to a WebSocket.", data);
         this.lastConnectionData = data;
-        this.connection = new WebSocket(`/api/v1/ws/telemetry?channel_id=${data.channel_id}&token=${this.token}`);
+        this.connection = new WebSocket(`/api/v1/ws/telemetry?channel_id=${data.channel_id}&token=${auth.getToken()}`);
         this.setListeners();
     }
 

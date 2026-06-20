@@ -212,6 +212,14 @@ class TelemetryService {
 
     private onMessage(event: MessageEvent) {
         this.updateInactivityTimer();
+
+        // Ping/pong
+        if (event.data === "ping") {
+            this.connection!.send("pong");
+            return;
+        }
+
+        // TelemetryUpdate
         try {
             const data = JSON.parse(event.data);
             this.stateManager.update(data);            

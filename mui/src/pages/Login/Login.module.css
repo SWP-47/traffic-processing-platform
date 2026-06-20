@@ -17,7 +17,7 @@
     background: var(--gradient-card);
 }
 
-input {
+.input {
     background-color: var(--color-background);
     
     border-radius: var(--card-border-radius);
@@ -34,23 +34,23 @@ input {
     outline: 0px solid transparent;
 }
 
-input:focus-visible {
+.input:focus-visible {
     outline: 1px solid var(--color-secondary);
 }
 
-input:invalid {
+.input:invalid {
     box-shadow: 0 0 7px var(--color-fail);
 }
 
-input:invalid:focus-visible {
+.input:invalid:focus-visible {
     outline: 1px solid var(--color-fail);
 }
 
-h1 {
+.title {
     margin-bottom: 20px;
 }
 
-button {
+.button {
     background: var(--gradient-main);
 
     border-radius: var(--card-border-radius);
@@ -60,18 +60,20 @@ button {
 
     color: var(--color-text);
 
-    margin-top: 20px;
-
     cursor: pointer;
 
     transition: box-shadow .4s, filter .4s;
 }
 
-button:hover {
+.button:hover {
     box-shadow: 0 0 5px var(--color-secondary);
 }
 
-button:disabled {
+.button:disabled {
     filter: contrast(0.6);
     cursor: wait;
+}
+
+.error {
+    color: var(--color-fail);
 }

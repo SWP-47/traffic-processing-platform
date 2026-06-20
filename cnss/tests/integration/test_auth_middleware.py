@@ -1,14 +1,12 @@
 """
 Integration tests for Authorization Middleware.
-Covers AC 1 through AC 5.
 """
 import pytest
 import jwt
-from datetime import datetime, timedelta, timezone
-from app.config import get_settings # Adjust import based on your structure
-from app.main import state_store
-from unittest.mock import patch
 from datetime import datetime, timezone
+from app.config import get_settings
+from unittest.mock import patch, AsyncMock
+from app.store.memory import InMemoryStateStore # FIX 1: Correct import path
 
 class TestAuthMiddleware:
     
@@ -28,7 +26,7 @@ class TestAuthMiddleware:
     def _get_headers(self, token):
         return {"Authorization": f"Bearer {token}"}
 
-    # Missing Header
+    # AC 1: Missing Header
     def test_missing_authorization_header_returns_401(self, client):
         """Given a request without the header, Then return 401 with specific JSON."""
         response = client.get("/api/v1/channels")
@@ -36,7 +34,7 @@ class TestAuthMiddleware:
         data = response.json()
         assert data == {"error": "unauthorized", "message": "Invalid or expired token."}
 
-    # Invalid/Expired Token
+    # AC 2: Invalid/Expired Token
     def test_expired_token_returns_401(self, client):
         """Given an expired token, Then return 401."""
         token = self._get_token("viewer", expired=True)
@@ -51,45 +49,41 @@ class TestAuthMiddleware:
         assert response.status_code == 401
         assert response.json()["error"] == "unauthorized"
 
-    # Admin Access (Bypass Scope)
+    # AC 3: Admin Access (Bypass Scope)
     def test_admin_has_unrestricted_access(self, client):
         """Given a request from admin, When checking channel access, Then access is allowed regardless of scope."""
         admin_token = self._get_token("admin", scope=[]) # Empty scope, but admin
-        response = client.get("/api/v1/channels", headers=self._get_headers(admin_token))
-        assert response.status_code == 200
+        test_store = InMemoryStateStore()
+        with patch("app.main.state_store", test_store):
+            response = client.get("/api/v1/channels", headers=self._get_headers(admin_token))
+            assert response.status_code == 200
 
-    # Viewer Access (Allowed)
+    # AC 4: Viewer Access (Allowed)
     def test_viewer_allowed_in_scope(self, client):
         """Given viewer with scope=["bridge-berlin-01"], When accessing it, Then 200."""
         viewer_token = self._get_token("viewer", scope=["bridge-berlin-01"])
         
-        # Mock store to ensure channel exists
-        with patch("app.main.state_store") as mock_store:
-            from app.main import InMemoryStateStore
-            mock_store.get_channel.return_value = None # Just to test middleware logic first, 
-                                                       # usually endpoint logic is tested here.
-                                                       # For middleware test, we just check if request reaches handler or 403.
-            
-            # We test against /channels which is implemented in main.py
+        # Use a real InMemoryStateStore to avoid MagicMock async issues
+        test_store = InMemoryStateStore()
+        with patch("app.main.state_store", test_store):
             response = client.get("/api/v1/channels", headers=self._get_headers(viewer_token))
             assert response.status_code == 200
 
-    # Viewer Access (Forbidden)
+    # AC 5: Viewer Access (Forbidden)
     def test_viewer_forbidden_out_of_scope(self, client):
         """Given viewer with scope=["bridge-berlin-01"], When accessing bridge-prague, Then 403."""
-        # This requires hitting the channel status endpoint to trigger the scope check logic
         viewer_token = self._get_token("viewer", scope=["bridge-berlin-01"])
         
-        # We need to mock the store to return a channel for 'bridge-prague-01'
-        # so the check reaches `if channel_id not in user.scope` rather than `404 Not Found`.
         class MockChannel:
             channel_id = "bridge-prague-01"
             is_active = False
             last_activity_timestamp = datetime.now(timezone.utc)
 
-        with patch("app.main.state_store") as mock_store:
-            mock_store.get_channel.return_value = MockChannel()
-            
+        # FIX 2: Use AsyncMock so that `await state_store.get_channel()` works correctly
+        mock_store = AsyncMock()
+        mock_store.get_channel.return_value = MockChannel()
+        
+        with patch("app.main.state_store", mock_store):
             response = client.get(
                 "/api/v1/channel/bridge-prague-01/status", 
                 headers=self._get_headers(viewer_token)

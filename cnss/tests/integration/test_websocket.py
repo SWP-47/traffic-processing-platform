@@ -38,26 +38,26 @@ class TestWebSocketTelemetry:
 
     def test_missing_token(self, client):
         """Missing token -> 4001 invalid_token."""
-        with pytest.raises(WebSocketDisconnect) as excinfo:
-            with client.websocket_connect("/api/v1/ws/telemetry?channel_id=test-ch"):
-                pass
+        with client.websocket_connect("/api/v1/ws/telemetry?channel_id=test-ch") as websocket:
+            with pytest.raises(WebSocketDisconnect) as excinfo:
+                websocket.receive_text()
         assert excinfo.value.code == 4001
 
     def test_invalid_token(self, client):
         """Invalid token -> 4001 invalid_token."""
-        with pytest.raises(WebSocketDisconnect) as excinfo:
-            with client.websocket_connect(
-                "/api/v1/ws/telemetry?token=badtoken&channel_id=test-ch"
-            ):
-                pass
+        with client.websocket_connect(
+            "/api/v1/ws/telemetry?token=badtoken&channel_id=test-ch"
+        ) as websocket:
+            with pytest.raises(WebSocketDisconnect) as excinfo:
+                websocket.receive_text()
         assert excinfo.value.code == 4001
 
     def test_missing_channel_id(self, client):
         """Missing channel_id -> 4002 missing_channel."""
         token = self._get_token("admin")
-        with pytest.raises(WebSocketDisconnect) as excinfo:
-            with client.websocket_connect(f"/api/v1/ws/telemetry?token={token}"):
-                pass
+        with client.websocket_connect(f"/api/v1/ws/telemetry?token={token}") as websocket:
+            with pytest.raises(WebSocketDisconnect) as excinfo:
+                websocket.receive_text()
         assert excinfo.value.code == 4002
 
     def test_viewer_forbidden_scope(self, client):
@@ -69,11 +69,11 @@ class TestWebSocketTelemetry:
         )
 
         with patch("app.main.state_store", test_store):
-            with pytest.raises(WebSocketDisconnect) as excinfo:
-                with client.websocket_connect(
-                    f"/api/v1/ws/telemetry?token={token}&channel_id=test-ch"
-                ):
-                    pass
+            with client.websocket_connect(
+                f"/api/v1/ws/telemetry?token={token}&channel_id=test-ch"
+            ) as websocket:
+                with pytest.raises(WebSocketDisconnect) as excinfo:
+                    websocket.receive_text()
             assert excinfo.value.code == 4003
 
     def test_channel_not_found(self, client):
@@ -82,11 +82,11 @@ class TestWebSocketTelemetry:
         test_store = InMemoryStateStore()
 
         with patch("app.main.state_store", test_store):
-            with pytest.raises(WebSocketDisconnect) as excinfo:
-                with client.websocket_connect(
-                    f"/api/v1/ws/telemetry?token={token}&channel_id=non-existent"
-                ):
-                    pass
+            with client.websocket_connect(
+                f"/api/v1/ws/telemetry?token={token}&channel_id=non-existent"
+            ) as websocket:
+                with pytest.raises(WebSocketDisconnect) as excinfo:
+                    websocket.receive_text()
             assert excinfo.value.code == 4004
 
     @pytest.mark.asyncio

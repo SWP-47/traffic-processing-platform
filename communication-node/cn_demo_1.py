@@ -1,9 +1,11 @@
 import json
 from scapy.all import *
+import socket
 import queue
 import threading
 import time
 import os
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -14,6 +16,7 @@ OUT_INTERFACE = os.getenv("OUT_INTERFACE")
 MY_MAC = os.getenv("MY_MAC")
 MY_IP = os.getenv("MY_IP")
 CNSS_IP = os.getenv("CNSS_IP")
+TIME_WINDOW = os.getenv("TIME_WINDOW")
 
 required_vars = {
     "SNIFF_INTERFACE_IN": SNIFF_INTERFACE_IN,
@@ -22,6 +25,7 @@ required_vars = {
     "MY_MAC": MY_MAC,
     "MY_IP": MY_IP,
     "CNSS_IP": CNSS_IP,
+    "TIME_WINDOW": TIME_WINDOW
 }
 
 for var_name, var_value in required_vars.items():
@@ -32,39 +36,47 @@ for var_name, var_value in required_vars.items():
 packet_queue_in = queue.Queue()
 packet_queue_out = queue.Queue()
 
+sequence = 0
+udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 def sending_data_to_cnss():
+    global sequence
     while True:
-        time.sleep(0.5)
-
-        if packet_queue_in.empty() and packet_queue_out.empty():
-            continue
+        time.sleep(int(TIME_WINDOW))
+        
+        sequence += 1
 
         packets_to_send_in = []
         packets_to_send_out = []
 
-        if not packet_queue_in.empty():
-            while not packet_queue_in.empty():
-                packets_to_send_in.append(packet_queue_in.get_nowait())
+        while not packet_queue_in.empty():
+            packets_to_send_in.append(packet_queue_in.get_nowait())
 
-        if not packet_queue_out.empty():
-            while not packet_queue_out.empty():
-                packets_to_send_out.append(packet_queue_out.get_nowait())
+        while not packet_queue_out.empty():
+            packets_to_send_out.append(packet_queue_out.get_nowait())
 
         packet_to_cnss = {
-            "timestamp": int(time.time() * 1000),
-            "packets_in": len(packets_to_send_in),
-            "packets_out": len(packets_to_send_out),
+             "channel_id": "main_tp_dev",
+             "sequence": sequence,
+             "window_ms": int(TIME_WINDOW) * 1000,
+             "direction_out": {
+               "packets": len(packets_to_send_out)
+            },
+             "direction_in": {
+               "packets": len(packets_to_send_in)
+            },
+             "timestamp": datetime.now(timezone.utc).strftime(r'%Y-%m-%dT%H:%M:%SZ')
         }
-
-        packet_to_cnss = json.dumps(packet_to_cnss)
-        packet_to_send = (
-            Ether(src=MY_MAC, dst="ff:ff:ff:ff:ff:ff")
-            / IP(src=MY_IP, dst=CNSS_IP)
-            / UDP(sport=80, dport=80)
-            / Raw(load=packet_to_cnss)
-        )
-        sendp(packet_to_send, iface=OUT_INTERFACE, verbose=2)
+  
+        packet_to_cnss = json.dumps(packet_to_cnss).encode('utf-8')
+        # packet_to_send = (
+        #     Ether(src=MY_MAC)
+        #     / IP(src=MY_IP, dst=CNSS_IP)
+        #     / UDP(sport=5140, dport=5140)
+        #     / Raw(load=packet_to_cnss)
+        # )
+        # sendp(packet_to_send, iface=OUT_INTERFACE, verbose=2)
+        udp_socket.sendto(packet_to_cnss, (CNSS_IP, 5140))
         print("PACKET WAS SENT")
 
 
@@ -131,3 +143,4 @@ try:
         time.sleep(1)
 except KeyboardInterrupt:
     print("\n Keyboard interruption")
+    udp_socket.close()

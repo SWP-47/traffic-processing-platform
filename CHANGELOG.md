@@ -56,6 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pull Request template with issue linking and changelog verification checklist. ([#6](https://github.com/SWP-47/traffic-processing-platform/issues/6))
 - Added foundational MVP v0 structure for Control and Status Server (CnSS), including `/health` endpoint, Docker configurations (Dev/Prod/Test), integration tests, and CI workflow. ([#30](https://github.com/SWP-47/traffic-processing-platform/issues/30))
 - Implemented bidirectional packet counting in Traffic Processor and aggregated UDP dispatch to Control and Status Server via Communication Node ([#77](https://github.com/SWP-47/traffic-processing-platform/issues/77))
+- Implemented FPGA-based minimal packet analysis in addition to forwarding ([#87](https://github.com/SWP-47/traffic-processing-platform/issues/87))
+- Constraints file (`.xdc`) for deploying bitstream to ARTIX-7 FPGA Development Board AX7201 ([#87](https://github.com/SWP-47/traffic-processing-platform/issues/87))
 
 ### Changed
 
@@ -68,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed telemetry traffic directions from `direction_a`/`direction_b` to `direction_out`/`direction_in` across API documentation, `openapi.yaml`, and `postman_collection.json` for improved clarity. ([#46](https://github.com/SWP-47/traffic-processing-platform/issues/46))
 - Updated WebSocket Connection Lifecycle to explicitly mandate server-initiated `ping`/`pong` mechanism for dead peer detection and memory leak prevention. ([#64](https://github.com/SWP-47/traffic-processing-platform/issues/64))
 - Changes Communication Node (CN) telemetry sender to correctly format JSON payloads and transmit UDP batches to CnSS ([#76](https://github.com/SWP-47/traffic-processing-platform/issues/76)).
+- Restructured `traffic-processor/` directory layout for improved navigation ([#87](https://github.com/SWP-47/traffic-processing-platform/issues/87))
 - MUI StatusIndicator component now can get real data from CnSS via WebSocket. ([#68](https://github.com/SWP-47/traffic-processing-platform/issues/68))
 
 ### Deprecated

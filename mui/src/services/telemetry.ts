@@ -6,7 +6,19 @@
 
 import type { components } from "@/api/schema";
 import auth from "./authentication";
+
 export type TelemetryUpdate = components["schemas"]["TelemetryUpdate"];
+export type TelemetryConnectionStatus = 
+  | 'disconnected'
+  | 'connecting'
+  | 'connected';
+
+
+export interface TelemetryState {
+    data: TelemetryUpdate,
+    status: TelemetryConnectionStatus,
+    error: string | null 
+}
 
 export interface TelemetryConnectionData {
     channel_id: string
@@ -23,7 +35,7 @@ const WS_ERROR_CODE = {
 const INACTIVITY_TIMEOUT = 6000; // in ms.
 
 class TelemetryStateManager {
-    private lastUpdate: TelemetryUpdate | null = null;
+    private lastUpdate: TelemetryState | null = null;
     private listeners = new Set<() => void>();
     
     subscribe(callback: () => void): () => void {
@@ -31,7 +43,7 @@ class TelemetryStateManager {
         return () => this.listeners.delete(callback);
     }
     
-    getLastUpdate(): TelemetryUpdate | null {
+    getLastUpdate(): TelemetryState | null {
         return this.lastUpdate;
     }
     
@@ -49,10 +61,15 @@ class TelemetryStateManager {
         this.listeners.forEach((callback) => callback());
     }
     
-    validate(data: unknown): data is TelemetryUpdate {
+    validate(data: unknown): data is TelemetryState {
         if (!data || typeof data !== 'object') return false;
 
-        const d = data as Record<string, unknown>;
+        const a = data as Record<string, unknown>;
+
+        if (typeof a.status !== 'string') return false;
+        if (!a.data || typeof a.data !== 'object') return false;
+
+        const d = a.data as Record<string, unknown>;
 
         if (d.type !== 'telemetry_update') return false;
         if (typeof d.channel_id !== 'string') return false;
@@ -106,7 +123,7 @@ class TelemetryService {
     /**
      * @returns last update of telemetry
      */
-    getLastUpdate(): TelemetryUpdate | null {
+    getLastUpdate(): TelemetryState | null {
         return this.stateManager.getLastUpdate();
     }
 
@@ -134,6 +151,12 @@ class TelemetryService {
         this.lastConnectionData = data;
         this.connection = new WebSocket(`/api/v1/ws/telemetry?channel_id=${data.channel_id}&token=${auth.getToken()}`);
         this.setListeners();
+
+        this.stateManager.update({
+            ...this.getInactiveUpdateObject(),
+            status: 'connecting',
+            error: null
+        } as TelemetryState)
     }
 
     private setListeners() {
@@ -151,6 +174,12 @@ class TelemetryService {
         console.debug("[TelemetryService] Connected!");
         this.updateInactivityTimer();
         this.stopReconnection();
+
+        this.stateManager.update({
+            ...this.getInactiveUpdateObject(),
+            status: 'connected',
+            error: null
+        } as TelemetryState)
     }
 
     private reconnect() {
@@ -185,6 +214,12 @@ class TelemetryService {
 
         this.connection = null;
         this.clearInactivityTimer();
+
+        this.stateManager.update({
+            ...this.getInactiveUpdateObject(),
+            status: 'disconnected',
+            error: event.reason
+        } as TelemetryState)
 
         // If new connection is scheduled, connect.
         if (this.followingConnectionData) {
@@ -227,7 +262,7 @@ class TelemetryService {
         try {
             console.debug(`[TelemetryService] WebSocket received telemetry update.`);
             const data = JSON.parse(event.data);
-            this.stateManager.update(data);            
+            this.stateManager.update({ ...this.getLastUpdate(), data });
         } catch (e) {
             console.error('[TelemetryService] Failed to parse telemetry:', e);
         }
@@ -257,19 +292,23 @@ class TelemetryService {
         this.reconnectionAttempt = 0;
     }
 
-    private getInactiveUpdateObject(): TelemetryUpdate {
+    private getInactiveUpdateObject(): TelemetryState {
         return {
-            type: 'telemetry_update',
-            channel_id: this.lastConnectionData?.channel_id || '',
-            is_active: false,
-            window_ms: 0,
-            dropped_batches: 0,
-            metrics: {
-                direction_in: { packets: 0, packets_per_sec: 0 },
-                direction_out: { packets: 0, packets_per_sec: 0 },
-            },
-            timestamp: new Date().toISOString(),
-            received_at: new Date().toISOString(),
+            status: 'connected',
+            error: null,
+            data: {
+                type: 'telemetry_update',
+                channel_id: this.lastConnectionData?.channel_id || '',
+                is_active: false,
+                window_ms: 0,
+                dropped_batches: 0,
+                metrics: {
+                    direction_in: { packets: 0, packets_per_sec: 0 },
+                    direction_out: { packets: 0, packets_per_sec: 0 },
+                },
+                timestamp: new Date().toISOString(),
+                received_at: new Date().toISOString(),
+            }
         };
     }
 }

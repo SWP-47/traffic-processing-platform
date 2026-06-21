@@ -71,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated WebSocket Connection Lifecycle to explicitly mandate server-initiated `ping`/`pong` mechanism for dead peer detection and memory leak prevention. ([#64](https://github.com/SWP-47/traffic-processing-platform/issues/64))
 - Changes Communication Node (CN) telemetry sender to correctly format JSON payloads and transmit UDP batches to CnSS ([#76](https://github.com/SWP-47/traffic-processing-platform/issues/76)).
 - Restructured `traffic-processor/` directory layout for improved navigation ([#87](https://github.com/SWP-47/traffic-processing-platform/issues/87))
+- MUI StatusIndicator component now can get real data from CnSS via WebSocket. ([#68](https://github.com/SWP-47/traffic-processing-platform/issues/68))
 
 ### Deprecated
 

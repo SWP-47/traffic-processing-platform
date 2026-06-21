@@ -1,1 +1,1 @@
-export { default } from './components/StatusIndicator/StatusIndicator';
+export { default } from './StatusIndicator';

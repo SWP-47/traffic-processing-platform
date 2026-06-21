@@ -84,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- N/A
+- Fixed incorrect IPv4 EtherType value in the Traffic Processor (FPGA) packet recognition logic ([#87](https://github.com/SWP-47/traffic-processing-platform/issues/87)).
 
 ### Security
 

@@ -36,6 +36,8 @@
                         #00000008 0%),
                      var(--color-surface);
 
+    --gradient-button: linear-gradient(90deg, #6140EC 0%, #53A2E7 100%);
+
     /* Other */
     --card-border-radius: 40px;
 }

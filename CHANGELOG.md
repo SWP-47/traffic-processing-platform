@@ -58,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented bidirectional packet counting in Traffic Processor and aggregated UDP dispatch to Control and Status Server via Communication Node ([#77](https://github.com/SWP-47/traffic-processing-platform/issues/77))
 - Implemented FPGA-based minimal packet analysis in addition to forwarding ([#87](https://github.com/SWP-47/traffic-processing-platform/issues/87))
 - Constraints file (`.xdc`) for deploying bitstream to ARTIX-7 FPGA Development Board AX7201 ([#87](https://github.com/SWP-47/traffic-processing-platform/issues/87))
+- Added MUI PacketsColumnChart component to show Rx/Tx rate obtained from WS telemetry. ([#69](https://github.com/SWP-47/traffic-processing-platform/issues/69))
 
 ### Changed
 

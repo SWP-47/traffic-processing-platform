@@ -1,0 +1,26 @@
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin: 32px 50px;
+}
+
+.left {
+    display: flex;
+    gap: 30px;
+
+    align-items: center;
+}
+
+.user {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.avatar {
+    flex-shrink: 0;
+    height: 42px;
+    width: 42px;
+}

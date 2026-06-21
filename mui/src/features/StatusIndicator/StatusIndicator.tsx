@@ -13,7 +13,7 @@ function StatusIndicator() {
 
   if (WSStatus == 'disconnected') {
     cardStyle = styles.error!;
-    message = WSError!;
+    message = WSError! || 'unknown error';
   } else if (WSStatus == 'connecting') {
     cardStyle = 'card';
     message = 'connecting to CnSS...';

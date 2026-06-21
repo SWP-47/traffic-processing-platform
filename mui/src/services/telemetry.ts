@@ -237,12 +237,13 @@ class TelemetryService {
 
         if (event.code === WS_ERROR_CODE.invalid_token) {
             auth.requestTokenRenewal();
-            this.reconnect();
+            // this.reconnect();
             return;
         }
-        
+
         // Reconnect on server error
-        if (event.code === WS_ERROR_CODE.internal_error) {
+        const NOT_RECONNECT_CODES = [4001, 4002, 4003, 4004]
+        if (!NOT_RECONNECT_CODES.includes(event.code)) {
             this.reconnect();
             return;
         }

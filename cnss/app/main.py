@@ -21,22 +21,21 @@ from .tasks import background_timeout_and_gc_task
 class TokenMaskingFilter(logging.Filter):
     """Masks tokens in query parameters to prevent leakage in logs."""
 
-    def filter(self, record):
-        # 1. Resolve lazy formatting (e.g., logger.info("msg %s", arg))
-        # This flattens the template and arguments into a single string.
-        if record.args:
-            try:
-                record.msg = record.msg % record.args
-                record.args = (
-                    None  # Crucial: Prevents formatter from re-applying unmasked args
-                )
-            except (TypeError, ValueError):
-                pass
+    TOKEN_PATTERN = re.compile(r"([?&]token=)[^ &\s]+")
 
-        # 2. Apply regex masking on the fully resolved string
+    def _mask_string(self, s: str) -> str:
+        if isinstance(s, str):
+            return self.TOKEN_PATTERN.sub(r"\1[REDACTED]", s)
+        return s
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.args, tuple):
+            record.args = tuple(self._mask_string(arg) for arg in record.args)
+        elif isinstance(record.args, dict):
+            record.args = {k: self._mask_string(v) for k, v in record.args.items()}
+
         if isinstance(record.msg, str):
-            # Matches ?token=... or &token=... up to the next space or &
-            record.msg = re.sub(r"([?&]token=)[^ &\s]+", r"\1[REDACTED]", record.msg)
+            record.msg = self._mask_string(record.msg)
 
         return True
 

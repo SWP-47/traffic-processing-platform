@@ -140,7 +140,7 @@ make stop
 
 ## Links and Reports
 
-- **Main Documentation**: [System Documentation](/docs/system-documentation.md)
+- **Main Documentation**: [System Documentation](docs/system-documentation.md)
 - **Current Deployment / Runnable Artifacts**: [View Deployment] *(Placeholder)*
 - **Week 2 Reports**:
   - [Week 2 Report](reports/week2/README.md)

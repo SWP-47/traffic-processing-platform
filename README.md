@@ -1,5 +1,7 @@
 # Traffic Processing Platform
 
+[![Release](https://img.shields.io/github/v/release/SWP-47/traffic-processing-platform?label=MVP%20v1)](https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.0.0)
+
 ## Project Overview
 
 This is a monorepo containing minimally intrusive network traffic monitoring system. It consists of four distinct components designed to capture, process, forward, and visualize network telemetry in real-time without degrading network performance:
@@ -35,13 +37,13 @@ note: Ensure you have Python 3.8 or higher and pip (Python package installer) in
 
 1. Install dependencies  using command `pip install -r requirements.txt`
 2. Create a file of environment using command `cp .env.example .env` for bash or `copy .env.example .env` for PowerShell. Edit `.env` file if necessary
-3. Run the main script as administrator using command `sudo python3 .\demo_1\tp_packet_counter.py` for bash or `python3 .\demo_1\tp_packet_counter.py` as administrator for PowerShell
+3. Run the main script as administrator using command `sudo python3 .\software-part\tp_packet_counter.py` for bash or `python3 .\software-part\tp_packet_counter.py` as administrator for PowerShell
 
 
 ##### Hardware part:
 note: Ensure you have AMD Vivado Design Suite installed on your system. The folder contains `top.sv` and `top.xdc` files which are expected to be used to program ARTIX-7 FPGA Development Board AX7201.
 
-1. Run Vivado IDE and add `top.sv` as a source file and `top.xdc` as a file with constraints. 
+1. Run Vivado IDE and add open `ax7201-ethernet-loopback.xpr` project.
 2. Run synthesis and Implementation process. Than generate bitstream. 
 3. Connect FPGA board to your computer using JTAG programmer.
 4. Open "Hardware manager" and program connected device using the corresponding button
@@ -66,11 +68,11 @@ for PowerShell. Edit `.env` file if necessary
 
 3. Run the main script as administrator using command 
 ```bash
-sudo python3 .\demo_1\cn_packet_counter.py
+sudo python3 .\cn_packet_counter.py
 ```
 for bash or 
 ```PowerShell
-python3 .\demo_1\cn_packet_counter.py
+python3 .\cn_packet_counter.py
 ```
  as administrator for PowerShell
 
@@ -140,8 +142,9 @@ make stop
 
 ## Links and Reports
 
-- **Main Documentation**: [System Documentation](docs/system-documentation.md)
-- **Current Deployment / Runnable Artifacts**: [View Deployment] *(Placeholder)*
+- **System Documentation**: [System Documentation](docs/system-documentation.md)
+- **API Documentation**: [API Documentation](api/README.md)
+- **Current Deployment / Runnable Artifacts**: http://10.93.26.186
 - **Week 2 Reports**:
   - [Week 2 Report](reports/week2/README.md)
   - [MVP v0 Report](reports/week2/mvp-v0-report.md)

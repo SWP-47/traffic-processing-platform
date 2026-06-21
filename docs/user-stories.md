@@ -9,12 +9,12 @@
 | US-004 | Modular Platform Integration | Must Have | [#52](https://github.com/SWP-47/traffic-processing-platform/issues/52) | Active | Done | [Sprint 1](https://github.com/SWP-47/traffic-processing-platform/milestone/1) |
 | US-005 | Invisible Traffic Analyzer Deployment | Must Have | [#53](https://github.com/SWP-47/traffic-processing-platform/issues/53) | Active | Done | [Sprint 1](https://github.com/SWP-47/traffic-processing-platform/milestone/1) |
 | US-009 | Seamless Bidirectional Packet Passing | Must Have | [#54](https://github.com/SWP-47/traffic-processing-platform/issues/54) | Active | Done | [Sprint 1](https://github.com/SWP-47/traffic-processing-platform/milestone/1) |
+| US-012 | Basic Password Protection for MUI | Could Have | [#103](https://github.com/SWP-47/traffic-processing-platform/issues/103) | Active | Done | [Sprint 1](https://github.com/SWP-47/traffic-processing-platform/milestone/1) |
 | US-014 | Remote MUI Access | Must Have | [#55](https://github.com/SWP-47/traffic-processing-platform/issues/55) | Active | Done | [Sprint 1](https://github.com/SWP-47/traffic-processing-platform/milestone/1) |
 | US-015 | Real-time MUI Dashboard Updates | Should Have | [#98](https://github.com/SWP-47/traffic-processing-platform/issues/98) | Active | Done | [Sprint 1](https://github.com/SWP-47/traffic-processing-platform/milestone/1) |
 | US-006 | Specific IP Traffic Analysis | Should Have | [#96](https://github.com/SWP-47/traffic-processing-platform/issues/96) | Active | To Do | — |
 | US-013 | Historical Traffic Statistics Storage | Should Have | [#97](https://github.com/SWP-47/traffic-processing-platform/issues/97) | Active | To Do | — |
 | US-016 | Byte Volume Counting | Should Have | [#104](https://github.com/SWP-47/traffic-processing-platform/issues/104) | Active | To Do | — |
-| US-012 | Basic Password Protection for MUI | Could Have | [#103](https://github.com/SWP-47/traffic-processing-platform/issues/103) | Active | Done | [Sprint 1](https://github.com/SWP-47/traffic-processing-platform/milestone/1) |
 | US-003 | Traffic Information Export | Could Have | [#99](https://github.com/SWP-47/traffic-processing-platform/issues/99) | Active | To Do | — |
 | US-008 | SYN Flood Attack Detection | Could Have | [#100](https://github.com/SWP-47/traffic-processing-platform/issues/100) | Active | To Do | — |
 | US-010 | Protocol Type Traffic Display Filtering | Could Have | [#101](https://github.com/SWP-47/traffic-processing-platform/issues/101) | Active | To Do | — |

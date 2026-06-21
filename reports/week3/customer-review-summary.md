@@ -61,12 +61,6 @@ The team presented progress on the following **Must Have** user stories:
 
 ### UI/UX Improvements
 
-**Requested by customer:**
-
-- **Related to US-001, US-002**: "Make the two counters bigger/stretch them to fill the entire screen to avoid empty space"
-  - Priority: High (for MVP v1)
-  - Action: @Minnezing to adjust dashboard layout
-
 ### Security & Architecture Recommendations
 
 **Noted but NOT required for MVP v1:**

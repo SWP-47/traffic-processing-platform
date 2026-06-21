@@ -67,7 +67,7 @@ These requirements define the reusable Scrum, workflow, and product-management e
 
 2. Acceptance criteria must be specific, observable, and testable.
 
-3. Given/When/Then ([Gherkin](https://cucumber.io/docs/gherkin/reference)) is recommended for behavioral scenarios, but any clear and testable format is acceptable.
+3. Given/When/Then ([Gherkin](https://cucumber.io/docs/gherkin/reference/)) is recommended for behavioral scenarios, but any clear and testable format is acceptable.
 
 4. A PBI that is expected to be implemented, reviewed, or verified must not be treated as ready for execution without acceptance criteria appropriate to that work.
 

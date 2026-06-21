@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+
+## [1.0.0] - 2026-06-21
+
+### Added
+
 - Functional MUI Login page, centralized JWT token management via `AuthenticationService`, visual error feedback for invalid credentials, and automatic redirection upon successful authentication. ([#115](https://github.com/SWP-47/traffic-processing-platform/issues/115))
 - REST endpoint `GET /api/v1/health` returning CnSS operational status with aggregate channel statistics (`channels_active`, `channels_total`) and component health indicators. ([#84](https://github.com/SWP-47/traffic-processing-platform/issues/84))
 - REST endpoint `GET /api/v1/channels` listing all channels accessible to the authenticated user with `is_active` status and `last_activity_timestamp` for each channel. ([#84](https://github.com/SWP-47/traffic-processing-platform/issues/84))
@@ -94,6 +109,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented stateless JWT-based authentication (HS256) with automatic expiration checking (`exp` claim) to protect REST endpoints and prepare for WebSocket authorization. ([#80](https://github.com/SWP-47/traffic-processing-platform/issues/80))
 - Added JWT-based authentication for all REST and WebSocket endpoints to protect telemetry data and prevent unauthorized access. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 - CnSS now sanitizes access logs to prevent `access_token` leakage via query parameters. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
+
+
+[Unreleased]: https://github.com/SWP-47/traffic-processing-platform/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.0.0
 
 <!-- 
 RELEASE TEMPLATE (For Release Manager use only):

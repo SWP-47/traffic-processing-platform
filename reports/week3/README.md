@@ -27,12 +27,11 @@ All active user stories, their current states, and historical tracking are maint
 
 We incorporated feedback from both the Assignment 2 prototype review and the Week 3 customer review into the MVP v1 implementation:
 
-1. **Dashboard UI Layout & Contrast (from Assignment 2 Review):** The customer requested that the Tx/Rx packet counters be stretched to fill the bottom of the screen to avoid empty space.
-2. **Frontend-Backend Integration Tooling (from Week 3 Review):** The customer recommended using `openapi-ts` and `openapi-fetch` to generate TypeScript clients directly from the backend's OpenAPI specification to reduce manual errors.
+1. **Frontend-Backend Integration Tooling (from Week 3 Review):** The customer recommended using `openapi-ts` and `openapi-fetch` to generate TypeScript clients directly from the backend's OpenAPI specification to reduce manual errors.
    - *Addressed:* We integrated `openapi-ts` into the MUI build pipeline to auto-generate type-safe API wrappers from the CnSS OpenAPI spec, replacing manual fetch calls.
-3. **Security and Access Control (from Week 3 Review):** During the review, it was decided that basic authentication should not be deferred and must be included in the first functional release to protect the dashboard.
+2. **Security and Access Control (from Week 3 Review):** During the review, it was decided that basic authentication should not be deferred and must be included in the first functional release to protect the dashboard.
    - *Addressed:* We added **US-012 (Basic Password Protection for MUI)** to the current Sprint. The CnSS now issues JWT tokens via `/api/v1/auth/login`, and the MUI requires authentication before accessing the dashboard or WebSocket streams.
-4. **CN-to-CnSS Communication Protocol (from Week 3 Review):** The customer suggested exploring Protobuf/gRPC for the future but agreed to keep the MVP simple and avoid overengineering.
+3. **CN-to-CnSS Communication Protocol (from Week 3 Review):** The customer suggested exploring Protobuf/gRPC for the future but agreed to keep the MVP simple and avoid overengineering.
    - *Addressed:* We finalized the UDP/JSON `TelemetryBatch` schema for the CN-to-CnSS pipeline for MVP v1, and documented the gRPC/Protobuf migration in the roadmap for future sprints.
 
 ## Links and Github views
@@ -112,11 +111,15 @@ Moving forward, the team will focus on expanding the platform's analytical capab
 ![pr ex.1](images/pr-minnezing.png)
   - @arinamnova [PR link](https://github.com/SWP-47/traffic-processing-platform/pull/111)
 ![pr ex.2](images/pr-arinamnova.png)
+  - @jinseisieko [PR link](https://github.com/SWP-47/traffic-processing-platform/pull/138)
+![pr ex.3](images/pr-jinseisieko.png)
+  - @Rena-ln [PR link](https://github.com/SWP-47/traffic-processing-platform/pull/136)
+![pr ex.4](images/pr-renaln.png)
 
 ## Links
 
-- [SemVer release PLACEHOLDER]
-[IMAGE PLACEHOLDER]
+- [SemVer release v1.0.0](https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.0.0)
+![semver release](images/release-v1-0-0.png)
 - [CHANGELOG.md](../../CHANGELOG.md)
 - [Process Requirements](../../docs/process-requirements.md)
 - [Roadmap](../../docs/roadmap.md)
@@ -130,9 +133,17 @@ Moving forward, the team will focus on expanding the platform's analytical capab
 - [Reviewed PRs Github View](https://github.com/orgs/SWP-47/projects/1/views/16) (see column "Linked pull request")
   - [Example reviewed PR](https://github.com/SWP-47/traffic-processing-platform/pull/111)
 ![reviewed PR](images/reviewed-pr.png)
-- [RUNNABLE MVP PLACEHOLDER]
-[IMAGE PLACEHOLDER]
-- [ACCESS INSTRUCTIONS PLACEHOLDER]
+- [Deployed Artifact](http://10.93.26.186/) (Only accessible on Innopolis University "UniversityStudent" Network)
+
+*Admin view (multiple channels)*
+![mvp admin](images/mvp-v1-admin-view.png)
+*Viewer view (limited channels)*
+![mvp viewer](images/mvp-v1-viewer-view.png)
+*Error screen*
+![error](images/mvp-v1-error.png)
+
+- [Local Setup Instructions](../../README.md#local-setup-instructions)
+- [Video demonstration](https://disk.yandex.ru/i/YEpjQhjgh39rvw)
 - [Customer review transcript](customer-review-transcript.md)
 - [Customer review summary](customer-review-summary.md)
 - [Week 3 reflection](reflection.md)

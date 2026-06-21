@@ -11,7 +11,7 @@ logic [511:0] new_packet;
 assign new_packet = {packet[503:0], e1_rxd};
 logic [7:0] byte_counter;
 logic [15:0] etherType;
-logic isArp;
+logic isIPv4;
 logic validity;
 
 always_ff @( posedge e1_rxc_int ) begin 
@@ -23,13 +23,13 @@ always_ff @( posedge e1_rxc_int ) begin
             etherType [15:8] <= e1_rxd;
         if (byte_counter == 5'd21) begin
             etherType [7:0] <= e1_rxd;
-            if ({etherType[15:8], e1_rxd} == 16'h0806)
-                isArp <= 1'b1;
+            if ({etherType[15:8], e1_rxd} == 16'h0800)
+                isIPv4 <= 1'b1;
         end
     end else begin
-        // validity <= isArp;
-        wr_en <= isArp;
-        isArp <= '0;
+        // validity <= isIPv4;
+        wr_en <= isIPv4;
+        isIPv4 <= '0;
         packet <= '0;
         byte_counter <= '0;
         etherType <= '0;

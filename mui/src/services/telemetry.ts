@@ -235,6 +235,12 @@ class TelemetryService {
             this.reconnect();
             return;
         }
+
+        if (event.code === WS_ERROR_CODE.invalid_token) {
+            auth.requestTokenRenewal();
+            this.reconnect();
+            return;
+        }
         
         // Reconnect on server error
         if (event.code === WS_ERROR_CODE.internal_error) {

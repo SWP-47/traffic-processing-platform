@@ -119,8 +119,8 @@ Moving forward, the team will focus on expanding the platform's analytical capab
 
 ## Links
 
-- [SemVer release PLACEHOLDER]
-[IMAGE PLACEHOLDER]
+- [SemVer release v1.0.0](https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.0.0)
+![semver release](images/release-v1-0-0.png)
 - [CHANGELOG.md](../../CHANGELOG.md)
 - [Process Requirements](../../docs/process-requirements.md)
 - [Roadmap](../../docs/roadmap.md)
@@ -134,9 +134,17 @@ Moving forward, the team will focus on expanding the platform's analytical capab
 - [Reviewed PRs Github View](https://github.com/orgs/SWP-47/projects/1/views/16) (see column "Linked pull request")
   - [Example reviewed PR](https://github.com/SWP-47/traffic-processing-platform/pull/111)
 ![reviewed PR](images/reviewed-pr.png)
-- [RUNNABLE MVP PLACEHOLDER]
-[IMAGE PLACEHOLDER]
-- [ACCESS INSTRUCTIONS PLACEHOLDER]
+- [Deployed Artifact](http://10.93.26.186/) (Only accessible on Innopolis University "UniversityStudent" Network)
+
+*Admin view (multiple channels)*
+![mvp admin](images/mvp-v1-admin-view.png)
+*Viewer view (limited channels)*
+![mvp viewer](images/mvp-v1-viewer-view.png)
+*Error screen*
+![error](images/mvp-v1-error.png)
+
+- [Local Setup Instructions](../../README.md#local-setup-instructions)
+- [Video demonstration](https://disk.yandex.ru/i/YEpjQhjgh39rvw)
 - [Customer review transcript](customer-review-transcript.md)
 - [Customer review summary](customer-review-summary.md)
 - [Week 3 reflection](reflection.md)

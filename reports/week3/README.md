@@ -112,6 +112,10 @@ Moving forward, the team will focus on expanding the platform's analytical capab
 ![pr ex.1](images/pr-minnezing.png)
   - @arinamnova [PR link](https://github.com/SWP-47/traffic-processing-platform/pull/111)
 ![pr ex.2](images/pr-arinamnova.png)
+  - @jinseisieko [PR link](https://github.com/SWP-47/traffic-processing-platform/pull/138)
+![pr ex.3](images/pr-jinseisieko.png)
+  - @Rena-ln [PR link](https://github.com/SWP-47/traffic-processing-platform/pull/136)
+![pr ex.4](images/pr-renaln.png)
 
 ## Links
 

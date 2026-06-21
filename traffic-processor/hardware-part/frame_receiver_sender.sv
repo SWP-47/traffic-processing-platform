@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module top
+module frame_receiver_sender
 (
     input                           sys_clk_p,                    //system clock positive
     input                           sys_clk_n,                    //system clock negative 
@@ -172,6 +172,14 @@ module top
     assign e4_txen     = e1_rxdv;
     assign e4_txer     = e1_rxer;
     assign e4_txd      = e1_rxd;
+
+
+    // connection_filter connection_filter_inst (
+    //     .e1_rxc_int (  e1_rxc_int  ),
+    //     .e1_rxdv    (  e1_rxdv     ),
+    //     .e1_rxd     (  e1_rxd      )
+    // );
+
 
 
 // /*************************************************************************

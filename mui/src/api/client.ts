@@ -5,13 +5,19 @@
 import createClient from "openapi-fetch";
 import type { paths } from "./schema";
 import { mapHttpError } from "./errors";
+import auth from "@/services/authentication";
 
 // BaseURL is set to '' as MUI is proxying API queries.
 const apiClient = createClient<paths>({ baseUrl: '' });
 
 apiClient.use({
     async onRequest({ request }) {
-        // TODO: authentication workflow
+        const token = auth.getToken();
+        
+        if (token) {
+            request.headers.set('Authorization', `Bearer ${token}`);
+        }
+
         return request;
     },
     
@@ -23,11 +29,12 @@ apiClient.use({
             } catch {
                 errorBody = null;
             }
+
+            if (response.status === 401) auth.requestTokenRenewal();
             
             throw mapHttpError(response.status, errorBody);
         }
         
-        // TODO: authentication workflow
         return response;
     }
 });

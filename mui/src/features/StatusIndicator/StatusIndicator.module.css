@@ -6,7 +6,7 @@
 
   border-radius: var(--card-border-radius);
 
-  transition: background .3s;
+  transition: background .5s, box-shadow .5s;
 }
 
 .active {

@@ -263,7 +263,7 @@ class TelemetryService {
         try {
             console.debug(`[TelemetryService] WebSocket received telemetry update.`);
             const data = JSON.parse(event.data);
-            this.stateManager.update(data);            
+            this.stateManager.update({ ...this.getLastUpdate(), data });
         } catch (e) {
             console.error('[TelemetryService] Failed to parse telemetry:', e);
         }
@@ -295,7 +295,8 @@ class TelemetryService {
 
     private getInactiveUpdateObject(): TelemetryState {
         return {
-            ...this.getInactiveUpdateObject(),
+            status: 'connected',
+            error: null,
             data: {
                 type: 'telemetry_update',
                 channel_id: this.lastConnectionData?.channel_id || '',

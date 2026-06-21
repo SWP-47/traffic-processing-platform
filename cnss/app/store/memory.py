@@ -89,3 +89,20 @@ class InMemoryStateStore(StateStore):
             if channel_id in self._channels:
                 return self._channels[channel_id].listeners.copy()
             return set()
+
+    async def set_channel_inactive(self, channel_id: str) -> bool:
+        async with self._lock:
+            if channel_id in self._channels:
+                self._channels[channel_id].is_active = False
+                return True
+            return False
+
+    async def remove_channel(self, channel_id: str) -> bool:
+        async with self._lock:
+            if channel_id in self._channels:
+                del self._channels[channel_id]
+                logger.info(
+                    f"Channel {channel_id} removed from registry (Garbage Collected)."
+                )
+                return True
+            return False

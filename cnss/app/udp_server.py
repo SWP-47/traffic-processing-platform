@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from .models import TelemetryBatch
 from .store import state_store
 from .config import settings
+from .broadcast import broadcast_telemetry_update
 
 logger = logging.getLogger(__name__)
 
@@ -46,18 +47,21 @@ class TelemetryUDPProtocol(asyncio.DatagramProtocol):
         asyncio.create_task(self._process_batch(batch, server_received_at))
 
     async def _process_batch(self, batch: TelemetryBatch, received_at: datetime):
-        # 1. Update State & Calculate Drops
-        await state_store.update_channel_activity(
+        # 1. Update State & Calculate Drops (Sets is_active = True internally)
+        dropped = await state_store.update_channel_activity(
             channel_id=batch.channel_id,
             incoming_sequence=batch.sequence,
             server_received_at=received_at,
         )
 
         # 2. Broadcast to WebSocket Listeners
-        listeners = await state_store.get_listeners(batch.channel_id)
-        if listeners:
-            # TODO: Construct telemetry_update payload and send to listeners
-            pass
+        await broadcast_telemetry_update(
+            channel_id=batch.channel_id,
+            is_active=True,
+            batch=batch,
+            dropped_batches=dropped,
+            received_at=received_at,
+        )
 
 
 async def start_udp_server(host: str = "0.0.0.0", port: int = 5140):

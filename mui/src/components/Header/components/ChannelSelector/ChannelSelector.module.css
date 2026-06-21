@@ -1,0 +1,19 @@
+.select {
+    padding: 12px 25px;
+    border-radius: 30px;
+
+    background: var(--gradient-button);
+    color: var(--color-text);
+
+    font-size: 1.125rem;
+    font-weight: bold;
+
+    border: none;
+    outline: none;
+
+    cursor: pointer;
+}
+
+.option {
+    color: var(--color-text);
+}

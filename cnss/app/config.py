@@ -10,9 +10,6 @@ class Settings(BaseSettings):
     # UDP Ingestion (CN to CnSS)
     cnss_udp_port: int = 5140
 
-    # WebSocket Server (CnSS to MUI)
-    cnss_ws_port: int = 8443
-
     # Security & JWT
     jwt_secret_key: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"
@@ -20,6 +17,10 @@ class Settings(BaseSettings):
 
     # Logging Configuration
     log_level: str = "INFO"  # Default to INFO for safety
+
+    # Telemetry Timeouts & Garbage Collection
+    activity_timeout_ms: int = 5000
+    channel_retention_ms: int = 86400000
 
     model_config = SettingsConfigDict(
         env_file=".env",

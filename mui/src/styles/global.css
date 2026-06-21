@@ -31,12 +31,12 @@
                         var(--color-secondary) 64.66%,
                         var(--color-accent) 97.78%);
 
-                        /* Rectangle 40 */
-
     --gradient-card: linear-gradient(90deg,
                         #FFFFFF08 0%,
                         #00000008 0%),
                      var(--color-surface);
+
+    --gradient-button: linear-gradient(90deg, #6140EC 0%, #53A2E7 100%);
 
     /* Other */
     --card-border-radius: 40px;
@@ -45,9 +45,12 @@
 
 /* ======= Text ======= */
 
+html {
+    font-family: "Manrope", sans-serif;
+}
+
 p, h1, h2, h3, h4, h5, h6 {
     color: var(--color-text);
-    font-family: "Manrope", sans-serif;
 }
 
 h1 {
@@ -56,6 +59,7 @@ h1 {
 
 button {
     font-size: 1.125rem;
+    font-weight: bold;
 }
 
 p {

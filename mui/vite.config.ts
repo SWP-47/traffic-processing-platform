@@ -18,13 +18,9 @@ export default defineConfig(({ mode }) => {
         usePolling: true
       },
       proxy: {
-        '/api/v1/ws': {
-          target: env.WS_BASE_URL,
-          ws: true,
-          changeOrigin: true,
-        },
         '/api': {
-          target: env.API_BASE_URL,
+          target: env.CNSS_BASE_URL,
+          ws: true,
           changeOrigin: true,
         }
       }

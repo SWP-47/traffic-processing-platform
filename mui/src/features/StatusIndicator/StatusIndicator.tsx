@@ -11,7 +11,7 @@ function StatusIndicator() {
   let cardStyle: string = 'card';
   let message: string = '';
 
-  if (WSStatus == 'error') {
+  if (WSStatus == 'disconnected') {
     cardStyle = styles.error!;
     message = WSError!;
   } else if (WSStatus == 'connecting') {

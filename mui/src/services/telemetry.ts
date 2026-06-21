@@ -11,8 +11,7 @@ export type TelemetryUpdate = components["schemas"]["TelemetryUpdate"];
 export type TelemetryConnectionStatus = 
   | 'disconnected'
   | 'connecting'
-  | 'connected'
-  | 'error';
+  | 'connected';
 
 
 export interface TelemetryState {

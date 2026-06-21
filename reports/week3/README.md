@@ -27,12 +27,11 @@ All active user stories, their current states, and historical tracking are maint
 
 We incorporated feedback from both the Assignment 2 prototype review and the Week 3 customer review into the MVP v1 implementation:
 
-1. **Dashboard UI Layout & Contrast (from Assignment 2 Review):** The customer requested that the Tx/Rx packet counters be stretched to fill the bottom of the screen to avoid empty space.
-2. **Frontend-Backend Integration Tooling (from Week 3 Review):** The customer recommended using `openapi-ts` and `openapi-fetch` to generate TypeScript clients directly from the backend's OpenAPI specification to reduce manual errors.
+1. **Frontend-Backend Integration Tooling (from Week 3 Review):** The customer recommended using `openapi-ts` and `openapi-fetch` to generate TypeScript clients directly from the backend's OpenAPI specification to reduce manual errors.
    - *Addressed:* We integrated `openapi-ts` into the MUI build pipeline to auto-generate type-safe API wrappers from the CnSS OpenAPI spec, replacing manual fetch calls.
-3. **Security and Access Control (from Week 3 Review):** During the review, it was decided that basic authentication should not be deferred and must be included in the first functional release to protect the dashboard.
+2. **Security and Access Control (from Week 3 Review):** During the review, it was decided that basic authentication should not be deferred and must be included in the first functional release to protect the dashboard.
    - *Addressed:* We added **US-012 (Basic Password Protection for MUI)** to the current Sprint. The CnSS now issues JWT tokens via `/api/v1/auth/login`, and the MUI requires authentication before accessing the dashboard or WebSocket streams.
-4. **CN-to-CnSS Communication Protocol (from Week 3 Review):** The customer suggested exploring Protobuf/gRPC for the future but agreed to keep the MVP simple and avoid overengineering.
+3. **CN-to-CnSS Communication Protocol (from Week 3 Review):** The customer suggested exploring Protobuf/gRPC for the future but agreed to keep the MVP simple and avoid overengineering.
    - *Addressed:* We finalized the UDP/JSON `TelemetryBatch` schema for the CN-to-CnSS pipeline for MVP v1, and documented the gRPC/Protobuf migration in the roadmap for future sprints.
 
 ## Links and Github views

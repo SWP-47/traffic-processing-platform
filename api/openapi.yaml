@@ -8,15 +8,17 @@ info:
     - **Protocol**: UDP
     - **Endpoint**: `{{cnss_host}}:{{cnss_udp_port}}`
     - **Payload Schema**: `TelemetryBatch` (defined in components/schemas)
-    
+    - **UDP MTU Constraint**: CN must ensure the serialized JSON payload does not exceed 1400 bytes. Adjust `window_ms` to prevent IP fragmentation.
+
     ## Authentication
     - **Endpoint**: `POST /api/v1/auth/login`
     - **Mechanism**: JWT Bearer Token. The token contains `role` and `scope` claims for per-channel access control.
-    
+
     ## WebSocket Stream (CnSS to MUI)
     - **Endpoint**: `wss://{{cnss_host}}:{{cnss_http_port}}/api/v1/ws/telemetry`
     - **Auth**: Query parameters `?token={{access_token}}&channel_id={{channel_id}}`
     - **Payload Schema**: `TelemetryUpdate` (defined in components/schemas)
+    - **Frequency**: 1 Hz (aggregated by Reporting Worker from TimescaleDB)
     - **Keep-Alive**: CnSS sends periodic `ping` frames. MUI must respond with `pong`.
   version: 1.1.0
 
@@ -81,8 +83,8 @@ paths:
     get:
       summary: List Accessible Channels
       description: |
-        List all channels accessible to the authenticated user. 
-        For `viewer`, the list is filtered by JWT `scope`. 
+        List all channels accessible to the authenticated user.
+        For `viewer`, the list is filtered by JWT `scope`.
         For `admin`, all known channels are returned.
       security:
         - bearerAuth: []
@@ -139,17 +141,17 @@ paths:
       description: |
         Upgrades to WebSocket for real-time push stream, scoped to a specific channel.
         Auth via query parameters `?token={{access_token}}&channel_id={{channel_id}}`.
-        
+
         **Connection Lifecycle & Close Codes:**
         1. MUI opens WebSocket connection with `token` and `channel_id`.
         2. CnSS validates token. On failure, closes with code `4001` (invalid_token).
         3. CnSS checks if the `channel_id` query parameter is present in the URL. On failure, closes with code `4002` (missing_channel).
         4. CnSS checks access to `channel_id` via JWT scope. On failure, closes with code `4003` (channel_forbidden).
         5. CnSS checks if the provided `channel_id` value exists in the registry. On failure, closes with code `4004` (channel_not_found).
-        6. CnSS pushes `telemetry_update` frames (2-10 Hz).
+        6. CnSS pushes `telemetry_update` frames at 1 Hz (aggregated by Reporting Worker from TimescaleDB).
         7. **Keep-Alive:** CnSS sends periodic `ping` frames. MUI must respond with `pong`.
         8. If no telemetry from CN for 5000ms, CnSS sends `is_active: false`.
-        
+
         *Security Note: CnSS MUST NOT log the full request URL to prevent token leakage.*
       parameters:
         - in: query
@@ -174,6 +176,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
   schemas:
     LoginRequest:
       type: object
@@ -279,42 +282,65 @@ components:
           type: string
           format: date-time
           example: "2026-06-17T12:00:00Z"
-          
+
+    PacketMetadata:
+      type: object
+      description: Raw metadata for a single observed packet.
+      properties:
+        direction:
+          type: integer
+          enum: [0, 1]
+          description: "0 for IN, 1 for OUT."
+          example: 0
+        src_ip:
+          type: string
+          description: Source IP address (IPv4/IPv6).
+          example: "192.168.1.100"
+        dst_ip:
+          type: string
+          description: Destination IP address (IPv4/IPv6).
+          example: "8.8.8.8"
+        src_port:
+          type: integer
+          description: Source port.
+          example: 12345
+        dst_port:
+          type: integer
+          description: Destination port.
+          example: 53
+
     TelemetryBatch:
       type: object
-      description: Payload sent from CN to CnSS over UDP.
+      description: |
+        Payload sent from CN to CnSS over UDP.
+        Contains raw packet metadata for a specific time window.
+        CN must keep `window_ms` small enough to ensure the JSON payload fits within a single UDP datagram (ideally < 1400 bytes to avoid IP fragmentation).
       properties:
         channel_id:
           type: string
           description: Identifier of the monitored channel/bridge. Used by CnSS to route the batch.
           example: "bridge-berlin-01"
+        timestamp:
+          type: integer
+          description: Unix timestamp (seconds) of the window start.
+          example: 1718625600
         sequence:
           type: integer
-          description: Monotonically increasing sequence number per channel.
+          description: Monotonically increasing sequence number per channel. Used by CnSS to detect dropped UDP datagrams.
           example: 1042
         window_ms:
           type: integer
-          example: 500
-        direction_out:
-          type: object
-          properties:
-            packets:
-              type: integer
-              example: 150
-        direction_in:
-          type: object
-          properties:
-            packets:
-              type: integer
-              example: 140
-        timestamp:
-          type: string
-          format: date-time
-          example: "2026-06-17T12:00:00Z"
-          
+          description: Duration of the batching window in milliseconds. Must be kept small enough to ensure the JSON fits within the UDP MTU (< 1400 bytes).
+          example: 50
+        packets:
+          type: array
+          description: Array of raw packet metadata captured during the window.
+          items:
+            $ref: '#/components/schemas/PacketMetadata'
+
     TelemetryUpdate:
       type: object
-      description: Payload pushed from CnSS to MUI over WebSocket.
+      description: Payload pushed from CnSS to MUI over WebSocket. Aggregated by the Reporting Worker from TimescaleDB at 1 Hz.
       properties:
         type:
           type: string
@@ -327,7 +353,7 @@ components:
           example: true
         window_ms:
           type: integer
-          example: 500
+          example: 50
         dropped_batches:
           type: integer
           description: Number of lost UDP datagrams between the previous and current batch for this channel.
@@ -344,7 +370,7 @@ components:
                   example: 300.0
                 packets:
                   type: integer
-                  example: 150
+                  example: 15
             direction_in:
               type: object
               properties:
@@ -354,14 +380,14 @@ components:
                   example: 280.0
                 packets:
                   type: integer
-                  example: 140
+                  example: 14
         timestamp:
           type: string
           format: date-time
-          description: Original timestamp from the CN batch.
+          description: Original timestamp from the latest CN batch.
           example: "2026-06-17T12:00:00Z"
         received_at:
           type: string
           format: date-time
-          description: Server time at CnSS when the UDP datagram was received.
+          description: Server time at CnSS when the aggregation was generated by the Reporting Worker.
           example: "2026-06-17T12:00:00.050Z"

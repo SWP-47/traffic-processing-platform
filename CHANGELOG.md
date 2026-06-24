@@ -88,6 +88,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Changes Communication Node (CN) telemetry sender to correctly format JSON payloads and transmit UDP batches to CnSS ([#76](https://github.com/SWP-47/traffic-processing-platform/issues/76)).
 - Restructured `traffic-processor/` directory layout for improved navigation ([#87](https://github.com/SWP-47/traffic-processing-platform/issues/87))
 - MUI StatusIndicator component now can get real data from CnSS via WebSocket. ([#68](https://github.com/SWP-47/traffic-processing-platform/issues/68))
+- Traffic Processor (TP) now extracts and forwards individual packet metadata (IP addresses, ports, direction) instead of aggregated counters, and switched to standard UDP sockets for reliable delivery ([#142](https://github.com/SWP-47/traffic-processing-platform/issues/142)).
+- Communication Node (CN) telemetry payload updated to send a flat array of individual packet metadata with Unix timestamps and integer ports, aligning with the revised API specification ([#143](https://github.com/SWP-47/traffic-processing-platform/issues/143)).
 
 ### Deprecated
 

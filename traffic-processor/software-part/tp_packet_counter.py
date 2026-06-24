@@ -61,28 +61,28 @@ def process_packet_in(pkt):
         pkt.payload,
         "\n\n\n",
     )
-    src_ip = ""
-    dst_ip = ""
-    src_port = ""
-    dst_port = ""
+    src_ip = 0
+    dst_ip = 0
+    src_port = 0
+    dst_port = 0
 
     if IP in pkt:
         src_ip = pkt[IP].src
         dst_ip = pkt[IP].dst
         try:
-            src_port = str(pkt[IP].payload.sport)
-            dst_port = str(pkt[IP].payload.dport)
+            src_port = pkt[IP].payload.sport
+            dst_port = pkt[IP].payload.dport
         except AttributeError:
-            src_port = "null"
-            dst_port = "null"
+            src_port = None
+            dst_port = None
     else:
-        src_ip = "null"
-        dst_ip = "null"
-        src_port = "null"
-        dst_port = "null"
+        src_ip = None
+        dst_ip = None
+        src_port = None
+        dst_port = None
     
     json_payload = {
-        "direction": "in",   
+        "direction": 0,   
         "src_ip": src_ip,
         "dst_ip": dst_ip,
         "src_port": src_port,
@@ -101,28 +101,28 @@ def process_packet_out(pkt):
         pkt.payload,
         "\n\n\n",
     )
-    src_ip = ""
-    dst_ip = ""
-    src_port = ""
-    dst_port = ""
+    src_ip = 0
+    dst_ip = 0
+    src_port = 0
+    dst_port = 0
 
     if IP in pkt:
         src_ip = pkt[IP].src
         dst_ip = pkt[IP].dst
         try:
-            src_port = str(pkt[IP].payload.sport)
-            dst_port = str(pkt[IP].payload.dport)
+            src_port = pkt[IP].payload.sport
+            dst_port = pkt[IP].payload.dport
         except AttributeError:
-            src_port = "null"
-            dst_port = "null"
+            src_port = None
+            dst_port = None
     else:
-        src_ip = "null"
-        dst_ip = "null"
-        src_port = "null"
-        dst_port = "null"
+        src_ip = None
+        dst_ip = None
+        src_port = None
+        dst_port = None
     
     json_payload = {
-        "direction": "out",   
+        "direction": 1,   
         "src_ip": src_ip,
         "dst_ip": dst_ip,
         "src_port": src_port,

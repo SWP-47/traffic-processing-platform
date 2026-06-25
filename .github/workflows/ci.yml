@@ -92,8 +92,6 @@ jobs:
           flake8 .
 
       - name: Run integration tests
-        # Эта команда запустит наши новые тесты для /health endpoint
-        # Если тесты не пройдут, CI вернет ошибку и заблокирует мерж PR
         run: pytest tests/ -v
 
 

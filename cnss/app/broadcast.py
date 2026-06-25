@@ -1,6 +1,7 @@
 # app/broadcast.py
 import logging
 from datetime import datetime, timezone
+
 from .store import state_store
 from .models import TelemetryBatch
 
@@ -22,6 +23,11 @@ async def broadcast_telemetry_update(
 
     if batch:
         window_sec = batch.window_ms / 1000.0 if batch.window_ms > 0 else 1.0
+
+        # Derive per-direction counts from raw packets array
+        packets_out = sum(1 for p in batch.packets if p.direction == 1)
+        packets_in = sum(1 for p in batch.packets if p.direction == 0)
+
         payload = {
             "type": "telemetry_update",
             "channel_id": channel_id,
@@ -30,15 +36,17 @@ async def broadcast_telemetry_update(
             "dropped_batches": dropped_batches,
             "metrics": {
                 "direction_out": {
-                    "packets_per_sec": batch.direction_out.packets / window_sec,
-                    "packets": batch.direction_out.packets,
+                    "packets_per_sec": packets_out / window_sec,
+                    "packets": packets_out,
                 },
                 "direction_in": {
-                    "packets_per_sec": batch.direction_in.packets / window_sec,
-                    "packets": batch.direction_in.packets,
+                    "packets_per_sec": packets_in / window_sec,
+                    "packets": packets_in,
                 },
             },
-            "timestamp": batch.timestamp.isoformat().replace("+00:00", "Z"),
+            "timestamp": datetime.fromtimestamp(batch.timestamp, tz=timezone.utc)
+            .isoformat()
+            .replace("+00:00", "Z"),
             "received_at": (
                 received_at.isoformat().replace("+00:00", "Z")
                 if received_at

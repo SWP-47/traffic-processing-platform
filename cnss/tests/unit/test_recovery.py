@@ -37,11 +37,6 @@ async def test_recovery_on_new_udp_state(store):
 
 @pytest.mark.asyncio
 async def test_recovery_broadcasts_to_listeners():
-    """
-    Given a channel receives UDP telemetry after being marked inactive,
-        ...
-        And listeners are notified.
-    """
     protocol = TelemetryUDPProtocol()
     protocol.transport = AsyncMock()
 
@@ -49,31 +44,33 @@ async def test_recovery_broadcasts_to_listeners():
         "channel_id": "ch-recover-broadcast",
         "sequence": 2,
         "window_ms": 500,
-        "direction_out": {"packets": 10},
-        "direction_in": {"packets": 10},
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": int(datetime.now(timezone.utc).timestamp()),
+        "packets": [
+            {
+                "direction": 1,
+                "src_ip": "192.168.1.100",
+                "dst_ip": "8.8.8.8",
+                "src_port": 12345,
+                "dst_port": 53,
+            }
+        ],
     }
     data = json.dumps(valid_batch).encode("utf-8")
 
-    with patch("app.udp_server.state_store") as mock_store:
+    with patch("app.udp_server.state_store") as mock_store, patch(
+        "app.udp_server.insert_packet_flows", new_callable=AsyncMock
+    ), patch(
+        "app.udp_server.broadcast_telemetry_update", new_callable=AsyncMock
+    ) as mock_broadcast:
+
         mock_store.update_channel_activity = AsyncMock(return_value=0)
-        mock_store.get_listeners = AsyncMock(
-            return_value={AsyncMock()}
-        )  # Mock listener
+        mock_store.get_listeners = AsyncMock(return_value={AsyncMock()})
 
-        with patch(
-            "app.udp_server.broadcast_telemetry_update", new_callable=AsyncMock
-        ) as mock_broadcast:
-            protocol.datagram_received(data, ("127.0.0.1", 12345))
-            await asyncio.sleep(0.01)  # Allow asyncio.create_task to run
+        protocol.datagram_received(data, ("127.0.0.1", 12345))
+        await asyncio.sleep(0.01)
 
-            mock_broadcast.assert_called_once()
-            args, kwargs = mock_broadcast.call_args
-
-            channel_id = args[0] if args else kwargs.get("channel_id")
-            assert channel_id == "ch-recover-broadcast"
-
-            is_active = kwargs.get("is_active")
-            assert (
-                is_active is True
-            ), "Broadcast must notify listeners that channel is active"
+        mock_broadcast.assert_called_once()
+        args, kwargs = mock_broadcast.call_args
+        channel_id = args[0] if args else kwargs.get("channel_id")
+        assert channel_id == "ch-recover-broadcast"
+        assert kwargs.get("is_active") is True

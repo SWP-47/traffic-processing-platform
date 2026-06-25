@@ -17,6 +17,8 @@ from fastapi import WebSocket, WebSocketDisconnect, Query
 from .auth import get_ws_user
 from .tasks import background_timeout_and_gc_task
 
+from .db import init_db_pool, close_db_pool
+
 
 class TokenMaskingFilter(logging.Filter):
     """Masks tokens in query parameters to prevent leakage in logs."""
@@ -59,26 +61,26 @@ udp_transport = None
 async def lifespan(app: FastAPI):
     global udp_transport
     logger.info(f"Starting CnSS on {settings.cnss_host}:{settings.cnss_http_port}")
+
+    await init_db_pool()
+
     logger.info(f"Opening UDP Telemetry Listener on port {settings.cnss_udp_port}")
     udp_transport = await start_udp_server(
         host=settings.cnss_host, port=settings.cnss_udp_port
     )
-
     bg_task = asyncio.create_task(background_timeout_and_gc_task())
-
     yield
+
+    # Shutdown
     if udp_transport:
         udp_transport.close()
         logger.info("UDP Telemetry Listener stopped.")
-
     bg_task.cancel()
     try:
         await bg_task
     except asyncio.CancelledError:
         pass
-
-    if udp_transport:
-        udp_transport.close()
+    await close_db_pool()
 
 
 app = FastAPI(

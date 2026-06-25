@@ -7,16 +7,21 @@ class Settings(BaseSettings):
     cnss_host: str = "0.0.0.0"
     cnss_http_port: int = 8000
 
-    # UDP Ingestion (CN to CnSS)
+    # UDP Ingestion (CN → CnSS)
     cnss_udp_port: int = 5140
+
+    # TimescaleDB
+    database_url: str = "postgresql://traffic:traffic@localhost:5432/traffic_db"
+    database_pool_min_size: int = 2
+    database_pool_max_size: int = 10
 
     # Security & JWT
     jwt_secret_key: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"
     jwt_expiration_seconds: int = 86400
 
-    # Logging Configuration
-    log_level: str = "INFO"  # Default to INFO for safety
+    # Logging
+    log_level: str = "INFO"
 
     # Telemetry Timeouts & Garbage Collection
     activity_timeout_ms: int = 5000

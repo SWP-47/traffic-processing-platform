@@ -3,17 +3,20 @@ from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 
 
-class DirectionStats(BaseModel):
-    packets: int
+class PacketMetadata(BaseModel):
+    direction: int  # 0 = IN, 1 = OUT
+    src_ip: str  # IPv4/IPv6
+    dst_ip: str  # IPv4/IPv6
+    src_port: int
+    dst_port: int
 
 
 class TelemetryBatch(BaseModel):
     channel_id: str
+    timestamp: int  # Unix epoch seconds (window start)
     sequence: int
     window_ms: int
-    direction_out: DirectionStats
-    direction_in: DirectionStats
-    timestamp: datetime
+    packets: List[PacketMetadata]
 
 
 class ChannelState(BaseModel):

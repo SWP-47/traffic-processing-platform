@@ -15,7 +15,7 @@ import asyncio
 
 from fastapi import WebSocket, WebSocketDisconnect, Query
 from .auth import get_ws_user
-from .tasks import background_timeout_and_gc_task
+from .tasks import background_timeout_and_gc_task, reporting_worker_task
 
 from .db import init_db_pool, close_db_pool
 
@@ -69,6 +69,7 @@ async def lifespan(app: FastAPI):
         host=settings.cnss_host, port=settings.cnss_udp_port
     )
     bg_task = asyncio.create_task(background_timeout_and_gc_task())
+    reporting_task = asyncio.create_task(reporting_worker_task())
     yield
 
     # Shutdown
@@ -76,6 +77,11 @@ async def lifespan(app: FastAPI):
         udp_transport.close()
         logger.info("UDP Telemetry Listener stopped.")
     bg_task.cancel()
+    reporting_task.cancel()
+    try:
+        await reporting_task
+    except asyncio.CancelledError:
+        pass
     try:
         await bg_task
     except asyncio.CancelledError:

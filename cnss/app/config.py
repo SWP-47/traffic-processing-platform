@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     activity_timeout_ms: int = 5000
     channel_retention_ms: int = 86400000
 
+    # Reporting Worker
+    reporting_interval_sec: float = 1.0
+    reporting_window_sec: float = 3.0
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

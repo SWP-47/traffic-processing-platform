@@ -14,9 +14,11 @@ CREATE TABLE packet_flows (
     PRIMARY KEY (id, time)
 );
 
+-- Convert to hypertable partitioned by time
 SELECT create_hypertable('packet_flows', 'time');
 
+-- Index for fast aggregation by channel and time
 CREATE INDEX idx_channel_time ON packet_flows (channel_id, time DESC);
 
--- Auto-drop chunks older than 7 days
+-- Auto-drop chunks older than 7 days to prevent infinite disk growth
 SELECT add_retention_policy('packet_flows', INTERVAL '7 days');

@@ -6,12 +6,13 @@ services:
       POSTGRES_PASSWORD: traffic
       POSTGRES_DB: traffic_db
     ports:
-      - "5432:5432"
+      - "5432:5432" # Exposed for local DB tool access (e.g., DBeaver, pgAdmin)
     volumes:
       - timescaledb_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U traffic"]
+      # Explicitly specify the database name to prevent "database does not exist" FATAL logs
+      test: ["CMD-SHELL", "pg_isready -U traffic -d traffic_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -24,11 +25,13 @@ services:
       - "8000:8000"
       - "5140:5140/udp"
     volumes:
+      # Mount current directory for instant code change reflection (hot-reload)
       - .:/app
     environment:
-      ENV: development
-      PORT: "8000"
-      DATABASE_URL: postgresql://traffic:traffic@timescaledb:5432/traffic_db
+      - ENV=development
+      - PORT=8000
+      - DATABASE_URL=postgresql://traffic:traffic@timescaledb:5432/traffic_db
+    # Override command from Dockerfile to guarantee reload mode
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --log-level debug
     depends_on:
       timescaledb:

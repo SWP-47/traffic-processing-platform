@@ -5,9 +5,8 @@ from unittest.mock import patch, AsyncMock
 from starlette.websockets import WebSocketDisconnect
 from app.store.memory import InMemoryStateStore
 from app.auth import create_access_token
-from app.models import TelemetryBatch
+from app.models import TelemetryBatch, PacketMetadata
 from app.broadcast import broadcast_telemetry_update
-
 
 class TestWebSocketTelemetry:
     def _get_token(self, role, scope=None):
@@ -17,15 +16,12 @@ class TestWebSocketTelemetry:
     def test_valid_connection(self, client):
         """Valid connection adds listener and accepts."""
         test_store = InMemoryStateStore()
-
         # Use asyncio.run for setup to avoid manual loop management/closure issues
         asyncio.run(
             test_store.update_channel_activity("test-ch", 1, datetime.now(timezone.utc))
         )
-
         token = self._get_token("admin")
         url = f"/api/v1/ws/telemetry?token={token}&channel_id=test-ch"
-
         with patch("app.main.state_store", test_store):
             with client.websocket_connect(url) as websocket:
                 assert "test-ch" in test_store._channels
@@ -43,7 +39,7 @@ class TestWebSocketTelemetry:
         ) as websocket:
             with pytest.raises(WebSocketDisconnect) as excinfo:
                 websocket.receive_text()
-        assert excinfo.value.code == 4001
+            assert excinfo.value.code == 4001
 
     def test_invalid_token(self, client):
         """Invalid token -> 4001 invalid_token."""
@@ -52,7 +48,7 @@ class TestWebSocketTelemetry:
         ) as websocket:
             with pytest.raises(WebSocketDisconnect) as excinfo:
                 websocket.receive_text()
-        assert excinfo.value.code == 4001
+            assert excinfo.value.code == 4001
 
     def test_missing_channel_id(self, client):
         """Missing channel_id -> 4002 missing_channel."""
@@ -62,7 +58,7 @@ class TestWebSocketTelemetry:
         ) as websocket:
             with pytest.raises(WebSocketDisconnect) as excinfo:
                 websocket.receive_text()
-        assert excinfo.value.code == 4002
+            assert excinfo.value.code == 4002
 
     def test_viewer_forbidden_scope(self, client):
         """Viewer out of scope -> 4003 channel_forbidden."""
@@ -71,64 +67,59 @@ class TestWebSocketTelemetry:
         asyncio.run(
             test_store.update_channel_activity("test-ch", 1, datetime.now(timezone.utc))
         )
-
         with patch("app.main.state_store", test_store):
             with client.websocket_connect(
                 f"/api/v1/ws/telemetry?token={token}&channel_id=test-ch"
             ) as websocket:
                 with pytest.raises(WebSocketDisconnect) as excinfo:
                     websocket.receive_text()
-            assert excinfo.value.code == 4003
+                assert excinfo.value.code == 4003
 
     def test_channel_not_found(self, client):
         """Channel doesn't exist -> 4004 channel_not_found."""
         token = self._get_token("admin")
         test_store = InMemoryStateStore()
-
         with patch("app.main.state_store", test_store):
             with client.websocket_connect(
                 f"/api/v1/ws/telemetry?token={token}&channel_id=non-existent"
             ) as websocket:
                 with pytest.raises(WebSocketDisconnect) as excinfo:
                     websocket.receive_text()
-            assert excinfo.value.code == 4004
+                assert excinfo.value.code == 4004
 
-    @pytest.mark.asyncio
-    async def test_broadcast_to_multiple_listeners():
-        """Broadcast pushes to all listeners of the channel only."""
-        from app.models import TelemetryBatch, PacketMetadata
+@pytest.mark.asyncio
+async def test_broadcast_to_multiple_listeners():
+    """Broadcast pushes to all listeners of the channel only."""
+    test_store = InMemoryStateStore()
+    await test_store.update_channel_activity(
+        "test-ch", 1, datetime.now(timezone.utc)
+    )
+    mock_ws1 = AsyncMock()
+    mock_ws2 = AsyncMock()
+    await test_store.add_listener("test-ch", mock_ws1)
+    await test_store.add_listener("test-ch", mock_ws2)
 
-        test_store = InMemoryStateStore()
-        await test_store.update_channel_activity(
-            "test-ch", 1, datetime.now(timezone.utc)
+    batch = TelemetryBatch(
+        channel_id="test-ch",
+        sequence=1,
+        window_ms=500,
+        timestamp=int(datetime.now(timezone.utc).timestamp()),
+        packets=[
+            PacketMetadata(direction=1, src_ip="1.1.1.1", dst_ip="2.2.2.2",
+                           src_port=1000, dst_port=80),
+            PacketMetadata(direction=0, src_ip="2.2.2.2", dst_ip="1.1.1.1",
+                           src_port=80, dst_port=1000),
+        ],
+    )
+
+    with patch("app.broadcast.state_store", test_store):
+        await broadcast_telemetry_update(
+            "test-ch", True, batch, 0, datetime.now(timezone.utc)
         )
-        mock_ws1 = AsyncMock()
-        mock_ws2 = AsyncMock()
-        await test_store.add_listener("test-ch", mock_ws1)
-        await test_store.add_listener("test-ch", mock_ws2)
 
-        batch = TelemetryBatch(
-            channel_id="test-ch",
-            sequence=1,
-            window_ms=500,
-            timestamp=int(datetime.now(timezone.utc).timestamp()),
-            packets=[
-                PacketMetadata(direction=1, src_ip="1.1.1.1", dst_ip="2.2.2.2",
-                            src_port=1000, dst_port=80),
-                PacketMetadata(direction=0, src_ip="2.2.2.2", dst_ip="1.1.1.1",
-                            src_port=80, dst_port=1000),
-            ],
-        )
+    mock_ws1.send_json.assert_called_once()
+    mock_ws2.send_json.assert_called_once()
 
-        with patch("app.broadcast.state_store", test_store):
-            await broadcast_telemetry_update(
-                "test-ch", True, batch, 0, datetime.now(timezone.utc)
-            )
-
-        mock_ws1.send_json.assert_called_once()
-        mock_ws2.send_json.assert_called_once()
-
-        # Verify metrics were derived from packets array
-        sent_payload = mock_ws1.send_json.call_args.args[0]
-        assert sent_payload["metrics"]["direction_out"]["packets"] == 1
-        assert sent_payload["metrics"]["direction_in"]["packets"] == 1
+    sent_payload = mock_ws1.send_json.call_args.args[0]
+    assert sent_payload["metrics"]["direction_out"]["packets"] == 1
+    assert sent_payload["metrics"]["direction_in"]["packets"] == 1

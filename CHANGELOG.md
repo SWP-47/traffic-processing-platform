@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated WebSocket `telemetry_update` push frequency description from `2-10 Hz` to `1 Hz (aggregated from TimescaleDB)` in `README.md`, `openapi.yaml`, and `postman_collection.json`. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 - Rewrote CnSS architectural sequence diagrams to illustrate the new flow: CN -> UDP -> CnSS Ingestion -> TimescaleDB -> CnSS Reporting -> WebSocket. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 - Bumped `openapi.yaml` version from `1.0.0` to `2.0.0` to reflect the major architectural shift. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
-
+- Added Docker configuration for Traffic Processor (TP) to simplify deployment and ensure environment consistency. ([#90](https://github.com/SWP-47/traffic-processing-platform/issues/90))
 ### Deprecated
 
 ### Removed

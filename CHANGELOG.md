@@ -8,16 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Comprehensive TimescaleDB schema specification (`packet_flows` hypertable with `BIGSERIAL` and composite PK) and retention policies in `system-documentation.md`. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
+- `PacketMetadata` schema definition and strict UDP MTU constraint (< 1400 bytes) guidelines across `README.md`, `openapi.yaml`, and `system-documentation.md`. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
+- Architectural descriptions of the new `Ingestion Worker` (UDP to DB) and `Reporting Worker` (DB to WebSocket) in CnSS responsibilities. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 
 ### Changed
+- Completely revised `TelemetryBatch` payload schema to transmit raw packet metadata (IPs, ports, integer direction) instead of aggregated counters, reflecting the MVP v2 data pipeline. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
+- Updated `timestamp` field type from ISO 8601 string to Unix timestamp (integer) in all API specifications and OpenAPI schemas. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
+- Updated WebSocket `telemetry_update` push frequency description from `2-10 Hz` to `1 Hz (aggregated from TimescaleDB)` in `README.md`, `openapi.yaml`, and `postman_collection.json`. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
+- Rewrote CnSS architectural sequence diagrams to illustrate the new flow: CN -> UDP -> CnSS Ingestion -> TimescaleDB -> CnSS Reporting -> WebSocket. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
+- Bumped `openapi.yaml` version from `1.0.0` to `2.0.0` to reflect the major architectural shift. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 
 ### Deprecated
 
 ### Removed
+- References to in-memory `Dict` state management and legacy aggregated counter payloads (`direction_out`, `direction_in` objects) from all API and system documentation. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 
 ### Fixed
 
 ### Security
+- Documented UDP MTU enforcement (< 1400 bytes) as a critical mitigation against network-level fragmentation and silent packet drops in the CN Trust Model section. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 
 
 ## [1.0.0] - 2026-06-21

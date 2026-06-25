@@ -22,21 +22,32 @@
 - **Reliability**: Best-effort. No ACK required. CN must handle silent drops by simply sending the next batch.
 - **Encoding**: JSON, UTF-8, single datagram per batch.
 - **Routing**: CnSS uses `channel_id` from the payload to route the batch to the correct per-channel state. If the channel does not exist, CnSS creates it on first receipt.
+- **UDP MTU Constraint**: CN is strictly responsible for ensuring the serialized JSON payload does not exceed the network MTU (recommended `< 1400 bytes`). CN must dynamically or statically adjust `window_ms` to prevent IP fragmentation and silent UDP drops.
 
 ### Payload Schema: `TelemetryBatch`
 
 ```json
 {
-  "channel_id": "{{channel_id}}",
-  "sequence": 1042,
-  "window_ms": 500,
-  "direction_out": {
-    "packets": 150
-  },
-  "direction_in": {
-    "packets": 140
-  },
-  "timestamp": "2026-06-17T12:00:00Z"
+   "channel_id": "{{channel_id}}",
+   "timestamp": 1718625600,
+   "sequence": 1042,
+   "window_ms": 50,
+   "packets": [
+     {
+       "direction": 0,
+       "src_ip": "192.168.1.100",
+       "dst_ip": "8.8.8.8",
+       "src_port": 12345,
+       "dst_port": 53
+     },
+     {
+       "direction": 1,
+       "src_ip": "8.8.8.8",
+       "dst_ip": "192.168.1.100",
+       "src_port": 53,
+       "dst_port": 12345
+     }
+   ]
 }
 ```
 
@@ -45,11 +56,15 @@
 | Field | Type | Description |
 |-------|------|-------------|
 | `channel_id` | string | Identifier of the monitored channel/bridge. Used by CnSS to route the batch to the correct per-channel state. |
-| `sequence` | integer | Monotonically increasing sequence number **per channel**. Allows CnSS to detect dropped datagrams for this specific channel. |
-| `window_ms` | integer | Duration of the aggregation window in milliseconds. Used for rate normalization. |
-| `direction_out.packets` | integer | Packet count OUT (e.g., A→B) in this window. |
-| `direction_in.packets` | integer | Packet count IN (e.g., B→A) in this window. |
-| `timestamp` | string (ISO 8601) | Timestamp when the CN received the telemetry data from the TP. |
+| `timestamp` | integer | Unix timestamp (seconds) of the window start. |
+| `sequence` | integer | Monotonically increasing sequence number per channel. Allows CnSS to detect dropped datagrams for this specific channel. |
+| `window_ms` | integer | Duration of the batching window in milliseconds. Must be kept small enough to ensure the JSON fits within the UDP MTU (< 1400 bytes). |
+| `packets` | array | Array of raw packet metadata objects captured during the window. |
+| `packets[].direction` | integer | `0` for IN, `1` for OUT. |
+| `packets[].src_ip` | string | Source IP address (IPv4/IPv6). |
+| `packets[].dst_ip` | string | Destination IP address (IPv4/IPv6). |
+| `packets[].src_port` | integer | Source port. |
+| `packets[].dst_port` | integer | Destination port. |
 
 ---
 
@@ -304,7 +319,7 @@ wss://{{cnss_host}}:{{cnss_http_port}}/api/v1/ws/telemetry?token={{access_token}
 3. CnSS checks that the `{{channel_id}}` query parameter is present in the URL. On failure, closes with code `4002` and reason `missing_channel`.
 4. CnSS checks that the JWT's `scope` permits access to `{{channel_id}}` (or user is `admin`). On failure, closes with code `4003` and reason `channel_forbidden`.
 5. CnSS checks that the provided `{{channel_id}}` value exists in its channel registry. On failure, closes with code `4004` and reason `channel_not_found`.
-6. On success, the WebSocket is added to `channels[channel_id].listeners`, and CnSS begins pushing `telemetry_update` frames for that channel only at the same frequency as CN ingestion (2–10 Hz).
+6. On success, the WebSocket is added to `channels[channel_id].listeners`, and CnSS begins pushing `telemetry_update` frames for that channel only at a fixed frequency (e.g 1 Hz), aggregated by the Reporting Worker from TimescaleDB.
 7. MUI may send a `ping` frame; CnSS responds with `pong`.
 8. If no telemetry is received from the CN for this channel for `activity_timeout_ms` (default: 5000), CnSS sends an `is_active: false` update to all listeners of that channel.
 
@@ -458,13 +473,14 @@ All REST endpoints return errors in a consistent format:
 
 ### 5.1. Transport Security
 
-WebSocket connections should use `wss://` (TLS) to protect telemetry data and tokens in transit, especially for remote MUI access. In MVP v1, HTTP is permitted as a conscious trade-off for simplicity, but this introduces risks (token interception via MITM).
+WebSocket connections should use `wss://` (TLS) to protect telemetry data and tokens in transit, especially for remote MUI access. HTTP is permitted as a conscious trade-off for simplicity, but this introduces risks (token interception via MITM).
 
 ### 5.2. Logging
 
 CnSS must sanitize logs. Query parameters containing tokens must be masked or omitted from access logs (e.g., replace `?token=eyJhbG...` with `?token=[REDACTED]`).
 
-### 5.3. CN Trust Model (MVP v1)
+### 5.3. CN Trust Model
 In MVP v1, CNs are not authenticated — the `channel_id` is a trusted assertion. CnSS accepts UDP datagrams from any source. Mitigations:
 - **Network-level ACLs**: CnSS should only accept UDP from known CN IP addresses.
+- **MTU Enforcement**: CN must strictly enforce the `< 1400 bytes` payload limit to prevent network-level fragmentation and drops.
 - **Future versions**: mTLS / DTLS with client certificates, with `channel_id` embedded in the certificate's Subject Alternative Name.

@@ -6,8 +6,8 @@ WORKDIR /tp
 
 COPY ./software-part .
 
-RUN pip install -r ./software-part/requirements.txt
+RUN pip install -r requirements.txt
 
-RUN if [ ! -f ./software-part/.env ]; then cp ./software-part/.env.example .env; fi
+# RUN if [ ! -f .env ]; then cp .env.example .env; fi
 
-CMD ["python3", "./software-part/tp_packet_counter.py"]
+CMD ["python3", "tp_packet_counter.py"]

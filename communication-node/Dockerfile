@@ -6,8 +6,8 @@ WORKDIR /cn
 
 COPY . .
 
-RUN pip install -r ./requirements.txt
+RUN pip install -r requirements.txt
 
-RUN if [ ! -f ./.env ]; then cp ./.env.example .env; fi
+# RUN if [ ! -f .env ]; then cp .env.example .env; fi
 
-CMD ["python3", "./tp_packet_counter.py"]
+CMD ["python3", "cn_demo_1.py"]

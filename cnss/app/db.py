@@ -107,3 +107,38 @@ async def insert_packet_flows(
             f"Database insert failed for channel {channel_id} "
             f"(seq ~{rows[0][0]}): {exc}. Batch dropped gracefully."
         )
+
+async def get_reporting_data() -> tuple[dict, dict]:
+    """
+    Fetches aggregated metrics for the last 1 second and the last seen time per channel.
+    Returns: (metrics_dict, last_seen_map)
+    """
+    if not pool:
+        return {}, {}
+    try:
+        metrics_rows = await pool.fetch("""
+            SELECT channel_id, direction, COUNT(*) as count
+            FROM packet_flows
+            WHERE time > NOW() - INTERVAL '1 second'
+            GROUP BY channel_id, direction
+        """)
+        
+        last_seen_rows = await pool.fetch("""
+            SELECT channel_id, MAX(time) as last_seen
+            FROM packet_flows
+            GROUP BY channel_id
+        """)
+        
+        metrics = {}
+        for row in metrics_rows:
+            ch_id = row['channel_id']
+            if ch_id not in metrics:
+                metrics[ch_id] = {0: 0, 1: 0}
+            metrics[ch_id][row['direction']] = row['count']
+            
+        last_seen_map = {row['channel_id']: row['last_seen'] for row in last_seen_rows}
+        
+        return metrics, last_seen_map
+    except Exception as e:
+        logger.error(f"Failed to fetch reporting data: {e}")
+        return {}, {}

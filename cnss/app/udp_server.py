@@ -61,15 +61,6 @@ class TelemetryUDPProtocol(asyncio.DatagramProtocol):
                 f"Database insert failed for channel {batch.channel_id}: {exc}. Batch dropped gracefully."
             )
 
-        # Push to WebSocket listeners
-        await broadcast_telemetry_update(
-            channel_id=batch.channel_id,
-            is_active=True,
-            batch=batch,
-            dropped_batches=dropped,
-            received_at=received_at,
-        )
-
 
 async def start_udp_server(host: str = "0.0.0.0", port: int = settings.cnss_udp_port):
     loop = asyncio.get_running_loop()

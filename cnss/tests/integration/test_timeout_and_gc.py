@@ -78,11 +78,11 @@ async def test_timeout_detection_and_isolation(mock_store, mock_settings):
     ch_b = await mock_store.get_channel("ch-b")
 
     assert ch_a is not None
-    assert ch_a.is_active is False, "AC 1 Failed: Timed out channel should be inactive"
+    assert ch_a.is_active is False, "Timed out channel should be inactive"
     assert ch_b is not None
     assert (
         ch_b.is_active is True
-    ), "AC 3 Failed: Active channel should remain unaffected"
+    ), "Active channel should remain unaffected"
 
 
 @pytest.mark.asyncio
@@ -168,7 +168,7 @@ async def test_garbage_collection(mock_store, mock_settings):
     await run_gc_iteration(mock_store)
 
     ch = await mock_store.get_channel("ch-gc")
-    assert ch is None, "AC 4 Failed: Channel should be garbage collected"
+    assert ch is None, "Channel should be garbage collected"
 
 
 @pytest.mark.asyncio
@@ -194,4 +194,4 @@ async def test_gc_not_triggered_with_listeners(mock_store, mock_settings):
     ch = await mock_store.get_channel("ch-gc-listeners")
     assert (
         ch is not None
-    ), "AC 4 Negative Failed: Channel with listeners should NOT be garbage collected"
+    ), "Channel with listeners should NOT be garbage collected"

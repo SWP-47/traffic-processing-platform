@@ -26,7 +26,7 @@ async def broadcast_telemetry_update(
 
         # Derive per-direction counts from raw packets array
         packets_out = sum(1 for p in batch.packets if p.direction == 1)
-        packets_in  = sum(1 for p in batch.packets if p.direction == 0)
+        packets_in = sum(1 for p in batch.packets if p.direction == 0)
 
         payload = {
             "type": "telemetry_update",
@@ -44,10 +44,9 @@ async def broadcast_telemetry_update(
                     "packets": packets_in,
                 },
             },
-            "timestamp": datetime
-                .fromtimestamp(batch.timestamp, tz=timezone.utc)
-                .isoformat()
-                .replace("+00:00", "Z"),
+            "timestamp": datetime.fromtimestamp(batch.timestamp, tz=timezone.utc)
+            .isoformat()
+            .replace("+00:00", "Z"),
             "received_at": (
                 received_at.isoformat().replace("+00:00", "Z")
                 if received_at
@@ -63,7 +62,7 @@ async def broadcast_telemetry_update(
             "dropped_batches": 0,
             "metrics": {
                 "direction_out": {"packets_per_sec": 0.0, "packets": 0},
-                "direction_in":  {"packets_per_sec": 0.0, "packets": 0},
+                "direction_in": {"packets_per_sec": 0.0, "packets": 0},
             },
             "timestamp": now_iso,
             "received_at": now_iso,

@@ -12,8 +12,9 @@ from app.store.memory import InMemoryStateStore
 async def test_udp_socket_receives_and_updates_state():
     test_store = InMemoryStateStore()
 
-    with patch("app.udp_server.state_store", test_store), \
-         patch("app.udp_server.insert_packet_flows", new_callable=AsyncMock) as mock_db:
+    with patch("app.udp_server.state_store", test_store), patch(
+        "app.udp_server.insert_packet_flows", new_callable=AsyncMock
+    ) as mock_db:
 
         transport = await start_udp_server(host="127.0.0.1", port=0)
         port = transport.get_extra_info("sockname")[1]

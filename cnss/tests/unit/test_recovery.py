@@ -57,9 +57,11 @@ async def test_recovery_broadcasts_to_listeners():
     }
     data = json.dumps(valid_batch).encode("utf-8")
 
-    with patch("app.udp_server.state_store") as mock_store, \
-         patch("app.udp_server.insert_packet_flows", new_callable=AsyncMock), \
-         patch("app.udp_server.broadcast_telemetry_update", new_callable=AsyncMock) as mock_broadcast:
+    with patch("app.udp_server.state_store") as mock_store, patch(
+        "app.udp_server.insert_packet_flows", new_callable=AsyncMock
+    ), patch(
+        "app.udp_server.broadcast_telemetry_update", new_callable=AsyncMock
+    ) as mock_broadcast:
 
         mock_store.update_channel_activity = AsyncMock(return_value=0)
         mock_store.get_listeners = AsyncMock(return_value={AsyncMock()})

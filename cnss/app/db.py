@@ -54,7 +54,6 @@ async def insert_packet_flows(
     Uses executemany for a single network roundtrip.
     On any failure the batch is dropped and the error is logged.
     """
-    global pool
 
     # Lazy re-init if pool was unavailable at startup or was lost
     if not pool:

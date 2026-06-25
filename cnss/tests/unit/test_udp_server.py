@@ -67,8 +67,9 @@ def test_invalid_schema(protocol, caplog):
 async def test_udp_to_state_integration(protocol):
     valid_data = create_valid_payload(channel_id="udp-int-test", sequence=42)
 
-    with patch("app.udp_server.state_store") as mock_store, \
-         patch("app.udp_server.insert_packet_flows", new_callable=AsyncMock) as mock_db:
+    with patch("app.udp_server.state_store") as mock_store, patch(
+        "app.udp_server.insert_packet_flows", new_callable=AsyncMock
+    ) as mock_db:
 
         mock_store.update_channel_activity = AsyncMock(return_value=0)
         mock_store.get_listeners = AsyncMock(return_value=set())
@@ -97,8 +98,9 @@ async def test_db_failure_graceful(protocol, caplog):
     async def failing_insert(*args, **kwargs):
         raise RuntimeError("connection refused")
 
-    with patch("app.udp_server.state_store") as mock_store, \
-         patch("app.udp_server.insert_packet_flows", side_effect=failing_insert):
+    with patch("app.udp_server.state_store") as mock_store, patch(
+        "app.udp_server.insert_packet_flows", side_effect=failing_insert
+    ):
 
         mock_store.update_channel_activity = AsyncMock(return_value=0)
         mock_store.get_listeners = AsyncMock(return_value=set())

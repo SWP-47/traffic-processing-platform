@@ -9,7 +9,7 @@ from .models import TelemetryBatch
 from .store import state_store
 from .config import settings
 from .broadcast import broadcast_telemetry_update
-from .db import insert_packet_flows          # ← NEW
+from .db import insert_packet_flows  # ← NEW
 
 logger = logging.getLogger(__name__)
 
@@ -20,14 +20,10 @@ class TelemetryUDPProtocol(asyncio.DatagramProtocol):
 
     def connection_made(self, transport):
         self.transport = transport
-        logger.info(
-            f"UDP Telemetry Listener bound to port {settings.cnss_udp_port}"
-        )
+        logger.info(f"UDP Telemetry Listener bound to port {settings.cnss_udp_port}")
 
     def datagram_received(self, data: bytes, addr):
-        logger.debug(
-            f"Raw UDP datagram from {addr[0]}:{addr[1]} ({len(data)} bytes)"
-        )
+        logger.debug(f"Raw UDP datagram from {addr[0]}:{addr[1]} ({len(data)} bytes)")
         try:
             text = data.decode("utf-8")
             payload = json.loads(text)
@@ -46,16 +42,14 @@ class TelemetryUDPProtocol(asyncio.DatagramProtocol):
         server_received_at = datetime.now(timezone.utc)
         asyncio.create_task(self._process_batch(batch, server_received_at))
 
-    async def _process_batch(
-        self, batch: TelemetryBatch, received_at: datetime
-    ):
+    async def _process_batch(self, batch: TelemetryBatch, received_at: datetime):
         # in-memory sequence tracking (no DB query)
         dropped = await state_store.update_channel_activity(
             channel_id=batch.channel_id,
             incoming_sequence=batch.sequence,
             server_received_at=received_at,
         )
-        try:    
+        try:
             # persist to TimescaleDB
             await insert_packet_flows(
                 channel_id=batch.channel_id,
@@ -63,11 +57,10 @@ class TelemetryUDPProtocol(asyncio.DatagramProtocol):
                 packets=batch.packets,
             )
         except Exception as exc:
-            logger.error(
-                f"Database insert failed for channel {batch.channel_id}: {exc}. Batch dropped gracefully."
-            )
+            logger.error(f"Database insert failed for channel {batch.channel_id}: \
+                  {exc}. Batch dropped gracefully.")
 
-        # Push to WebSocket listeners 
+        # Push to WebSocket listeners
         await broadcast_telemetry_update(
             channel_id=batch.channel_id,
             is_active=True,

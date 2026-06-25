@@ -8,6 +8,7 @@ from app.auth import create_access_token
 from app.models import TelemetryBatch, PacketMetadata
 from app.broadcast import broadcast_telemetry_update
 
+
 class TestWebSocketTelemetry:
     def _get_token(self, role, scope=None):
         token, _, _ = create_access_token(f"{role}_user", role, scope or [])
@@ -87,13 +88,12 @@ class TestWebSocketTelemetry:
                     websocket.receive_text()
                 assert excinfo.value.code == 4004
 
+
 @pytest.mark.asyncio
 async def test_broadcast_to_multiple_listeners():
     """Broadcast pushes to all listeners of the channel only."""
     test_store = InMemoryStateStore()
-    await test_store.update_channel_activity(
-        "test-ch", 1, datetime.now(timezone.utc)
-    )
+    await test_store.update_channel_activity("test-ch", 1, datetime.now(timezone.utc))
     mock_ws1 = AsyncMock()
     mock_ws2 = AsyncMock()
     await test_store.add_listener("test-ch", mock_ws1)
@@ -105,10 +105,20 @@ async def test_broadcast_to_multiple_listeners():
         window_ms=500,
         timestamp=int(datetime.now(timezone.utc).timestamp()),
         packets=[
-            PacketMetadata(direction=1, src_ip="1.1.1.1", dst_ip="2.2.2.2",
-                           src_port=1000, dst_port=80),
-            PacketMetadata(direction=0, src_ip="2.2.2.2", dst_ip="1.1.1.1",
-                           src_port=80, dst_port=1000),
+            PacketMetadata(
+                direction=1,
+                src_ip="1.1.1.1",
+                dst_ip="2.2.2.2",
+                src_port=1000,
+                dst_port=80,
+            ),
+            PacketMetadata(
+                direction=0,
+                src_ip="2.2.2.2",
+                dst_ip="1.1.1.1",
+                src_port=80,
+                dst_port=1000,
+            ),
         ],
     )
 

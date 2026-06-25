@@ -19,6 +19,7 @@ from .tasks import background_timeout_and_gc_task
 
 from .db import init_db_pool, close_db_pool
 
+
 class TokenMaskingFilter(logging.Filter):
     """Masks tokens in query parameters to prevent leakage in logs."""
 
@@ -70,7 +71,7 @@ async def lifespan(app: FastAPI):
     bg_task = asyncio.create_task(background_timeout_and_gc_task())
     yield
 
-    # Shutdown 
+    # Shutdown
     if udp_transport:
         udp_transport.close()
         logger.info("UDP Telemetry Listener stopped.")
@@ -80,7 +81,6 @@ async def lifespan(app: FastAPI):
     except asyncio.CancelledError:
         pass
     await close_db_pool()
-
 
 
 app = FastAPI(

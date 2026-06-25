@@ -1,0 +1,26 @@
+# version: '3.8'
+
+services:
+  traffic-processor:
+    build:
+      context: ../traffic-processor/
+      dockerfile: Dockerfile
+    container_name: tp
+    network_mode: host
+    privileged: true
+    env_file:
+      - ../traffic-processor/software-part/.env
+    restart: unless-stopped
+
+  communication-node:
+    build:
+      context: ../communication-node
+      dockerfile: Dockerfile
+    container_name: cn
+    network_mode: host
+    privileged: true
+    env_file:
+      - ../communication-node/.env
+    depends_on:
+      - traffic-processor
+    restart: unless-stopped

@@ -41,21 +41,21 @@ def create_valid_payload(channel_id="test-ch", sequence=1):
 
 
 # Malformed JSON / Invalid UTF-8
-def test_ac5_invalid_utf8(protocol, caplog):
+def test_invalid_utf8(protocol, caplog):
     invalid_data = b"\xff\xfe\xfd"
     with caplog.at_level(logging.ERROR):
         protocol.datagram_received(invalid_data, ("127.0.0.1", 12345))
-    assert "invalid UTF-8" in caplog.text
+    assert "Invalid UTF-8" in caplog.text
 
 
-def test_ac5_malformed_json(protocol, caplog):
+def test_malformed_json(protocol, caplog):
     bad_json = b'{"channel_id": "test", "sequence":'
     with caplog.at_level(logging.ERROR):
         protocol.datagram_received(bad_json, ("127.0.0.1", 12345))
     assert "Invalid payload" in caplog.text
 
 
-def test_ac5_invalid_schema(protocol, caplog):
+def test_invalid_schema(protocol, caplog):
     incomplete_json = b'{"channel_id": "test"}'
     with caplog.at_level(logging.ERROR):
         protocol.datagram_received(incomplete_json, ("127.0.0.1", 12345))
@@ -64,7 +64,7 @@ def test_ac5_invalid_schema(protocol, caplog):
 
 # Full pipeline
 @pytest.mark.asyncio
-async def test_ac1_udp_to_state_integration(protocol):
+async def test_udp_to_state_integration(protocol):
     valid_data = create_valid_payload(channel_id="udp-int-test", sequence=42)
 
     with patch("app.udp_server.state_store") as mock_store, \
@@ -91,7 +91,7 @@ async def test_ac1_udp_to_state_integration(protocol):
 
 # DB failure does not crash
 @pytest.mark.asyncio
-async def test_ac4_db_failure_graceful(protocol, caplog):
+async def test_db_failure_graceful(protocol, caplog):
     valid_data = create_valid_payload(channel_id="db-fail-test", sequence=7)
 
     async def failing_insert(*args, **kwargs):

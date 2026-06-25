@@ -6,16 +6,27 @@ services:
       POSTGRES_PASSWORD: traffic
       POSTGRES_DB: traffic_db
     ports:
-      - "5432:5432" # Exposed for local DB tool access (e.g., DBeaver, pgAdmin)
+      - "5432:5432"
     volumes:
       - timescaledb_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      # Explicitly specify the database name to prevent "database does not exist" FATAL logs
       test: ["CMD-SHELL", "pg_isready -U traffic -d traffic_db"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+
 
   cnss:
     build:

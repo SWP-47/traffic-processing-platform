@@ -94,13 +94,14 @@ class TestWebSocketTelemetry:
             assert excinfo.value.code == 4004
 
     @pytest.mark.asyncio
-    async def test_broadcast_to_multiple_listeners(self):
+    async def test_broadcast_to_multiple_listeners():
         """Broadcast pushes to all listeners of the channel only."""
+        from app.models import TelemetryBatch, PacketMetadata
+
         test_store = InMemoryStateStore()
         await test_store.update_channel_activity(
             "test-ch", 1, datetime.now(timezone.utc)
         )
-
         mock_ws1 = AsyncMock()
         mock_ws2 = AsyncMock()
         await test_store.add_listener("test-ch", mock_ws1)
@@ -110,12 +111,15 @@ class TestWebSocketTelemetry:
             channel_id="test-ch",
             sequence=1,
             window_ms=500,
-            direction_out={"packets": 10},
-            direction_in={"packets": 10},
-            timestamp=datetime.now(timezone.utc),
+            timestamp=int(datetime.now(timezone.utc).timestamp()),
+            packets=[
+                PacketMetadata(direction=1, src_ip="1.1.1.1", dst_ip="2.2.2.2",
+                            src_port=1000, dst_port=80),
+                PacketMetadata(direction=0, src_ip="2.2.2.2", dst_ip="1.1.1.1",
+                            src_port=80, dst_port=1000),
+            ],
         )
 
-        # Patch the state_store in the broadcast module so it uses our test_store
         with patch("app.broadcast.state_store", test_store):
             await broadcast_telemetry_update(
                 "test-ch", True, batch, 0, datetime.now(timezone.utc)
@@ -123,3 +127,8 @@ class TestWebSocketTelemetry:
 
         mock_ws1.send_json.assert_called_once()
         mock_ws2.send_json.assert_called_once()
+
+        # Verify metrics were derived from packets array
+        sent_payload = mock_ws1.send_json.call_args.args[0]
+        assert sent_payload["metrics"]["direction_out"]["packets"] == 1
+        assert sent_payload["metrics"]["direction_in"]["packets"] == 1

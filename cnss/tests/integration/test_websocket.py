@@ -5,7 +5,6 @@ from unittest.mock import patch, AsyncMock
 from starlette.websockets import WebSocketDisconnect
 from app.store.memory import InMemoryStateStore
 from app.auth import create_access_token
-from app.models import TelemetryBatch, PacketMetadata
 from app.broadcast import broadcast_telemetry_update
 
 
@@ -94,34 +93,13 @@ async def test_broadcast_to_multiple_listeners():
     """Broadcast pushes to all listeners of the channel only."""
     test_store = InMemoryStateStore()
     await test_store.update_channel_activity("test-ch", 1, datetime.now(timezone.utc))
+
     mock_ws1 = AsyncMock()
     mock_ws2 = AsyncMock()
     await test_store.add_listener("test-ch", mock_ws1)
     await test_store.add_listener("test-ch", mock_ws2)
 
-    batch = TelemetryBatch(
-        channel_id="test-ch",
-        sequence=1,
-        window_ms=500,
-        timestamp=int(datetime.now(timezone.utc).timestamp()),
-        packets=[
-            PacketMetadata(
-                direction=1,
-                src_ip="1.1.1.1",
-                dst_ip="2.2.2.2",
-                src_port=1000,
-                dst_port=80,
-            ),
-            PacketMetadata(
-                direction=0,
-                src_ip="2.2.2.2",
-                dst_ip="1.1.1.1",
-                src_port=80,
-                dst_port=1000,
-            ),
-        ],
-    )
-
+    # No more TelemetryBatch or PacketMetadata needed!
     with patch("app.broadcast.state_store", test_store):
         await broadcast_telemetry_update(
             channel_id="test-ch",
@@ -129,12 +107,18 @@ async def test_broadcast_to_multiple_listeners():
             packets_in=1,
             packets_out=1,
             dropped_batches=0,
-            received_at=datetime.now(timezone.utc)
+            received_at=datetime.now(timezone.utc),
+            window_sec=3.0,  # Verify the new sliding window parameter
         )
 
     mock_ws1.send_json.assert_called_once()
     mock_ws2.send_json.assert_called_once()
 
     sent_payload = mock_ws1.send_json.call_args.args[0]
+
+    # Verify metrics
     assert sent_payload["metrics"]["direction_out"]["packets"] == 1
     assert sent_payload["metrics"]["direction_in"]["packets"] == 1
+
+    # Verify the sliding window was correctly translated to window_ms
+    assert sent_payload["window_ms"] == 3000

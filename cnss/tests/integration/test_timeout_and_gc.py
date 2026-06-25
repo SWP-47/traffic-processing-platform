@@ -29,7 +29,9 @@ async def run_reporting_iteration(store, last_seen_map, metrics=None):
         # First sleep passes, second raises CancelledError to break the loop
         mock_sleep.side_effect = [None, asyncio.CancelledError()]
         with patch("app.tasks.state_store", store):
-            with patch("app.tasks.get_reporting_data", new_callable=AsyncMock) as mock_db:
+            with patch(
+                "app.tasks.get_reporting_data", new_callable=AsyncMock
+            ) as mock_db:
                 mock_db.return_value = (metrics, last_seen_map)
                 with patch(
                     "app.tasks.broadcast_telemetry_update", new_callable=AsyncMock
@@ -56,7 +58,7 @@ async def test_timeout_detection_and_isolation(mock_store, mock_settings):
     Then other channels are unaffected.
     """
     now = datetime.now(timezone.utc)
-    
+
     # Channel A: Timed out (6000ms > 5000ms)
     await mock_store.update_channel_activity(
         "ch-a", 1, now - timedelta(milliseconds=6000)
@@ -80,9 +82,7 @@ async def test_timeout_detection_and_isolation(mock_store, mock_settings):
     assert ch_a is not None
     assert ch_a.is_active is False, "Timed out channel should be inactive"
     assert ch_b is not None
-    assert (
-        ch_b.is_active is True
-    ), "Active channel should remain unaffected"
+    assert ch_b.is_active is True, "Active channel should remain unaffected"
 
 
 @pytest.mark.asyncio
@@ -108,7 +108,7 @@ async def test_broadcast_on_timeout(mock_store, mock_settings):
     # Verify broadcast was called for the timed-out channel
     mock_broadcast.assert_called_once()
     args, kwargs = mock_broadcast.call_args
-    
+
     channel_id = args[0] if args else kwargs.get("channel_id")
     assert channel_id == "ch-timeout"
     assert kwargs.get("is_active") is False
@@ -120,7 +120,7 @@ async def test_broadcast_on_timeout(mock_store, mock_settings):
 async def test_reporting_worker_aggregates_metrics(mock_store, mock_settings):
     """
     Given the DB returns aggregated metrics for a channel,
-    When the reporting worker runs, Then it passes the correct packets_in, 
+    When the reporting worker runs, Then it passes the correct packets_in,
     packets_out, and window_sec to the broadcast function.
     """
     now = datetime.now(timezone.utc)
@@ -128,15 +128,13 @@ async def test_reporting_worker_aggregates_metrics(mock_store, mock_settings):
 
     last_seen_map = {"ch-metrics": now}
     # Simulate DB aggregation: 150 packets IN (direction 0), 300 packets OUT (direction 1)
-    metrics = {
-        "ch-metrics": {0: 150, 1: 300}
-    }
+    metrics = {"ch-metrics": {0: 150, 1: 300}}
 
     mock_broadcast = await run_reporting_iteration(mock_store, last_seen_map, metrics)
 
     mock_broadcast.assert_called_once()
     args, kwargs = mock_broadcast.call_args
-    
+
     assert kwargs.get("channel_id") == "ch-metrics"
     assert kwargs.get("is_active") is True
     assert kwargs.get("packets_in") == 150
@@ -155,7 +153,7 @@ async def test_garbage_collection(mock_store, mock_settings):
     # Create channel and manually set it to inactive and old
     await mock_store.update_channel_activity("ch-gc", 1, now)
     await mock_store.set_channel_inactive("ch-gc")
-    
+
     # Override timestamp to simulate 25 hours of inactivity
     async with mock_store._lock:
         mock_store._channels["ch-gc"].last_activity_timestamp = now - timedelta(
@@ -179,7 +177,7 @@ async def test_gc_not_triggered_with_listeners(mock_store, mock_settings):
     now = datetime.now(timezone.utc)
     await mock_store.update_channel_activity("ch-gc-listeners", 1, now)
     await mock_store.set_channel_inactive("ch-gc-listeners")
-    
+
     async with mock_store._lock:
         mock_store._channels["ch-gc-listeners"].last_activity_timestamp = (
             now - timedelta(hours=25)
@@ -192,6 +190,4 @@ async def test_gc_not_triggered_with_listeners(mock_store, mock_settings):
     await run_gc_iteration(mock_store)
 
     ch = await mock_store.get_channel("ch-gc-listeners")
-    assert (
-        ch is not None
-    ), "Channel with listeners should NOT be garbage collected"
+    assert ch is not None, "Channel with listeners should NOT be garbage collected"

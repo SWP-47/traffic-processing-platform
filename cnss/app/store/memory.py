@@ -33,43 +33,6 @@ class InMemoryStateStore(StateStore):
                 )
             return self._channels[channel_id]
 
-    async def update_channel_activity(
-        self, channel_id: str, incoming_sequence: int, server_received_at: datetime
-    ) -> int:
-        async with self._lock:
-            if channel_id not in self._channels:
-                self._channels[channel_id] = ChannelState(
-                    channel_id=channel_id,
-                    is_active=True,
-                    last_activity_timestamp=server_received_at,
-                    last_sequence=incoming_sequence,
-                )
-                return 0
-
-            channel = self._channels[channel_id]
-            dropped_batches = 0
-
-            if channel.last_sequence is not None:
-                # AC 3: Detect dropped batches
-                if incoming_sequence > channel.last_sequence + 1:
-                    dropped_batches = incoming_sequence - (channel.last_sequence + 1)
-                    logger.warning(
-                        f"Channel {channel_id}: Detected {dropped_batches} dropped batches."
-                    )
-
-                # AC 4 FIX: Only advance the sequence counter, never regress it
-                if incoming_sequence > channel.last_sequence:
-                    channel.last_sequence = incoming_sequence
-            else:
-                # Fallback if last_sequence was somehow None
-                channel.last_sequence = incoming_sequence
-
-            # Always update activity timestamp and active status
-            channel.last_activity_timestamp = server_received_at
-            channel.is_active = True
-
-            return dropped_batches
-
     async def add_listener(self, channel_id: str, listener: Any) -> bool:
         async with self._lock:
             if channel_id in self._channels:
@@ -106,8 +69,7 @@ class InMemoryStateStore(StateStore):
                 )
                 return True
             return False
-        
-    # Update update_channel_activity to accumulate dropped_batches
+
     async def update_channel_activity(
         self, channel_id: str, incoming_sequence: int, server_received_at: datetime
     ) -> int:
@@ -131,7 +93,7 @@ class InMemoryStateStore(StateStore):
                     logger.warning(
                         f"Channel {channel_id}: Detected {dropped_batches} dropped batches."
                     )
-                
+
                 if incoming_sequence > channel.last_sequence:
                     channel.last_sequence = incoming_sequence
             else:

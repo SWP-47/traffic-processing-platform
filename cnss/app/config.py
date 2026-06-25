@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     # Reporting Worker
     reporting_interval_sec: float = 1.0
     reporting_window_sec: float = 3.0
-    
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

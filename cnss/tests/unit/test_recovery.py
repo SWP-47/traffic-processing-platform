@@ -1,10 +1,6 @@
 import pytest
-import asyncio
-import json
 from datetime import datetime, timezone, timedelta
-from unittest.mock import AsyncMock, patch
 from app.store.memory import InMemoryStateStore
-from app.udp_server import TelemetryUDPProtocol
 
 
 @pytest.fixture

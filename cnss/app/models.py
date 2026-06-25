@@ -27,8 +27,8 @@ class ChannelState(BaseModel):
     is_active: bool = True
     last_activity_timestamp: datetime
     last_sequence: Optional[int] = None
-    dropped_batches: int = 0 
-    
+    dropped_batches: int = 0
+
     # Transient field: WebSocket listeners are kept in memory only.
     listeners: Set[Any] = Field(default_factory=set, exclude=True)
 

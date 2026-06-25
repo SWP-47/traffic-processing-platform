@@ -8,7 +8,6 @@ from pydantic import ValidationError
 from .models import TelemetryBatch
 from .store import state_store
 from .config import settings
-from .broadcast import broadcast_telemetry_update
 from .db import insert_packet_flows  # ← NEW
 
 logger = logging.getLogger(__name__)
@@ -44,7 +43,7 @@ class TelemetryUDPProtocol(asyncio.DatagramProtocol):
 
     async def _process_batch(self, batch: TelemetryBatch, received_at: datetime):
         # in-memory sequence tracking (no DB query)
-        dropped = await state_store.update_channel_activity(
+        await state_store.update_channel_activity(
             channel_id=batch.channel_id,
             incoming_sequence=batch.sequence,
             server_received_at=received_at,

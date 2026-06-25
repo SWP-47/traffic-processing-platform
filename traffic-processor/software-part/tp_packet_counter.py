@@ -54,13 +54,13 @@ def sending_data_to_cnss():
             time.sleep(1) 
 
 def process_packet_in(pkt):
-    print(
-        "------Packet captured------\n\n",
-        pkt.summary(),
-        "\n",
-        pkt.payload,
-        "\n\n\n",
-    )
+    # print(
+    #     "------Packet captured------\n\n",
+    #     pkt.summary(),
+    #     "\n",
+    #     pkt.payload,
+    #     "\n\n\n",
+    # )
     src_ip = 0
     dst_ip = 0
     src_port = 0
@@ -94,13 +94,13 @@ def process_packet_in(pkt):
 
 
 def process_packet_out(pkt):
-    print(
-        "------Packet captured------\n\n",
-        pkt.summary(),
-        "\n",
-        pkt.payload,
-        "\n\n\n",
-    )
+    # print(
+    #     "------Packet captured------\n\n",
+    #     pkt.summary(),
+    #     "\n",
+    #     pkt.payload,
+    #     "\n\n\n",
+    # )
     src_ip = 0
     dst_ip = 0
     src_port = 0

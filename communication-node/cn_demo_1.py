@@ -69,13 +69,13 @@ def sending_data_to_cnss():
 
 
 def process_packet(pkt):
-    print(
-        "------Packet captured------\n\n",
-        pkt.summary(),
-        "\n",
-        pkt.payload,
-        "\n\n\n",
-    )
+    # print(
+    #     "------Packet captured------\n\n",
+    #     pkt.summary(),
+    #     "\n",
+    #     pkt.payload,
+    #     "\n\n\n",
+    # )
     if Raw in pkt:
         try:
             raw_data = pkt[Raw].load.decode("utf-8", errors="ignore")

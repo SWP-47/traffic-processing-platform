@@ -124,7 +124,12 @@ async def test_broadcast_to_multiple_listeners():
 
     with patch("app.broadcast.state_store", test_store):
         await broadcast_telemetry_update(
-            "test-ch", True, batch, 0, datetime.now(timezone.utc)
+            channel_id="test-ch",
+            is_active=True,
+            packets_in=1,
+            packets_out=1,
+            dropped_batches=0,
+            received_at=datetime.now(timezone.utc)
         )
 
     mock_ws1.send_json.assert_called_once()

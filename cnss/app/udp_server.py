@@ -57,8 +57,9 @@ class TelemetryUDPProtocol(asyncio.DatagramProtocol):
                 packets=batch.packets,
             )
         except Exception as exc:
-            logger.error(f"Database insert failed for channel {batch.channel_id}: \
-                  {exc}. Batch dropped gracefully.")
+            logger.error(
+                f"Database insert failed for channel {batch.channel_id}: {exc}. Batch dropped gracefully."
+            )
 
         # Push to WebSocket listeners
         await broadcast_telemetry_update(

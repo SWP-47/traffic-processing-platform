@@ -15,27 +15,29 @@ async def broadcast_telemetry_update(
     packets_out: int = 0,
     dropped_batches: int = 0,
     received_at: datetime = None,
+    window_sec: float = 1.0,
 ):
     listeners = await state_store.get_listeners(channel_id)
     if not listeners:
         return
         
     now_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    window_sec = 1.0  # 1-second aggregation window
+    
+    safe_window_sec = window_sec if window_sec > 0 else 1.0
     
     payload = {
         "type": "telemetry_update",
         "channel_id": channel_id,
         "is_active": is_active,
-        "window_ms": int(window_sec*1000),
+        "window_ms": int(safe_window_sec * 1000),
         "dropped_batches": dropped_batches,
         "metrics": {
             "direction_out": {
-                "packets_per_sec": float(packets_out) / window_sec,
+                "packets_per_sec": float(packets_out) / safe_window_sec,
                 "packets": packets_out,
             },
             "direction_in": {
-                "packets_per_sec": float(packets_in) / window_sec,
+                "packets_per_sec": float(packets_in) / safe_window_sec,
                 "packets": packets_in,
             },
         },

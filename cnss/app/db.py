@@ -116,10 +116,12 @@ async def get_reporting_data() -> tuple[dict, dict]:
     if not pool:
         return {}, {}
     try:
-        metrics_rows = await pool.fetch("""
+        window_interval = f"{settings.reporting_window_sec} seconds"
+        
+        metrics_rows = await pool.fetch(f"""
             SELECT channel_id, direction, COUNT(*) as count
             FROM packet_flows
-            WHERE time > NOW() - INTERVAL '1 second'
+            WHERE time > NOW() - INTERVAL '{window_interval}'
             GROUP BY channel_id, direction
         """)
         

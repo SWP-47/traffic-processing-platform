@@ -13,7 +13,7 @@ async def reporting_worker_task():
     logger.info("Reporting worker started.")
     while True:
         try:
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(settings.reporting_interval_sec)
             now = datetime.now(timezone.utc)
             
             metrics, last_seen_map = await get_reporting_data()
@@ -33,7 +33,7 @@ async def reporting_worker_task():
                 ch_metrics = metrics.get(ch.channel_id, {0: 0, 1: 0})
                 packets_in = ch_metrics.get(0, 0)
                 packets_out = ch_metrics.get(1, 0)
-                
+
                 dropped = await state_store.get_and_reset_dropped_batches(ch.channel_id)
                 
                 await broadcast_telemetry_update(
@@ -42,7 +42,8 @@ async def reporting_worker_task():
                     packets_in=packets_in,
                     packets_out=packets_out,
                     dropped_batches=dropped,
-                    received_at=now
+                    received_at=now,
+                    window_sec=settings.reporting_window_sec
                 )
                 
         except asyncio.CancelledError:

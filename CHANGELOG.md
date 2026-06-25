@@ -8,23 +8,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Background `reporting_worker` task that periodically queries TimescaleDB to aggregate metrics and push `telemetry_update` payloads to WebSocket listeners. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
+- Sliding window aggregation (configurable via `reporting_window_sec`) to calculate smoother, more accurate `packets_per_sec` metrics and prevent data gaps during task scheduling delays. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
+- `dropped_batches` accumulation in `ChannelState` to be consumed and reset by the reporting worker. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
+- `init.sql` initialization script to automatically create the `packet_flows` hypertable, composite index `(channel_id, time DESC)`, and 7-day retention policy on TimescaleDB container startup. ([#145](https://github.com/SWP-47/traffic-processing-platform/issues/145))
+- `app/db.py` module implementing `asyncpg` connection pool management and high-performance `executemany` batch inserts into TimescaleDB. ([#145](https://github.com/SWP-47/traffic-processing-platform/issues/145))
+- TimescaleDB service integration across `docker-compose.yml`, `docker-compose.prod.yml`, and `docker-compose.test.yml` with health checks and proper dependency management. ([#145](https://github.com/SWP-47/traffic-processing-platform/issues/145))
+- In-memory sequence tracking and `dropped_batches` calculation logic within the UDP ingestion pipeline (`app/udp_server.py`). ([#146](https://github.com/SWP-47/traffic-processing-platform/issues/146))
+- `PacketMetadata` Pydantic model in `app/models.py` to parse raw packet metadata (IPs, ports, direction) from the MVP v2 `TelemetryBatch` schema. ([#146](https://github.com/SWP-47/traffic-processing-platform/issues/146))
 - Comprehensive TimescaleDB schema specification (`packet_flows` hypertable with `BIGSERIAL` and composite PK) and retention policies in `system-documentation.md`. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 - `PacketMetadata` schema definition and strict UDP MTU constraint (< 1400 bytes) guidelines across `README.md`, `openapi.yaml`, and `system-documentation.md`. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 - Architectural descriptions of the new `Ingestion Worker` (UDP to DB) and `Reporting Worker` (DB to WebSocket) in CnSS responsibilities. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 
 ### Changed
+- Refactored channel timeout detection (`is_active` status) to be determined by querying `MAX(time)` from TimescaleDB instead of relying solely on in-memory timestamps. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
+- Updated `broadcast_telemetry_update` signature to accept pre-calculated metrics (`packets_in`, `packets_out`, `window_sec`) instead of a raw `TelemetryBatch`. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
+- Refactored `background_timeout_and_gc_task` to strictly handle Garbage Collection of inactive channels, decoupling it from timeout detection and broadcasting. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
+- Updated integration tests to mock DB queries and validate the new `reporting_worker` and GC task lifecycles. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
+- Refactored `app/broadcast.py` to derive real-time `direction_in` and `direction_out` metrics by iterating over the raw `packets` array instead of reading pre-aggregated counters. ([#146](https://github.com/SWP-47/traffic-processing-platform/issues/146))
+- Updated `app/config.py` to include database connection settings (`DATABASE_URL`, pool sizes) loaded from environment variables. ([#145](https://github.com/SWP-47/traffic-processing-platform/issues/145))
+- Updated `app/main.py` lifespan to initialize and close the `asyncpg` connection pool on startup/shutdown. ([#145](https://github.com/SWP-47/traffic-processing-platform/issues/145))
+- Migrated all existing tests to construct `TelemetryBatch` payloads using the new `packets` array schema and mocked `insert_packet_flows`. ([#146](https://github.com/SWP-47/traffic-processing-platform/issues/146))
 - Completely revised `TelemetryBatch` payload schema to transmit raw packet metadata (IPs, ports, integer direction) instead of aggregated counters, reflecting the MVP v2 data pipeline. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 - Updated `timestamp` field type from ISO 8601 string to Unix timestamp (integer) in all API specifications and OpenAPI schemas. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 - Updated WebSocket `telemetry_update` push frequency description from `2-10 Hz` to `1 Hz (aggregated from TimescaleDB)` in `README.md`, `openapi.yaml`, and `postman_collection.json`. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 - Rewrote CnSS architectural sequence diagrams to illustrate the new flow: CN -> UDP -> CnSS Ingestion -> TimescaleDB -> CnSS Reporting -> WebSocket. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 - Bumped `openapi.yaml` version from `1.0.0` to `2.0.0` to reflect the major architectural shift. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 - Added Docker configuration for Traffic Processor (TP) to simplify deployment and ensure environment consistency. ([#90](https://github.com/SWP-47/traffic-processing-platform/issues/90))
+- Added Docker configuration for Communication Node (CN) to simplify deployment and ensure environment consistency. ([#88](https://github.com/SWP-47/traffic-processing-platform/issues/88))
+
+
 ### Deprecated
 
 ### Removed
+- Immediate WebSocket broadcasting from the UDP ingestion path (`udp_server.py`), shifting all push responsibilities to the reporting worker. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
+- Timeout detection and broadcasting logic from the background GC task. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
+- Legacy `DirectionStats` Pydantic model from `app/models.py`, replaced by `PacketMetadata` and the raw `packets` array. ([#146](https://github.com/SWP-47/traffic-processing-platform/issues/146))
 - References to in-memory `Dict` state management and legacy aggregated counter payloads (`direction_out`, `direction_in` objects) from all API and system documentation. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 
 ### Fixed
+- Added graceful error handling and lazy pool re-initialization in `app/db.py` and `app/udp_server.py` to ensure the UDP listener never crashes if TimescaleDB becomes temporarily unreachable (AC 4). ([#145](https://github.com/SWP-47/traffic-processing-platform/issues/145), [#146](https://github.com/SWP-47/traffic-processing-platform/issues/146))
+- Resolved `pytest-asyncio` collection errors caused by invalid method signatures in WebSocket integration tests. ([#146](https://github.com/SWP-47/traffic-processing-platform/issues/146))
+- Fixed case-sensitivity mismatch in UDP invalid UTF-8 logging assertion in `test_udp_server.py`. ([#146](https://github.com/SWP-47/traffic-processing-platform/issues/146))
 
 ### Security
 - Documented UDP MTU enforcement (< 1400 bytes) as a critical mitigation against network-level fragmentation and silent packet drops in the CN Trust Model section. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
@@ -98,6 +123,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Changes Communication Node (CN) telemetry sender to correctly format JSON payloads and transmit UDP batches to CnSS ([#76](https://github.com/SWP-47/traffic-processing-platform/issues/76)).
 - Restructured `traffic-processor/` directory layout for improved navigation ([#87](https://github.com/SWP-47/traffic-processing-platform/issues/87))
 - MUI StatusIndicator component now can get real data from CnSS via WebSocket. ([#68](https://github.com/SWP-47/traffic-processing-platform/issues/68))
+- Traffic Processor (TP) now extracts and forwards individual packet metadata (IP addresses, ports, direction) instead of aggregated counters, and switched to standard UDP sockets for reliable delivery ([#142](https://github.com/SWP-47/traffic-processing-platform/issues/142)).
+- Communication Node (CN) telemetry payload updated to send a flat array of individual packet metadata with Unix timestamps and integer ports, aligning with the revised API specification ([#143](https://github.com/SWP-47/traffic-processing-platform/issues/143)).
 
 ### Deprecated
 

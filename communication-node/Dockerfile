@@ -2,12 +2,12 @@ FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y libpcap-dev
 
-WORKDIR /tp
+WORKDIR /cn
 
-COPY ./software-part .
+COPY . .
 
 RUN pip install -r requirements.txt
 
 # RUN if [ ! -f .env ]; then cp .env.example .env; fi
 
-CMD ["python3", "tp_packet_counter.py"]
+CMD ["python3", "cn_demo_1.py"]

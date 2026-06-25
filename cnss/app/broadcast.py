@@ -1,8 +1,8 @@
 # app/broadcast.py
 import logging
 from datetime import datetime, timezone
+
 from .store import state_store
-from .models import TelemetryBatch
 
 logger = logging.getLogger(__name__)
 
@@ -10,9 +10,11 @@ logger = logging.getLogger(__name__)
 async def broadcast_telemetry_update(
     channel_id: str,
     is_active: bool,
-    batch: TelemetryBatch = None,
+    packets_in: int = 0,
+    packets_out: int = 0,
     dropped_batches: int = 0,
     received_at: datetime = None,
+    window_sec: float = 1.0,
 ):
     listeners = await state_store.get_listeners(channel_id)
     if not listeners:
@@ -20,45 +22,31 @@ async def broadcast_telemetry_update(
 
     now_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
-    if batch:
-        window_sec = batch.window_ms / 1000.0 if batch.window_ms > 0 else 1.0
-        payload = {
-            "type": "telemetry_update",
-            "channel_id": channel_id,
-            "is_active": is_active,
-            "window_ms": batch.window_ms,
-            "dropped_batches": dropped_batches,
-            "metrics": {
-                "direction_out": {
-                    "packets_per_sec": batch.direction_out.packets / window_sec,
-                    "packets": batch.direction_out.packets,
-                },
-                "direction_in": {
-                    "packets_per_sec": batch.direction_in.packets / window_sec,
-                    "packets": batch.direction_in.packets,
-                },
+    safe_window_sec = window_sec if window_sec > 0 else 1.0
+
+    payload = {
+        "type": "telemetry_update",
+        "channel_id": channel_id,
+        "is_active": is_active,
+        "window_ms": int(safe_window_sec * 1000),
+        "dropped_batches": dropped_batches,
+        "metrics": {
+            "direction_out": {
+                "packets_per_sec": float(packets_out) / safe_window_sec,
+                "packets": packets_out,
             },
-            "timestamp": batch.timestamp.isoformat().replace("+00:00", "Z"),
-            "received_at": (
-                received_at.isoformat().replace("+00:00", "Z")
-                if received_at
-                else now_iso
-            ),
-        }
-    else:
-        payload = {
-            "type": "telemetry_update",
-            "channel_id": channel_id,
-            "is_active": False,
-            "window_ms": 0,
-            "dropped_batches": 0,
-            "metrics": {
-                "direction_out": {"packets_per_sec": 0.0, "packets": 0},
-                "direction_in": {"packets_per_sec": 0.0, "packets": 0},
+            "direction_in": {
+                "packets_per_sec": float(packets_in) / safe_window_sec,
+                "packets": packets_in,
             },
-            "timestamp": now_iso,
-            "received_at": now_iso,
-        }
+        },
+        "timestamp": (
+            received_at.isoformat().replace("+00:00", "Z") if received_at else now_iso
+        ),
+        "received_at": (
+            received_at.isoformat().replace("+00:00", "Z") if received_at else now_iso
+        ),
+    }
 
     dead_listeners = []
     for ws in listeners:

@@ -58,3 +58,14 @@ class StateStore(ABC):
     async def remove_channel(self, channel_id: str) -> bool:
         """Remove a channel from the registry."""
         pass
+
+    # Replace set_channel_inactive with set_channel_active and add get_and_reset_dropped_batches
+    @abstractmethod
+    async def get_and_reset_dropped_batches(self, channel_id: str) -> int:
+        """Fetch and reset the dropped batches counter for a channel."""
+        pass
+
+    @abstractmethod
+    async def set_channel_active(self, channel_id: str, is_active: bool) -> bool:
+        """Set the active status of a channel."""
+        pass

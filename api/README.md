@@ -299,6 +299,46 @@
 }
 ```
 
+#### `GET /api/v1/channel/{channel_id}/history`
+**Purpose**: Lazy-load historical telemetry data for the Line Chart. CnSS dynamically calculates the optimal time-bucket interval based on the requested period.  
+**Auth**: `Authorization: Bearer {{access_token}}`
+
+Path Parameters:
+| Parameter | Type | Description |
+| --- | --- | --- |
+| channel_id | string | Identifier of the channel to query. |
+
+Query Parameters:
+| Parameter | Type | Description |
+| --- | --- | --- |
+| period | string | Time period to query. Enum: `1h`, `24h`, `7d`, `30d`. |
+
+Response 200:
+```json
+{
+    "channel_id": "bridge-berlin-01",
+    "period": "24h",
+    "interval_sec": 60,
+    "points": [
+        {
+            "timestamp": "2026-06-17T12:00:00Z",
+            "packets_in_per_sec": 280.5,
+            "packets_out_per_sec": 300.0,
+            "is_active": true
+        }
+    ]
+}
+```
+
+Response 403:
+```json
+{ "error": "forbidden", "message": "You do not have access to this channel." }
+```
+Response 404:
+```json
+{ "error": "not_found", "message": "Channel not found." }
+```
+
 ---
 
 ### 2.3 WebSocket Endpoint
@@ -375,6 +415,60 @@ wss://{{cnss_host}}:{{cnss_http_port}}/api/v1/ws/telemetry?token={{access_token}
 | `metrics.direction_in.packets` | integer | Raw packet count for IN direction in this window. |
 | `timestamp` | string (ISO 8601) | Original timestamp from the CN batch. |
 | `received_at` | string (ISO 8601) | Server time at CnSS when the UDP datagram was received. Used internally for accurate timeout calculation, independent of CN clock skew. |
+
+### WebSocket Control Messages (Client -> Server)
+**Transport**: WebSocket (Text frames).  
+**Purpose**: Manage real-time subscriptions for LAN/WAN host tables.
+
+Payload Schema (Subscribe):
+```json
+{
+    "action": "subscribe",
+    "target": "lan_hosts",  // Enum: "lan_hosts", "wan_hosts"
+    "sort_by": "sent",      // Enum: "sent", "received", "last_seen"
+    "limit": 5              // Integer, default: 5
+}
+```
+Payload Schema (Unsubscribe):
+```json
+{
+    "action": "unsubscribe",
+    "target": "lan_hosts"
+}
+```
+### WebSocket Host Updates (Server -> Client)
+**Transport**: WebSocket (JSON text frames).   
+**Purpose**: Push real-time updates for LAN/WAN host tables. Sent immediately upon subscription (Initial Snapshot) and then periodically (1 Hz) by the Reporting Worker.
+
+Payload Schema (`hosts_update`):
+```json
+{
+    "type": "hosts_update",
+    "target": "lan_hosts",
+    "channel_id": "bridge-berlin-01",
+    "timestamp": "2026-06-17T12:00:05Z",
+    "hosts": [
+        {
+            "ip": "192.168.1.100",
+            "sent_per_sec": 15.5,
+            "received_per_sec": 120.0,
+            "last_seen": "2026-06-17T12:00:04Z"
+        }
+    ]
+}
+```
+Fields:
+| Field | Type | Description |
+| --- | --- | --- |
+| type | string | Event type, always `hosts_update`. |
+| target | string | `lan_hosts` or `wan_hosts`. |
+| channel_id | string | Identifier of the monitored channel. |
+| timestamp | string (ISO 8601) | Server time when the snapshot was generated. |
+| hosts | array | List of top host objects. |
+| hosts[].ip | string | IP address of the host. |
+| hosts[].sent_per_sec | float | Average packets sent per second in the current window. |
+| hosts[].received_per_sec | float | Average packets received per second in the current window. |
+| hosts[].last_seen | string (ISO 8601) | Timestamp of the last packet observed for this IP. |
 
 ---
 

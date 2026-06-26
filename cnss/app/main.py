@@ -26,7 +26,7 @@ from .db import (
     is_db_healthy,
 )
 
-from datetime import datetime, timezone, timedelta
+from datetime import timedelta
 
 
 class TokenMaskingFilter(logging.Filter):

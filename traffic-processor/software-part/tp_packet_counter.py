@@ -30,6 +30,35 @@ packet_queue_out = queue.Queue()
 
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+def get_json_payload(pkt, direction):
+    src_ip = 0
+    dst_ip = 0
+    src_port = 0
+    dst_port = 0
+
+    if IP in pkt:
+        src_ip = pkt[IP].src
+        dst_ip = pkt[IP].dst
+        try:
+            src_port = pkt[IP].payload.sport
+            dst_port = pkt[IP].payload.dport
+        except AttributeError:
+            src_port = None
+            dst_port = None
+    else:
+        src_ip = None
+        dst_ip = None
+        src_port = None
+        dst_port = None
+    
+    json_payload = {
+        "direction": direction,   
+        "src_ip": src_ip,
+        "dst_ip": dst_ip,
+        "src_port": src_port,
+        "dst_port": dst_port,
+    }
+    return json_payload
 
 def sending_data_to_cnss():
     while True:
@@ -54,106 +83,92 @@ def sending_data_to_cnss():
             time.sleep(1) 
 
 def process_packet_in(pkt):
-    # print(
-    #     "------Packet captured------\n\n",
-    #     pkt.summary(),
-    #     "\n",
-    #     pkt.payload,
-    #     "\n\n\n",
-    # )
-    src_ip = 0
-    dst_ip = 0
-    src_port = 0
-    dst_port = 0
+    # src_ip = 0
+    # dst_ip = 0
+    # src_port = 0
+    # dst_port = 0
 
-    if IP in pkt:
-        src_ip = pkt[IP].src
-        dst_ip = pkt[IP].dst
-        try:
-            src_port = pkt[IP].payload.sport
-            dst_port = pkt[IP].payload.dport
-        except AttributeError:
-            src_port = None
-            dst_port = None
-    else:
-        src_ip = None
-        dst_ip = None
-        src_port = None
-        dst_port = None
+    # if IP in pkt:
+    #     src_ip = pkt[IP].src
+    #     dst_ip = pkt[IP].dst
+    #     try:
+    #         src_port = pkt[IP].payload.sport
+    #         dst_port = pkt[IP].payload.dport
+    #     except AttributeError:
+    #         src_port = None
+    #         dst_port = None
+    # else:
+    #     src_ip = None
+    #     dst_ip = None
+    #     src_port = None
+    #     dst_port = None
     
-    json_payload = {
-        "direction": 0,   
-        "src_ip": src_ip,
-        "dst_ip": dst_ip,
-        "src_port": src_port,
-        "dst_port": dst_port,
-    }
-
+    # json_payload = {
+    #     "direction": 0,   
+    #     "src_ip": src_ip,
+    #     "dst_ip": dst_ip,
+    #     "src_port": src_port,
+    #     "dst_port": dst_port,
+    # }
+    json_payload = get_json_payload(pkt, 0)
     packet_queue_in.put(json_payload)
 
 
 
 def process_packet_out(pkt):
-    # print(
-    #     "------Packet captured------\n\n",
-    #     pkt.summary(),
-    #     "\n",
-    #     pkt.payload,
-    #     "\n\n\n",
-    # )
-    src_ip = 0
-    dst_ip = 0
-    src_port = 0
-    dst_port = 0
+    # src_ip = 0
+    # dst_ip = 0
+    # src_port = 0
+    # dst_port = 0
 
-    if IP in pkt:
-        src_ip = pkt[IP].src
-        dst_ip = pkt[IP].dst
-        try:
-            src_port = pkt[IP].payload.sport
-            dst_port = pkt[IP].payload.dport
-        except AttributeError:
-            src_port = None
-            dst_port = None
-    else:
-        src_ip = None
-        dst_ip = None
-        src_port = None
-        dst_port = None
+    # if IP in pkt:
+    #     src_ip = pkt[IP].src
+    #     dst_ip = pkt[IP].dst
+    #     try:
+    #         src_port = pkt[IP].payload.sport
+    #         dst_port = pkt[IP].payload.dport
+    #     except AttributeError:
+    #         src_port = None
+    #         dst_port = None
+    # else:
+    #     src_ip = None
+    #     dst_ip = None
+    #     src_port = None
+    #     dst_port = None
     
-    json_payload = {
-        "direction": 1,   
-        "src_ip": src_ip,
-        "dst_ip": dst_ip,
-        "src_port": src_port,
-        "dst_port": dst_port,
-    }
-
+    # json_payload = {
+    #     "direction": 1,   
+    #     "src_ip": src_ip,
+    #     "dst_ip": dst_ip,
+    #     "src_port": src_port,
+    #     "dst_port": dst_port,
+    # }
+    json_payload = get_json_payload(pkt, 1)
     packet_queue_out.put(json_payload)
 
+if __name__ == "__main__":
+    threading.Thread(target=sending_data_to_cnss, daemon=True).start()
 
-threading.Thread(target=sending_data_to_cnss, daemon=True).start()
+    sniffer_in = threading.Thread(
+        target=lambda: sniff(
+            iface=SNIFF_INTERFACE_IN, prn=process_packet_in, store=False
+        ),
+        daemon=True,
+    )
+    sniffer_out = threading.Thread(
+        target=lambda: sniff(
+            iface=SNIFF_INTERFACE_OUT, prn=process_packet_out, store=False
+        ),
+        daemon=True,
+    )
 
-sniffer_in = threading.Thread(
-    target=lambda: sniff(
-        iface=SNIFF_INTERFACE_IN, prn=process_packet_in, store=False
-    ),
-    daemon=True,
-)
-sniffer_out = threading.Thread(
-    target=lambda: sniff(
-        iface=SNIFF_INTERFACE_OUT, prn=process_packet_out, store=False
-    ),
-    daemon=True,
-)
+    sniffer_in.start()
+    sniffer_out.start()
 
-sniffer_in.start()
-sniffer_out.start()
-
-try:
-    while True:
-        time.sleep(1)
-except KeyboardInterrupt:
-    print("\n Keyboard interruption")
-    udp_socket.close()
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\n Keyboard interruption")
+        udp_socket.close()
 

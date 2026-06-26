@@ -83,66 +83,12 @@ def sending_data_to_cnss():
             time.sleep(1) 
 
 def process_packet_in(pkt):
-    # src_ip = 0
-    # dst_ip = 0
-    # src_port = 0
-    # dst_port = 0
-
-    # if IP in pkt:
-    #     src_ip = pkt[IP].src
-    #     dst_ip = pkt[IP].dst
-    #     try:
-    #         src_port = pkt[IP].payload.sport
-    #         dst_port = pkt[IP].payload.dport
-    #     except AttributeError:
-    #         src_port = None
-    #         dst_port = None
-    # else:
-    #     src_ip = None
-    #     dst_ip = None
-    #     src_port = None
-    #     dst_port = None
-    
-    # json_payload = {
-    #     "direction": 0,   
-    #     "src_ip": src_ip,
-    #     "dst_ip": dst_ip,
-    #     "src_port": src_port,
-    #     "dst_port": dst_port,
-    # }
     json_payload = get_json_payload(pkt, 0)
     packet_queue_in.put(json_payload)
 
 
 
 def process_packet_out(pkt):
-    # src_ip = 0
-    # dst_ip = 0
-    # src_port = 0
-    # dst_port = 0
-
-    # if IP in pkt:
-    #     src_ip = pkt[IP].src
-    #     dst_ip = pkt[IP].dst
-    #     try:
-    #         src_port = pkt[IP].payload.sport
-    #         dst_port = pkt[IP].payload.dport
-    #     except AttributeError:
-    #         src_port = None
-    #         dst_port = None
-    # else:
-    #     src_ip = None
-    #     dst_ip = None
-    #     src_port = None
-    #     dst_port = None
-    
-    # json_payload = {
-    #     "direction": 1,   
-    #     "src_ip": src_ip,
-    #     "dst_ip": dst_ip,
-    #     "src_port": src_port,
-    #     "dst_port": dst_port,
-    # }
     json_payload = get_json_payload(pkt, 1)
     packet_queue_out.put(json_payload)
 

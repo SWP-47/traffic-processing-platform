@@ -1,6 +1,8 @@
 import pytest
 from datetime import datetime, timezone, timedelta
 from app.store.memory import InMemoryStateStore
+from app.models import WSClientSession
+from unittest.mock import MagicMock
 
 
 @pytest.fixture
@@ -9,7 +11,7 @@ def store():
     return InMemoryStateStore()
 
 
-# --- AC 2: Auto-create new channel ---
+# --- Auto-create new channel ---
 @pytest.mark.asyncio
 async def test_ac2_auto_create_channel(store):
     channel_id = "new-channel"
@@ -33,7 +35,7 @@ async def test_ac2_auto_create_channel(store):
     assert len(channel.listeners) == 0  # Empty listeners set
 
 
-# --- AC 1: Parse and update in-memory state ---
+# --- Parse and update in-memory state ---
 @pytest.mark.asyncio
 async def test_ac1_update_in_memory_state(store):
     channel_id = "test-channel"
@@ -56,7 +58,7 @@ async def test_ac1_update_in_memory_state(store):
     assert channel.last_activity_timestamp == later
 
 
-# --- AC 3: Detect dropped batches ---
+# --- Detect dropped batches ---
 @pytest.mark.asyncio
 async def test_ac3_detect_dropped_batches(store):
     channel_id = "drop-test"
@@ -77,7 +79,7 @@ async def test_ac3_detect_dropped_batches(store):
     assert channel.last_sequence == 5
 
 
-# --- AC 4: Handle out-of-order/duplicates gracefully ---
+# --- Handle out-of-order/duplicates gracefully ---
 @pytest.mark.asyncio
 async def test_ac4_out_of_order_handling(store):
     channel_id = "ooo-test"
@@ -102,3 +104,41 @@ async def test_ac4_out_of_order_handling(store):
     assert channel.last_activity_timestamp == later
     # Last sequence MUST NOT regress
     assert channel.last_sequence == 5
+
+# --- ubscription Target Filtering ---
+@pytest.mark.asyncio
+async def test_get_subscribers_by_target(store):
+    """Test filtering sessions by specific subscription target."""
+    await store.get_or_create_channel("sub-test-ch")
+    
+    # Create mock sessions
+    ws1 = MagicMock()
+    ws2 = MagicMock()
+    ws3 = MagicMock()
+    
+    session1 = WSClientSession(websocket=ws1, user=MagicMock(), channel_id="sub-test-ch")
+    session1.subscriptions["lan_hosts"] = {"sort_by": "sent", "limit": 5}
+    
+    session2 = WSClientSession(websocket=ws2, user=MagicMock(), channel_id="sub-test-ch")
+    session2.subscriptions["wan_hosts"] = {"sort_by": "received", "limit": 10}
+    
+    session3 = WSClientSession(websocket=ws3, user=MagicMock(), channel_id="sub-test-ch")
+    # No subscriptions
+    
+    await store.add_listener("sub-test-ch", session1)
+    await store.add_listener("sub-test-ch", session2)
+    await store.add_listener("sub-test-ch", session3)
+    
+    # Query for lan_hosts
+    lan_subs = await store.get_subscribers_by_target("sub-test-ch", "lan_hosts")
+    assert len(lan_subs) == 1
+    assert session1 in lan_subs
+    
+    # Query for wan_hosts
+    wan_subs = await store.get_subscribers_by_target("sub-test-ch", "wan_hosts")
+    assert len(wan_subs) == 1
+    assert session2 in wan_subs
+    
+    # Query for non-existent target
+    empty_subs = await store.get_subscribers_by_target("sub-test-ch", "unknown_target")
+    assert len(empty_subs) == 0

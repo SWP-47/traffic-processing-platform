@@ -1,12 +1,12 @@
 import pytest
 import asyncio
 from datetime import datetime, timezone
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch, AsyncMock, MagicMock
 from starlette.websockets import WebSocketDisconnect
 from app.store.memory import InMemoryStateStore
 from app.auth import create_access_token
 from app.broadcast import broadcast_telemetry_update
-
+from app.models import WSClientSession
 
 class TestWebSocketTelemetry:
     def _get_token(self, role, scope=None):
@@ -93,11 +93,16 @@ async def test_broadcast_to_multiple_listeners():
     """Broadcast pushes to all listeners of the channel only."""
     test_store = InMemoryStateStore()
     await test_store.update_channel_activity("test-ch", 1, datetime.now(timezone.utc))
-
+    
     mock_ws1 = AsyncMock()
     mock_ws2 = AsyncMock()
-    await test_store.add_listener("test-ch", mock_ws1)
-    await test_store.add_listener("test-ch", mock_ws2)
+    
+    # Wrap mocks in WSClientSession to match the new architecture
+    session1 = WSClientSession(websocket=mock_ws1, user=MagicMock(), channel_id="test-ch")
+    session2 = WSClientSession(websocket=mock_ws2, user=MagicMock(), channel_id="test-ch")
+    
+    await test_store.add_listener("test-ch", session1)
+    await test_store.add_listener("test-ch", session2)
 
     # No more TelemetryBatch or PacketMetadata needed!
     with patch("app.broadcast.state_store", test_store):
@@ -113,12 +118,9 @@ async def test_broadcast_to_multiple_listeners():
 
     mock_ws1.send_json.assert_called_once()
     mock_ws2.send_json.assert_called_once()
-
     sent_payload = mock_ws1.send_json.call_args.args[0]
-
     # Verify metrics
     assert sent_payload["metrics"]["direction_out"]["packets"] == 1
     assert sent_payload["metrics"]["direction_in"]["packets"] == 1
-
     # Verify the sliding window was correctly translated to window_ms
     assert sent_payload["window_ms"] == 3000

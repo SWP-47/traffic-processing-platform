@@ -5,7 +5,7 @@ The architecture is strictly decoupled into a hardware-accelerated data plane (f
 
 The system supports multiple Communication Nodes (CNs) feeding a single Control and Status Server (CnSS), and multiple Management User Interfaces (MUIs) consuming data from the same CnSS. 
 
-**MVP v2 Architectural Shift:** The CnSS persists **raw packet metadata** (IPs, ports, directions) into a Time-Series Database (TimescaleDB). Real-time metrics for the MUI are aggregated via periodic SQL queries. This provides historical data, prevents memory leaks during traffic spikes, and allows for flexible future reporting.
+The CnSS persists **raw packet metadata** (IPs, ports, directions) into a Time-Series Database (TimescaleDB). Real-time metrics for the MUI are aggregated via periodic SQL queries. This provides historical data, prevents memory leaks during traffic spikes, and allows for flexible future reporting.
 
 ## 2. Component Architecture & Conceptual Responsibilities
 
@@ -40,6 +40,9 @@ The system supports multiple Communication Nodes (CNs) feeding a single Control 
 *   **Reporting Worker:** A background task that runs every 1 second. It queries TimescaleDB to aggregate metrics (packet counts per direction) for the last second, determines channel `is_active` status, and pushes `telemetry_update` events to subscribed MUI clients via WebSocket.
 *   **Access Control:** Validates JWT tokens on all REST and WebSocket endpoints. Enforces per-channel access via the `scope` claim.
 *   **REST API & WebSocket:** Exposes endpoints for MUI authentication, channel discovery, and real-time telemetry streaming.
+*   **Session Management**: Maintains in-memory `WSClientSession` objects to track user context and active WebSocket subscriptions (e.g., LAN/WAN host tables). This enables targeted broadcasting and resource optimization.
+*   **History API**: Provides REST endpoints for lazy-loading historical telemetry data (Line Chart) with dynamic time-bucketing.
+*   **Targeted Reporting**: The Reporting Worker checks active subscriptions and pushes targeted `hosts_update` events only to subscribed MUI clients, skipping heavy DB queries if no one is listening.
 
 ### 2.4. Management User Interface (MUI)
 
@@ -145,6 +148,50 @@ sequenceDiagram
     DB-->>CnSS_Report: last_seen = just now
     CnSS_Report->>MUI_A: WS Push: {"channel_id": "bridge-berlin", "is_active": true}
 ```
+### 3.4. Line Chart History Retrieval (REST)
+This diagram illustrates how MUI lazy-loads historical data for the Line Chart.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Admin as System Administrator
+    participant MUI as Management UI (MUI)
+    participant CnSS as Control & Status Server (CnSS)
+    participant DB as TimescaleDB
+
+    Admin->>MUI: Select time period (e.g., "24h")
+    MUI->>CnSS: GET /api/v1/channel/{channel_id}/history?period=24h <br/> Authorization: Bearer ...
+    CnSS->>CnSS: Calculate optimal time_bucket interval (e.g., 1m)
+    CnSS->>DB: SELECT time_bucket(...), SUM(direction=0), SUM(direction=1) ...
+    DB-->>CnSS: Aggregated buckets
+    CnSS-->>MUI: 200 OK { points: [{timestamp, packets_in_per_sec, packets_out_per_sec, is_active}] }
+```
+
+### 3.5. WebSocket Subscription for Host Tables (LAN/WAN)
+This diagram illustrates the "Initial Snapshot on Subscribe" pattern for real-time host tables.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant MUI as Management UI (MUI)
+    participant CnSS_WS as CnSS (WebSocket Handler)
+    participant CnSS_Report as CnSS (Reporting Worker)
+    participant DB as TimescaleDB
+
+    MUI->>CnSS_WS: WS Send: {"action": "subscribe", "target": "lan_hosts", "sort_by": "sent", "limit": 5}
+    CnSS_WS->>CnSS_WS: Update WSClientSession.subscriptions in memory
+    CnSS_WS->>DB: SELECT Top 5 LAN Hosts (Immediate query for initial snapshot)
+    DB-->>CnSS_WS: Top 5 LAN Hosts data (packets/sec)
+    CnSS_WS-->>MUI: WS Push: {"type": "hosts_update", "target": "lan_hosts", "hosts": [...]} (Initial Snapshot)
+
+    Note over CnSS_Report: Reporting Worker ticks (1s later)
+    CnSS_Report->>CnSS_Report: Check if any session has "lan_hosts" subscription
+    alt Subscribers exist
+        CnSS_Report->>DB: SELECT Top 5 LAN Hosts (Periodic query)
+        DB-->>CnSS_Report: Updated Top 5 data
+        CnSS_Report-->>MUI: WS Push: {"type": "hosts_update", "target": "lan_hosts", "hosts": [...]} (Update)
+    end
+```
 
 ## 4. Protocol Specifications
 
@@ -216,6 +263,55 @@ sequenceDiagram
 }
 ```
 
+### 4.4. MUI to CnSS (WebSocket Control Messages)
+*   **Transport**: WebSocket (Text frames).
+*   **Direction**: MUI to CnSS.
+*   **Purpose**: Manage real-time subscriptions for host tables.
+
+Payload Schema (Subscribe):
+
+```json
+{
+    "action": "subscribe",
+    "target": "lan_hosts",  // Enum: "lan_hosts", "wan_hosts"
+    "sort_by": "sent",      // Enum: "sent", "received", "last_seen"
+    "limit": 5              // Integer, default: 5
+}
+```
+
+Payload Schema (Unsubscribe):
+
+```json
+{
+    "action": "unsubscribe",
+    "target": "lan_hosts"   // Enum: "lan_hosts", "wan_hosts"
+}
+```
+
+### 4.5. CnSS to MUI (WebSocket Host Updates)
+*   **Transport**: WebSocket (JSON frames).
+*   **Direction**: CnSS to MUI.
+*   **Purpose**: Push real-time updates for LAN/WAN host tables. Sent immediately upon subscription (Initial Snapshot) and then periodically (1 Hz) by the *   **Reporting** Worker.
+
+Payload Schema (`hosts_update`):
+
+```json
+{
+    "type": "hosts_update",
+    "target": "lan_hosts",
+    "channel_id": "bridge-berlin-01",
+    "timestamp": "2026-06-17T12:00:05Z",
+    "hosts": [
+        {
+            "ip": "192.168.1.100",
+            "sent_per_sec": 15.5,
+            "received_per_sec": 120.0,
+            "last_seen": "2026-06-17T12:00:04Z"
+        }
+    ]
+}
+```
+
 ## 5. Database Schema (TimescaleDB)
 
 CnSS utilizes TimescaleDB (an extension of PostgreSQL) for persistent, high-performance time-series storage.
@@ -253,6 +349,17 @@ To prevent infinite disk growth, CnSS (or a cronjob) should configure a retentio
 SELECT add_retention_policy('packet_flows', INTERVAL '7 days');
 ```
 
+### 5.3. Data Aggregation Strategies (TimescaleDB)
+To support the Line Chart and Host Tables without degrading performance, CnSS uses specific TimescaleDB features:
+
+1. Line Chart (History): Uses `time_bucket()` to group raw packet flows into fixed time intervals based on the requested period (e.g., 1h -> 1s buckets, 24h -> 1m buckets).
+2. Host Tables (LAN/WAN): 
+   - LAN Sent: `COUNT(*)` where `direction = 1` (OUT), grouped by `src_ip`.
+   - LAN Received: `COUNT(*)` where `direction = 0` (IN), grouped by `dst_ip`.
+   - WAN Sent: `COUNT(*)` where `direction = 0` (IN), grouped by `src_ip`.
+   - WAN Received: `COUNT(*)` where `direction = 1` (OUT), grouped by `dst_ip`.
+   - The results are combined using `UNION ALL` and grouped by IP to calculate `packets_per_sec` (count / window_sec).
+  
 ## 6. Reliability & Edge Cases
 
 ### 6.1. Uninterrupted Traffic Flow (US-005, US-007, US-009)
@@ -265,7 +372,7 @@ Sequence tracking is performed per channel in memory by the Ingestion Worker bef
 The calculated `dropped_batches` metric is passed to the Reporting Worker to be included in the WebSocket payload.
 
 ### 6.3. Database & Memory Leak Prevention
-*   **WebSocket GC:** On WebSocket `onclose`, the socket object is removed from the listener registry.
+*   **WebSocket GC**: On WebSocket `onclose`, the `WSClientSession` object (containing the socket and subscription context) is removed from the channel's listener registry. If a channel loses all subscribers for a specific target (e.g., `lan_hosts`), the Reporting Worker skips the heavy DB query for that target.
 *   **Database GC:** Handled natively by TimescaleDB retention policies (e.g., dropping chunks older than X days).
 *   **Ingestion Memory:** The Ingestion Worker only keeps the `last_sequence` integer per channel in memory. No raw packet data is held in memory.
 
@@ -410,3 +517,50 @@ The MUI must store the JWT token **exclusively in memory** (JavaScript variable)
   "channels_total": 4,
   "timestamp": "2026-06-17T12:00:00Z"
 }
+```
+
+### 8.5. `GET /api/v1/channel/{channel_id}/history`
+**Purpose**: Lazy-load historical telemetry data for the Line Chart. CnSS dynamically calculates the optimal `time_bucket` interval based on the requested period to return a reasonable number of points.
+**Auth**: `Authorization: Bearer {{access_token}}`
+
+Path Parameters:
+| Parameter | Type | Description |
+| --- | --- | --- |
+| channel_id | string | Identifier of the channel to query. |
+
+Query Parameters:
+| Parameter | Type | Description |
+| --- | --- | --- |
+| period | string | Time period to query. Enum: `1h`, `24h`, `7d`, `30d`. |
+
+
+Response 200:
+```json
+{
+    "channel_id": "bridge-berlin-01",
+    "period": "24h",
+    "interval_sec": 60,
+    "points": [
+        {
+            "timestamp": "2026-06-17T12:00:00Z",
+            "packets_in_per_sec": 280.5,
+            "packets_out_per_sec": 300.0,
+            "is_active": true
+        }
+    ]
+}
+```
+Response 403:
+```json
+{
+  "error": "forbidden",
+  "message": "You do not have access to this channel."
+}
+```
+Response 404:
+```json
+{
+  "error": "not_found",
+  "message": "Channel not found."
+}
+```

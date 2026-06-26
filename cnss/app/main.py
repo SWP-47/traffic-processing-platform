@@ -17,7 +17,16 @@ from fastapi import WebSocket, WebSocketDisconnect, Query
 from .auth import get_ws_user
 from .tasks import background_timeout_and_gc_task, reporting_worker_task
 
-from .db import init_db_pool, close_db_pool
+from .db import (
+    init_db_pool,
+    close_db_pool,
+    get_all_channels_from_db,
+    get_channel_status_from_db,
+    get_health_metrics_from_db,
+    is_db_healthy,
+)
+
+from datetime import timedelta
 
 
 class TokenMaskingFilter(logging.Filter):
@@ -95,7 +104,6 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
-
 
 # GLOBAL ERROR HANDLER
 
@@ -176,29 +184,42 @@ async def login(request: LoginRequest):
 async def list_channels(user: TokenPayload = Depends(get_current_user)):
     """
     Returns a list of channels accessible to the authenticated user.
-    Requires a valid JWT token in the Authorization header.
+    Queries TimescaleDB directly for channel existence and activity.
     """
-    all_channels = await state_store.get_all_channels()
+
+    channels_data = await get_all_channels_from_db()
 
     # Filter channels according to the Authorization Matrix
     if user.role == "admin":
-        # Admin sees all existing channels
-        accessible_channels = all_channels
+        accessible_channels = channels_data
     else:
-        # Viewer sees only channels present in their JWT scope
-        accessible_channels = [ch for ch in all_channels if ch.channel_id in user.scope]
+        accessible_channels = [
+            ch for ch in channels_data if ch["channel_id"] in user.scope
+        ]
 
-    # Format the response according to OpenAPI ChannelsResponse schema
-    response_channels = [
-        {
-            "channel_id": ch.channel_id,
-            "is_active": ch.is_active,
-            "last_activity_timestamp": ch.last_activity_timestamp.isoformat().replace(
-                "+00:00", "Z"
-            ),
-        }
-        for ch in accessible_channels
-    ]
+    now = datetime.now(timezone.utc)
+    timeout_td = timedelta(milliseconds=settings.activity_timeout_ms)
+
+    response_channels = []
+    for ch in accessible_channels:
+        last_activity = ch["last_activity_timestamp"]
+        is_active = False
+        if last_activity:
+            if last_activity.tzinfo is None:
+                last_activity = last_activity.replace(tzinfo=timezone.utc)
+            is_active = (now - last_activity) <= timeout_td
+
+        response_channels.append(
+            {
+                "channel_id": ch["channel_id"],
+                "is_active": is_active,
+                "last_activity_timestamp": (
+                    last_activity.isoformat().replace("+00:00", "Z")
+                    if last_activity
+                    else None
+                ),
+            }
+        )
 
     return {"channels": response_channels, "total": len(response_channels)}
 
@@ -209,16 +230,10 @@ async def get_channel_status(
 ):
     """
     REST fallback for a specific channel's activity indicator.
+    Queries TimescaleDB directly.
     """
-    # Check if channel exists
-    channel = await state_store.get_channel(channel_id)
-    if not channel:
-        return JSONResponse(
-            status_code=404,
-            content={"error": "not_found", "message": "Channel not found."},
-        )
 
-    # Check Authorization Matrix (Viewer scope enforcement)
+    # Check Authorization Matrix (Viewer scope enforcement) BEFORE DB lookup
     if user.role != "admin" and channel_id not in user.scope:
         return JSONResponse(
             status_code=403,
@@ -228,11 +243,28 @@ async def get_channel_status(
             },
         )
 
+    channel_data = await get_channel_status_from_db(channel_id)
+    if not channel_data:
+        return JSONResponse(
+            status_code=404,
+            content={"error": "not_found", "message": "Channel not found."},
+        )
+
+    now = datetime.now(timezone.utc)
+    timeout_td = timedelta(milliseconds=settings.activity_timeout_ms)
+    last_activity = channel_data["last_activity_timestamp"]
+
+    is_active = False
+    if last_activity:
+        if last_activity.tzinfo is None:
+            last_activity = last_activity.replace(tzinfo=timezone.utc)
+        is_active = (now - last_activity) <= timeout_td
+
     return {
-        "channel_id": channel.channel_id,
-        "is_active": channel.is_active,
-        "last_activity_timestamp": channel.last_activity_timestamp.isoformat().replace(
-            "+00:00", "Z"
+        "channel_id": channel_id,
+        "is_active": is_active,
+        "last_activity_timestamp": (
+            last_activity.isoformat().replace("+00:00", "Z") if last_activity else None
         ),
     }
 
@@ -240,17 +272,27 @@ async def get_channel_status(
 @app.get("/api/v1/health")
 async def health_check(user: TokenPayload = Depends(get_current_user)):
     """
-    Verify operational status of the CnSS and aggregate channel statistics.
+    Verify operational status of the CnSS and aggregate channel statistics from DB.
+    Returns 503 if the database is unreachable.
     """
-    channels = await state_store.get_all_channels()
-    active_count = sum(1 for c in channels if c.is_active)
-    return {
-        "status": "healthy",
-        "components": {"cnss": "active"},
-        "channels_active": active_count,
-        "channels_total": len(channels),
-        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-    }
+
+    db_healthy = await is_db_healthy()
+    metrics = await get_health_metrics_from_db()
+
+    status = "healthy" if db_healthy else "unhealthy"
+    cnss_status = "active" if db_healthy else "error"
+    status_code = 200 if db_healthy else 503
+
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "status": status,
+            "components": {"cnss": cnss_status},
+            "channels_active": metrics["channels_active"],
+            "channels_total": metrics["channels_total"],
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        },
+    )
 
 
 @app.websocket("/api/v1/ws/telemetry")

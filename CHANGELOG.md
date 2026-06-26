@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Configurable sliding window aggregation (`reporting_window_sec`) to calculate smoother, more accurate `packets_per_sec` metrics and prevent data gaps during task scheduling delays. ([#148](https://github.com/SWP-47/traffic-processing-platform/issues/148))
 - Background `reporting_worker` task that periodically queries TimescaleDB to aggregate metrics and push `telemetry_update` payloads to WebSocket listeners. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
 - Sliding window aggregation (configurable via `reporting_window_sec`) to calculate smoother, more accurate `packets_per_sec` metrics and prevent data gaps during task scheduling delays. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
 - `dropped_batches` accumulation in `ChannelState` to be consumed and reset by the reporting worker. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
@@ -21,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Architectural descriptions of the new `Ingestion Worker` (UDP to DB) and `Reporting Worker` (DB to WebSocket) in CnSS responsibilities. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 
 ### Changed
+- Updated `broadcast_telemetry_update` to accept and correctly apply the `window_sec` parameter for accurate rate calculations instead of hardcoding a 1-second window. ([#148](https://github.com/SWP-47/traffic-processing-platform/issues/148))
+- Refactored `test_websocket.py` to remove unused `TelemetryBatch` and `PacketMetadata` instantiations in broadcast tests, aligning with the new pre-calculated metrics signature. ([#148](https://github.com/SWP-47/traffic-processing-platform/issues/148))
+- Updated `test_timeout_and_gc.py` to mock DB queries and validate the new `reporting_worker` and GC task lifecycles with the sliding window configuration. ([#148](https://github.com/SWP-47/traffic-processing-platform/issues/148))
 - Refactored channel timeout detection (`is_active` status) to be determined by querying `MAX(time)` from TimescaleDB instead of relying solely on in-memory timestamps. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
 - Updated `broadcast_telemetry_update` signature to accept pre-calculated metrics (`packets_in`, `packets_out`, `window_sec`) instead of a raw `TelemetryBatch`. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
 - Refactored `background_timeout_and_gc_task` to strictly handle Garbage Collection of inactive channels, decoupling it from timeout detection and broadcasting. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
@@ -41,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Deprecated
 
 ### Removed
+- Dead code and unused variable assignments (e.g., `dropped` return value in `udp_server.py`, unused `batch` object in `test_websocket.py`) to improve code clarity and maintainability. ([#148](https://github.com/SWP-47/traffic-processing-platform/issues/148))
 - Immediate WebSocket broadcasting from the UDP ingestion path (`udp_server.py`), shifting all push responsibilities to the reporting worker. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
 - Timeout detection and broadcasting logic from the background GC task. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
 - Legacy `DirectionStats` Pydantic model from `app/models.py`, replaced by `PacketMetadata` and the raw `packets` array. ([#146](https://github.com/SWP-47/traffic-processing-platform/issues/146))

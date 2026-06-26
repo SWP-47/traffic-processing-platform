@@ -146,6 +146,7 @@ async def get_reporting_data() -> tuple[dict, dict]:
         logger.error(f"Failed to fetch reporting data: {e}")
         return {}, {}
 
+
 async def get_all_channels_from_db() -> list[dict]:
     """
     Fetches all distinct channels and their last activity timestamp from the DB.
@@ -160,14 +161,15 @@ async def get_all_channels_from_db() -> list[dict]:
         """)
         return [
             {
-                "channel_id": row["channel_id"], 
-                "last_activity_timestamp": row["last_activity_timestamp"]
-            } 
+                "channel_id": row["channel_id"],
+                "last_activity_timestamp": row["last_activity_timestamp"],
+            }
             for row in rows
         ]
     except Exception as e:
         logger.error(f"Failed to fetch channels from DB: {e}")
         return []
+
 
 async def get_channel_status_from_db(channel_id: str) -> dict | None:
     """
@@ -177,20 +179,24 @@ async def get_channel_status_from_db(channel_id: str) -> dict | None:
     if not pool:
         return None
     try:
-        row = await pool.fetchrow("""
+        row = await pool.fetchrow(
+            """
             SELECT MAX(time) as last_activity_timestamp
             FROM packet_flows
             WHERE channel_id = $1
-        """, channel_id)
+        """,
+            channel_id,
+        )
         if row and row["last_activity_timestamp"]:
             return {
-                "channel_id": channel_id, 
-                "last_activity_timestamp": row["last_activity_timestamp"]
+                "channel_id": channel_id,
+                "last_activity_timestamp": row["last_activity_timestamp"],
             }
         return None
     except Exception as e:
         logger.error(f"Failed to fetch channel status from DB: {e}")
         return None
+
 
 async def get_health_metrics_from_db() -> dict:
     """
@@ -209,7 +215,7 @@ async def get_health_metrics_from_db() -> dict:
         active = 0
         now = datetime.now(timezone.utc)
         timeout_td = timedelta(milliseconds=settings.activity_timeout_ms)
-        
+
         for row in rows:
             last_seen = row["last_activity_timestamp"]
             if last_seen:
@@ -217,11 +223,12 @@ async def get_health_metrics_from_db() -> dict:
                     last_seen = last_seen.replace(tzinfo=timezone.utc)
                 if (now - last_seen) <= timeout_td:
                     active += 1
-                    
+
         return {"channels_total": total, "channels_active": active}
     except Exception as e:
         logger.error(f"Failed to fetch health metrics from DB: {e}")
         return {"channels_total": 0, "channels_active": 0}
+
 
 async def is_db_healthy() -> bool:
     """

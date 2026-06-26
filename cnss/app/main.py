@@ -21,6 +21,7 @@ from .db import init_db_pool, close_db_pool
 
 from datetime import datetime, timezone, timedelta
 
+
 class TokenMaskingFilter(logging.Filter):
     """Masks tokens in query parameters to prevent leakage in logs."""
 
@@ -96,7 +97,6 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
-
 
 # GLOBAL ERROR HANDLER
 
@@ -180,18 +180,20 @@ async def list_channels(user: TokenPayload = Depends(get_current_user)):
     Queries TimescaleDB directly for channel existence and activity.
     """
     from .db import get_all_channels_from_db
-    
+
     channels_data = await get_all_channels_from_db()
-    
+
     # Filter channels according to the Authorization Matrix
     if user.role == "admin":
         accessible_channels = channels_data
     else:
-        accessible_channels = [ch for ch in channels_data if ch["channel_id"] in user.scope]
-        
+        accessible_channels = [
+            ch for ch in channels_data if ch["channel_id"] in user.scope
+        ]
+
     now = datetime.now(timezone.utc)
     timeout_td = timedelta(milliseconds=settings.activity_timeout_ms)
-    
+
     response_channels = []
     for ch in accessible_channels:
         last_activity = ch["last_activity_timestamp"]
@@ -200,15 +202,20 @@ async def list_channels(user: TokenPayload = Depends(get_current_user)):
             if last_activity.tzinfo is None:
                 last_activity = last_activity.replace(tzinfo=timezone.utc)
             is_active = (now - last_activity) <= timeout_td
-            
-        response_channels.append({
-            "channel_id": ch["channel_id"],
-            "is_active": is_active,
-            "last_activity_timestamp": last_activity.isoformat().replace("+00:00", "Z") if last_activity else None
-        })
-        
-    return {"channels": response_channels, "total": len(response_channels)}
 
+        response_channels.append(
+            {
+                "channel_id": ch["channel_id"],
+                "is_active": is_active,
+                "last_activity_timestamp": (
+                    last_activity.isoformat().replace("+00:00", "Z")
+                    if last_activity
+                    else None
+                ),
+            }
+        )
+
+    return {"channels": response_channels, "total": len(response_channels)}
 
 
 @app.get("/api/v1/channel/{channel_id}/status")
@@ -220,7 +227,7 @@ async def get_channel_status(
     Queries TimescaleDB directly.
     """
     from .db import get_channel_status_from_db
-    
+
     # Check Authorization Matrix (Viewer scope enforcement) BEFORE DB lookup
     if user.role != "admin" and channel_id not in user.scope:
         return JSONResponse(
@@ -237,21 +244,23 @@ async def get_channel_status(
             status_code=404,
             content={"error": "not_found", "message": "Channel not found."},
         )
-        
+
     now = datetime.now(timezone.utc)
     timeout_td = timedelta(milliseconds=settings.activity_timeout_ms)
     last_activity = channel_data["last_activity_timestamp"]
-    
+
     is_active = False
     if last_activity:
         if last_activity.tzinfo is None:
             last_activity = last_activity.replace(tzinfo=timezone.utc)
         is_active = (now - last_activity) <= timeout_td
-        
+
     return {
         "channel_id": channel_id,
         "is_active": is_active,
-        "last_activity_timestamp": last_activity.isoformat().replace("+00:00", "Z") if last_activity else None,
+        "last_activity_timestamp": (
+            last_activity.isoformat().replace("+00:00", "Z") if last_activity else None
+        ),
     }
 
 
@@ -262,14 +271,14 @@ async def health_check(user: TokenPayload = Depends(get_current_user)):
     Returns 503 if the database is unreachable.
     """
     from .db import get_health_metrics_from_db, is_db_healthy
-    
+
     db_healthy = await is_db_healthy()
     metrics = await get_health_metrics_from_db()
-    
+
     status = "healthy" if db_healthy else "unhealthy"
     cnss_status = "active" if db_healthy else "error"
     status_code = 200 if db_healthy else 503
-        
+
     return JSONResponse(
         status_code=status_code,
         content={
@@ -278,8 +287,9 @@ async def health_check(user: TokenPayload = Depends(get_current_user)):
             "channels_active": metrics["channels_active"],
             "channels_total": metrics["channels_total"],
             "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        }
+        },
     )
+
 
 @app.websocket("/api/v1/ws/telemetry")
 async def websocket_telemetry(

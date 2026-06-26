@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Documented the new REST endpoint `GET /api/v1/channel/{channel_id}/history` for lazy-loading historical telemetry data (Line Chart) with dynamic time-bucketing based on the requested period. ([#167](https://github.com/SWP-47/traffic-processing-platform/issues/167))
+- Documented WebSocket control messages (`subscribe`/`unsubscribe`) and the `hosts_update` payload schema to support real-time LAN/WAN host tables via the "Initial Snapshot on Subscribe" pattern. ([#167](https://github.com/SWP-47/traffic-processing-platform/issues/167))
+- Added new Sequence Diagrams for Line Chart history retrieval and WebSocket host table subscriptions to the Data Flow & Sequence Diagrams section. ([#167](https://github.com/SWP-47/traffic-processing-platform/issues/167))
+- Documented TimescaleDB data aggregation strategies for LAN/WAN host tables, detailing directional mapping and `UNION ALL` usage for calculating packets per second. ([#167](https://github.com/SWP-47/traffic-processing-platform/issues/167))
 - Configurable sliding window aggregation (`reporting_window_sec`) to calculate smoother, more accurate `packets_per_sec` metrics and prevent data gaps during task scheduling delays. ([#148](https://github.com/SWP-47/traffic-processing-platform/issues/148))
 - Background `reporting_worker` task that periodically queries TimescaleDB to aggregate metrics and push `telemetry_update` payloads to WebSocket listeners. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
 - Sliding window aggregation (configurable via `reporting_window_sec`) to calculate smoother, more accurate `packets_per_sec` metrics and prevent data gaps during task scheduling delays. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
@@ -22,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Architectural descriptions of the new `Ingestion Worker` (UDP to DB) and `Reporting Worker` (DB to WebSocket) in CnSS responsibilities. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 
 ### Changed
+- Updated CnSS responsibilities in the System Architecture to include in-memory `WSClientSession` management and targeted broadcasting for resource optimization. ([#167](https://github.com/SWP-47/traffic-processing-platform/issues/167))
+- Updated the Database & Memory Leak Prevention section to reflect WebSocket GC for `WSClientSession` objects and conditional DB querying based on active subscriptions. ([#167](https://github.com/SWP-47/traffic-processing-platform/issues/167))
 - Updated `broadcast_telemetry_update` to accept and correctly apply the `window_sec` parameter for accurate rate calculations instead of hardcoding a 1-second window. ([#148](https://github.com/SWP-47/traffic-processing-platform/issues/148))
 - Refactored `test_websocket.py` to remove unused `TelemetryBatch` and `PacketMetadata` instantiations in broadcast tests, aligning with the new pre-calculated metrics signature. ([#148](https://github.com/SWP-47/traffic-processing-platform/issues/148))
 - Updated `test_timeout_and_gc.py` to mock DB queries and validate the new `reporting_worker` and GC task lifecycles with the sliding window configuration. ([#148](https://github.com/SWP-47/traffic-processing-platform/issues/148))

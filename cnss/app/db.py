@@ -145,3 +145,92 @@ async def get_reporting_data() -> tuple[dict, dict]:
     except Exception as e:
         logger.error(f"Failed to fetch reporting data: {e}")
         return {}, {}
+
+async def get_all_channels_from_db() -> list[dict]:
+    """
+    Fetches all distinct channels and their last activity timestamp from the DB.
+    """
+    if not pool:
+        return []
+    try:
+        rows = await pool.fetch("""
+            SELECT channel_id, MAX(time) as last_activity_timestamp
+            FROM packet_flows
+            GROUP BY channel_id
+        """)
+        return [
+            {
+                "channel_id": row["channel_id"], 
+                "last_activity_timestamp": row["last_activity_timestamp"]
+            } 
+            for row in rows
+        ]
+    except Exception as e:
+        logger.error(f"Failed to fetch channels from DB: {e}")
+        return []
+
+async def get_channel_status_from_db(channel_id: str) -> dict | None:
+    """
+    Fetches the last activity timestamp for a specific channel.
+    Returns None if the channel has no records in the DB.
+    """
+    if not pool:
+        return None
+    try:
+        row = await pool.fetchrow("""
+            SELECT MAX(time) as last_activity_timestamp
+            FROM packet_flows
+            WHERE channel_id = $1
+        """, channel_id)
+        if row and row["last_activity_timestamp"]:
+            return {
+                "channel_id": channel_id, 
+                "last_activity_timestamp": row["last_activity_timestamp"]
+            }
+        return None
+    except Exception as e:
+        logger.error(f"Failed to fetch channel status from DB: {e}")
+        return None
+
+async def get_health_metrics_from_db() -> dict:
+    """
+    Fetches total and active channel counts from the DB.
+    Active channels are those with MAX(time) within the activity_timeout_ms window.
+    """
+    if not pool:
+        return {"channels_total": 0, "channels_active": 0}
+    try:
+        rows = await pool.fetch("""
+            SELECT channel_id, MAX(time) as last_activity_timestamp
+            FROM packet_flows
+            GROUP BY channel_id
+        """)
+        total = len(rows)
+        active = 0
+        now = datetime.now(timezone.utc)
+        timeout_td = timedelta(milliseconds=settings.activity_timeout_ms)
+        
+        for row in rows:
+            last_seen = row["last_activity_timestamp"]
+            if last_seen:
+                if last_seen.tzinfo is None:
+                    last_seen = last_seen.replace(tzinfo=timezone.utc)
+                if (now - last_seen) <= timeout_td:
+                    active += 1
+                    
+        return {"channels_total": total, "channels_active": active}
+    except Exception as e:
+        logger.error(f"Failed to fetch health metrics from DB: {e}")
+        return {"channels_total": 0, "channels_active": 0}
+
+async def is_db_healthy() -> bool:
+    """
+    Checks if the database connection pool is active and responsive.
+    """
+    if not pool:
+        return False
+    try:
+        await pool.fetchval("SELECT 1")
+        return True
+    except Exception:
+        return False

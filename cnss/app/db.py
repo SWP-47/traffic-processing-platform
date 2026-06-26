@@ -241,3 +241,120 @@ async def is_db_healthy() -> bool:
         return True
     except Exception:
         return False
+
+# Add to the end of app/db.py
+
+async def get_channel_history(channel_id: str, period: str) -> tuple[int, list[dict]]:
+    """
+    Fetches aggregated history points. Returns (interval_sec, points).
+    """
+    if not pool:
+        return 60, []
+
+    # Dynamically calculate optimal time_bucket interval based on period
+    period_map = {
+        "1h": 10,       # ~360 points
+        "24h": 60,      # ~1440 points
+        "7d": 600,      # ~1008 points (10 min buckets)
+        "30d": 3600     # ~720 points (1 hour buckets)
+    }
+    period_sql_map = {
+        "1h": "1 hour", "24h": "24 hours", "7d": "7 days", "30d": "30 days"
+    }
+    
+    interval_sec = period_map.get(period, 60)
+    period_sql = period_sql_map.get(period, "24 hours")
+
+    try:
+        query = f"""
+            SELECT
+                time_bucket('{interval_sec} seconds', time) AS bucket,
+                SUM(CASE WHEN direction = 0 THEN 1 ELSE 0 END)::float / {interval_sec} AS packets_in_per_sec,
+                SUM(CASE WHEN direction = 1 THEN 1 ELSE 0 END)::float / {interval_sec} AS packets_out_per_sec,
+                MAX(time) AS last_activity
+            FROM packet_flows
+            WHERE channel_id = $1 AND time > NOW() - INTERVAL '{period_sql}'
+            GROUP BY bucket
+            ORDER BY bucket
+        """
+        rows = await pool.fetch(query, channel_id)
+        
+        points = []
+        for row in rows:
+            p_in = float(row["packets_in_per_sec"])
+            p_out = float(row["packets_out_per_sec"])
+            points.append({
+                "timestamp": row["bucket"].isoformat().replace("+00:00", "Z"),
+                "packets_in_per_sec": p_in,
+                "packets_out_per_sec": p_out,
+                "is_active": (p_in + p_out) > 0
+            })
+        return interval_sec, points
+    except Exception as e:
+        logger.error(f"Failed to fetch history for {channel_id}: {e}")
+        return interval_sec, []
+
+async def get_top_hosts(
+    channel_id: str, target: str, sort_by: str, limit: int, window_sec: float
+) -> list[dict]:
+    """
+    Fetches top LAN/WAN hosts based on direction mapping.
+    """
+    if not pool:
+        return []
+
+    # Prevent SQL injection for sort column
+    sort_col_map = {"sent": "sent_per_sec", "received": "received_per_sec", "last_seen": "last_seen"}
+    sort_col = sort_col_map.get(sort_by, "sent_per_sec")
+    
+    # LAN/WAN Direction Mapping
+    if target == "lan_hosts":
+        sent_dir, sent_ip_col = 1, "src_ip"  # OUT: LAN -> WAN
+        recv_dir, recv_ip_col = 0, "dst_ip"  # IN: WAN -> LAN
+    elif target == "wan_hosts":
+        sent_dir, sent_ip_col = 0, "src_ip"  # IN: WAN -> LAN
+        recv_dir, recv_ip_col = 1, "dst_ip"  # OUT: LAN -> WAN
+    else:
+        return []
+
+    query = f"""
+        WITH sent AS (
+            SELECT {sent_ip_col} AS ip, COUNT(*)::float / $1 AS sent_per_sec, MAX(time) AS last_seen
+            FROM packet_flows
+            WHERE channel_id = $2 AND direction = $3 AND time > NOW() - make_interval(secs => $1::float)
+            GROUP BY {sent_ip_col}
+        ),
+        received AS (
+            SELECT {recv_ip_col} AS ip, COUNT(*)::float / $1 AS received_per_sec, MAX(time) AS last_seen
+            FROM packet_flows
+            WHERE channel_id = $2 AND direction = $4 AND time > NOW() - make_interval(secs => $1::float)
+            GROUP BY {recv_ip_col}
+        )
+        SELECT
+            COALESCE(s.ip, r.ip) AS ip,
+            COALESCE(s.sent_per_sec, 0) AS sent_per_sec,
+            COALESCE(r.received_per_sec, 0) AS received_per_sec,
+            GREATEST(
+                COALESCE(s.last_seen, '1970-01-01'::timestamptz), 
+                COALESCE(r.last_seen, '1970-01-01'::timestamptz)
+            ) AS last_seen
+        FROM sent s
+        FULL OUTER JOIN received r ON s.ip = r.ip
+        ORDER BY {sort_col} DESC
+        LIMIT $5
+    """
+    
+    try:
+        rows = await pool.fetch(query, window_sec, channel_id, sent_dir, recv_dir, limit)
+        return [
+            {
+                "ip": row["ip"],
+                "sent_per_sec": float(row["sent_per_sec"]),
+                "received_per_sec": float(row["received_per_sec"]),
+                "last_seen": row["last_seen"].isoformat().replace("+00:00", "Z") if row["last_seen"] else None
+            }
+            for row in rows
+        ]
+    except Exception as e:
+        logger.error(f"Failed to fetch top hosts for {channel_id} ({target}): {e}")
+        return []

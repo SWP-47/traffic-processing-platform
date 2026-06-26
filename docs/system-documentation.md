@@ -116,7 +116,7 @@ sequenceDiagram
     CnSS_Ingest->>DB: Batch INSERT INTO packet_flows
     
     Note over CnSS_Report: Runs every 1 second
-    CnSS_Report->>DB: SELECT COUNT, GROUP BY channel, direction <br/> WHERE time > NOW() - 1s
+    CnSS_Report->>DB: SELECT COUNT, GROUP BY channel, direction <br/> WHERE time > NOW() - reporting_window_sec
     DB-->>CnSS_Report: Aggregated metrics
     
     CnSS_Report->>MUI_A: WS push telemetry_update <br/> {metrics: {direction_out: {...}, ...}}
@@ -252,7 +252,7 @@ sequenceDiagram
    "type": "telemetry_update",
    "channel_id": "bridge-berlin-01",
    "is_active": true,
-   "window_ms": 50,
+   "window_ms": int(reporting_window_sec*1000),
    "dropped_batches": 0,
    "metrics": {
      "direction_out": { "packets_per_sec": 300.0, "packets": 15 },
@@ -289,7 +289,7 @@ Payload Schema (Unsubscribe):
 ```
 
 ### 4.5. CnSS to MUI (WebSocket Host Updates)
-*   **Transport**: WebSocket (JSON frames).
+*   **Transport**: WebSocket (Text frames).
 *   **Direction**: CnSS to MUI.
 *   **Purpose**: Push real-time updates for LAN/WAN host tables. Sent immediately upon subscription (Initial Snapshot) and then periodically (1 Hz) by the *   **Reporting** Worker.
 

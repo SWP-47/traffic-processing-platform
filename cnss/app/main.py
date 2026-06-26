@@ -17,7 +17,14 @@ from fastapi import WebSocket, WebSocketDisconnect, Query
 from .auth import get_ws_user
 from .tasks import background_timeout_and_gc_task, reporting_worker_task
 
-from .db import init_db_pool, close_db_pool
+from .db import (
+    init_db_pool,
+    close_db_pool,
+    get_all_channels_from_db,
+    get_channel_status_from_db,
+    get_health_metrics_from_db,
+    is_db_healthy,
+)
 
 from datetime import datetime, timezone, timedelta
 
@@ -179,7 +186,6 @@ async def list_channels(user: TokenPayload = Depends(get_current_user)):
     Returns a list of channels accessible to the authenticated user.
     Queries TimescaleDB directly for channel existence and activity.
     """
-    from .db import get_all_channels_from_db
 
     channels_data = await get_all_channels_from_db()
 
@@ -226,7 +232,6 @@ async def get_channel_status(
     REST fallback for a specific channel's activity indicator.
     Queries TimescaleDB directly.
     """
-    from .db import get_channel_status_from_db
 
     # Check Authorization Matrix (Viewer scope enforcement) BEFORE DB lookup
     if user.role != "admin" and channel_id not in user.scope:
@@ -270,7 +275,6 @@ async def health_check(user: TokenPayload = Depends(get_current_user)):
     Verify operational status of the CnSS and aggregate channel statistics from DB.
     Returns 503 if the database is unreachable.
     """
-    from .db import get_health_metrics_from_db, is_db_healthy
 
     db_healthy = await is_db_healthy()
     metrics = await get_health_metrics_from_db()

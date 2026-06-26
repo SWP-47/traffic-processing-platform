@@ -299,6 +299,7 @@ async def health_check(user: TokenPayload = Depends(get_current_user)):
         },
     )
 
+
 @app.websocket("/api/v1/ws/telemetry")
 async def websocket_telemetry(
     websocket: WebSocket, token: str = Query(None), channel_id: str = Query(None)
@@ -325,7 +326,7 @@ async def websocket_telemetry(
     if user.role != "admin" and channel_id not in user.scope:
         await websocket.accept()
         await websocket.close(code=4003, reason="channel_forbidden")
-        return  
+        return
 
     # 4. Validate Channel Existence
     channel = await state_store.get_channel(channel_id)
@@ -336,80 +337,99 @@ async def websocket_telemetry(
 
     # 5. Accept & Register Listener
     await websocket.accept()
-    
+
     # AC 1: Create WSClientSession
     session = WSClientSession(websocket=websocket, user=user, channel_id=channel_id)
     await state_store.add_listener(channel_id, session)
-    
+
     try:
         while True:
             data = await websocket.receive_text()
             if data == "ping":
                 await websocket.send_text("pong")
                 continue
-                
+
             # Handle Control Messages
             try:
                 msg_dict = json.loads(data)
                 msg = WSControlMessage(**msg_dict)
-                
-                if msg.action == "subscribe" and msg.target in ["lan_hosts", "wan_hosts"]:
+
+                if msg.action == "subscribe" and msg.target in [
+                    "lan_hosts",
+                    "wan_hosts",
+                ]:
                     # Update session subscriptions
                     session.subscriptions[msg.target] = {
                         "sort_by": msg.sort_by or "sent",
-                        "limit": msg.limit or 5
+                        "limit": msg.limit or 5,
                     }
-                    
+
                     # Initial Snapshot (Query DB and send ONLY to this client)
                     sub_params = session.subscriptions[msg.target]
                     hosts = await get_top_hosts(
-                        channel_id=channel_id, target=msg.target,
-                        sort_by=sub_params["sort_by"], limit=sub_params["limit"],
-                        window_sec=settings.reporting_window_sec
+                        channel_id=channel_id,
+                        target=msg.target,
+                        sort_by=sub_params["sort_by"],
+                        limit=sub_params["limit"],
+                        window_sec=settings.reporting_window_sec,
                     )
-                    
+
                     await broadcast_hosts_update(
                         channel_id=channel_id,
                         target=msg.target,
                         hosts=hosts,
-                        sessions=[session]
+                        sessions=[session],
                     )
-                    
-                elif msg.action == "unsubscribe" and msg.target in ["lan_hosts", "wan_hosts"]:
+
+                elif msg.action == "unsubscribe" and msg.target in [
+                    "lan_hosts",
+                    "wan_hosts",
+                ]:
                     # Remove subscription
                     session.subscriptions.pop(msg.target, None)
-                    
+
             except Exception as e:
                 logger.warning(f"Invalid WS control message: {e}")
-                
+
     except WebSocketDisconnect:
         pass
     finally:
         # Garbage Collection
         await state_store.remove_listener(channel_id, session)
-        
+
+
 @app.get("/api/v1/channel/{channel_id}/history")
 async def get_channel_history_endpoint(
-    channel_id: str,
-    period: str,
-    user: TokenPayload = Depends(get_current_user)
+    channel_id: str, period: str, user: TokenPayload = Depends(get_current_user)
 ):
     # Auth & Scope check
     if user.role != "admin" and channel_id not in user.scope:
-        return JSONResponse(status_code=403, content={"error": "forbidden", "message": "You do not have access to this channel."})
-        
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "forbidden",
+                "message": "You do not have access to this channel.",
+            },
+        )
+
     channel_data = await get_channel_status_from_db(channel_id)
     if not channel_data:
-        return JSONResponse(status_code=404, content={"error": "not_found", "message": "Channel not found."})
-        
+        return JSONResponse(
+            status_code=404,
+            content={"error": "not_found", "message": "Channel not found."},
+        )
+
     if period not in ["1h", "24h", "7d", "30d"]:
-        return JSONResponse(status_code=400, content={"error": "bad_request", "message": "Invalid period."})
+        return JSONResponse(
+            status_code=400,
+            content={"error": "bad_request", "message": "Invalid period."},
+        )
 
     interval_sec, points = await get_channel_history(channel_id, period)
-    
+
     return {
         "channel_id": channel_id,
         "period": period,
         "interval_sec": interval_sec,
-        "points": points
+        "points": points,
     }

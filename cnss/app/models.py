@@ -2,11 +2,11 @@ from typing import Any, List, Optional, Set
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from typing import Dict, TYPE_CHECKING
-import json
 
 if TYPE_CHECKING:
     from fastapi import WebSocket
     from .auth import TokenPayload
+
 
 class PacketMetadata(BaseModel):
     direction: int  # 0 = IN, 1 = OUT
@@ -23,9 +23,11 @@ class TelemetryBatch(BaseModel):
     window_ms: int
     packets: List[PacketMetadata]
 
+
 class WSClientSession:
     """Tracks WebSocket connection, user context, and active subscriptions."""
-    def __init__(self, websocket: 'WebSocket', user: 'TokenPayload', channel_id: str):
+
+    def __init__(self, websocket: "WebSocket", user: "TokenPayload", channel_id: str):
         self.websocket = websocket
         self.user = user
         self.channel_id = channel_id
@@ -39,6 +41,7 @@ class WSClientSession:
         if isinstance(other, WSClientSession):
             return self.websocket == other.websocket
         return False
+
 
 class ChannelState(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -64,17 +67,20 @@ class LoginResponse(BaseModel):
     role: str
     scope: List[str]
 
+
 class WSControlMessage(BaseModel):
     action: str
     target: Optional[str] = None
     sort_by: Optional[str] = None
     limit: Optional[int] = 5
 
+
 class HostEntry(BaseModel):
     ip: str
     sent_per_sec: float
     received_per_sec: float
     last_seen: str
+
 
 class HostsUpdate(BaseModel):
     type: str = "hosts_update"
@@ -83,11 +89,13 @@ class HostsUpdate(BaseModel):
     timestamp: str
     hosts: List[HostEntry]
 
+
 class HistoryPoint(BaseModel):
     timestamp: str
     packets_in_per_sec: float
     packets_out_per_sec: float
     is_active: bool
+
 
 class HistoryResponse(BaseModel):
     channel_id: str

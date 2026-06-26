@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import List, Set, Any, Optional, Dict
+from typing import List, Set, Optional, Dict
 from datetime import datetime, timezone
 from .base import StateStore
 from ..models import ChannelState
@@ -33,26 +33,6 @@ class InMemoryStateStore(StateStore):
                     last_sequence=None,
                 )
             return self._channels[channel_id]
-
-    async def add_listener(self, channel_id: str, listener: Any) -> bool:
-        async with self._lock:
-            if channel_id in self._channels:
-                self._channels[channel_id].listeners.add(listener)
-                return True
-            return False
-
-    async def remove_listener(self, channel_id: str, listener: Any) -> bool:
-        async with self._lock:
-            if channel_id in self._channels:
-                self._channels[channel_id].listeners.discard(listener)
-                return True
-            return False
-
-    async def get_listeners(self, channel_id: str) -> Set[Any]:
-        async with self._lock:
-            if channel_id in self._channels:
-                return self._channels[channel_id].listeners.copy()
-            return set()
 
     async def set_channel_inactive(self, channel_id: str) -> bool:
         async with self._lock:
@@ -139,11 +119,14 @@ class InMemoryStateStore(StateStore):
                 return self._channels[channel_id].listeners.copy()
             return set()
 
-    async def get_subscribers_by_target(self, channel_id: str, target: str) -> List[WSClientSession]:
+    async def get_subscribers_by_target(
+        self, channel_id: str, target: str
+    ) -> List[WSClientSession]:
         async with self._lock:
             if channel_id in self._channels:
                 return [
-                    session for session in self._channels[channel_id].listeners
+                    session
+                    for session in self._channels[channel_id].listeners
                     if target in session.subscriptions
                 ]
             return []

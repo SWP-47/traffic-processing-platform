@@ -4,6 +4,7 @@ from .store import state_store
 
 logger = logging.getLogger(__name__)
 
+
 async def broadcast_telemetry_update(
     channel_id: str,
     is_active: bool,
@@ -19,7 +20,7 @@ async def broadcast_telemetry_update(
 
     now_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     safe_window_sec = window_sec if window_sec > 0 else 1.0
-    
+
     payload = {
         "type": "telemetry_update",
         "channel_id": channel_id,
@@ -57,10 +58,7 @@ async def broadcast_telemetry_update(
 
 
 async def broadcast_hosts_update(
-    channel_id: str,
-    target: str,
-    hosts: list[dict],
-    sessions: list
+    channel_id: str, target: str, hosts: list[dict], sessions: list
 ):
     """
     Sends a hosts_update payload to a specific list of WSClientSessions.
@@ -75,7 +73,7 @@ async def broadcast_hosts_update(
         "target": target,
         "channel_id": channel_id,
         "timestamp": now_iso,
-        "hosts": hosts
+        "hosts": hosts,
     }
 
     dead_sessions = []

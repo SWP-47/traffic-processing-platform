@@ -105,40 +105,47 @@ async def test_ac4_out_of_order_handling(store):
     # Last sequence MUST NOT regress
     assert channel.last_sequence == 5
 
+
 # --- ubscription Target Filtering ---
 @pytest.mark.asyncio
 async def test_get_subscribers_by_target(store):
     """Test filtering sessions by specific subscription target."""
     await store.get_or_create_channel("sub-test-ch")
-    
+
     # Create mock sessions
     ws1 = MagicMock()
     ws2 = MagicMock()
     ws3 = MagicMock()
-    
-    session1 = WSClientSession(websocket=ws1, user=MagicMock(), channel_id="sub-test-ch")
+
+    session1 = WSClientSession(
+        websocket=ws1, user=MagicMock(), channel_id="sub-test-ch"
+    )
     session1.subscriptions["lan_hosts"] = {"sort_by": "sent", "limit": 5}
-    
-    session2 = WSClientSession(websocket=ws2, user=MagicMock(), channel_id="sub-test-ch")
+
+    session2 = WSClientSession(
+        websocket=ws2, user=MagicMock(), channel_id="sub-test-ch"
+    )
     session2.subscriptions["wan_hosts"] = {"sort_by": "received", "limit": 10}
-    
-    session3 = WSClientSession(websocket=ws3, user=MagicMock(), channel_id="sub-test-ch")
+
+    session3 = WSClientSession(
+        websocket=ws3, user=MagicMock(), channel_id="sub-test-ch"
+    )
     # No subscriptions
-    
+
     await store.add_listener("sub-test-ch", session1)
     await store.add_listener("sub-test-ch", session2)
     await store.add_listener("sub-test-ch", session3)
-    
+
     # Query for lan_hosts
     lan_subs = await store.get_subscribers_by_target("sub-test-ch", "lan_hosts")
     assert len(lan_subs) == 1
     assert session1 in lan_subs
-    
+
     # Query for wan_hosts
     wan_subs = await store.get_subscribers_by_target("sub-test-ch", "wan_hosts")
     assert len(wan_subs) == 1
     assert session2 in wan_subs
-    
+
     # Query for non-existent target
     empty_subs = await store.get_subscribers_by_target("sub-test-ch", "unknown_target")
     assert len(empty_subs) == 0

@@ -8,6 +8,7 @@ from app.auth import create_access_token
 from app.broadcast import broadcast_telemetry_update
 from app.models import WSClientSession
 
+
 class TestWebSocketTelemetry:
     def _get_token(self, role, scope=None):
         token, _, _ = create_access_token(f"{role}_user", role, scope or [])
@@ -93,14 +94,18 @@ async def test_broadcast_to_multiple_listeners():
     """Broadcast pushes to all listeners of the channel only."""
     test_store = InMemoryStateStore()
     await test_store.update_channel_activity("test-ch", 1, datetime.now(timezone.utc))
-    
+
     mock_ws1 = AsyncMock()
     mock_ws2 = AsyncMock()
-    
+
     # Wrap mocks in WSClientSession to match the new architecture
-    session1 = WSClientSession(websocket=mock_ws1, user=MagicMock(), channel_id="test-ch")
-    session2 = WSClientSession(websocket=mock_ws2, user=MagicMock(), channel_id="test-ch")
-    
+    session1 = WSClientSession(
+        websocket=mock_ws1, user=MagicMock(), channel_id="test-ch"
+    )
+    session2 = WSClientSession(
+        websocket=mock_ws2, user=MagicMock(), channel_id="test-ch"
+    )
+
     await test_store.add_listener("test-ch", session1)
     await test_store.add_listener("test-ch", session2)
 

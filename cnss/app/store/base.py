@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Set, Any, Optional
+from typing import List, Set, Optional
 from datetime import datetime
 from ..models import ChannelState
 from ..models import WSClientSession
@@ -33,21 +33,6 @@ class StateStore(ABC):
         Updates sequence and activity timestamp.
         Returns the number of dropped batches (AC 3 & AC 4).
         """
-        pass
-
-    @abstractmethod
-    async def add_listener(self, channel_id: str, listener: Any) -> bool:
-        """Add a WebSocket listener to a channel."""
-        pass
-
-    @abstractmethod
-    async def remove_listener(self, channel_id: str, listener: Any) -> bool:
-        """Remove a WebSocket listener from a channel."""
-        pass
-
-    @abstractmethod
-    async def get_listeners(self, channel_id: str) -> Set[Any]:
-        """Get a copy of the listeners set for broadcasting."""
         pass
 
     @abstractmethod
@@ -87,6 +72,8 @@ class StateStore(ABC):
         pass
 
     @abstractmethod
-    async def get_subscribers_by_target(self, channel_id: str, target: str) -> List[WSClientSession]:
+    async def get_subscribers_by_target(
+        self, channel_id: str, target: str
+    ) -> List[WSClientSession]:
         """Get all sessions subscribed to a specific target (e.g., 'lan_hosts')."""
         pass

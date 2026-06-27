@@ -1,0 +1,161 @@
+.component {
+    padding: 30px;
+    background: var(--gradient-card);
+    border-radius: var(--card-border-radius);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+
+    h1 {
+        font-weight: 400;
+    }
+
+    .left {
+        display: flex;
+        align-items: center;
+        gap: 40px;
+    }
+}
+
+.legend {
+    display: flex;
+    gap: 30px;
+
+    span {
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+
+        transition: color .3s;
+
+        user-select: none;
+    }
+
+    span::before {
+        content: "";
+        display: block;
+
+        width: 30px;
+        height: 10px;
+        border-radius: 10px;
+
+        margin-right: 10px;
+
+        transition: background-color .3s;
+    }
+
+    [data-series="Received"]::before {
+        background-color: var(--color-primary);
+    }
+
+    [data-series="Sent"]::before {
+        background-color: var(--color-accent);
+    }
+
+    span.inactive {
+        color: var(--color-text-muted);
+    }
+
+    span.inactive::before {
+        background-color: var(--color-surface-hover);
+    }
+}
+
+.filters {
+    display: flex;
+    gap: 25px;
+}
+
+.filter {
+    background: none;
+    border: none;
+    outline: none;
+
+    color: var(--color-text);
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition: color .3s;
+
+}
+
+.filter.active {
+    color: var(--color-secondary);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+/* Chart */
+
+.chart {
+    height: 250px;
+    width: 100%;
+}
+
+.tooltipWrapper {
+    padding: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+}
+
+.tooltip {
+    border: 6px solid var(--color-background);
+    outline: 1px solid var(--color-secondary);
+    outline-offset: -6px;
+    border-radius: 20px;
+    padding: 11px;
+    background: var(--color-surface);
+
+    .date {
+        font-weight: bold;
+    }
+
+    .window, .details {
+        color: var(--color-text-muted);
+    }
+
+    .props {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        margin: 10px 0;
+
+        .prop {
+            display: flex;
+            justify-content: space-between;
+            gap: 25px;
+
+            color: var(--color-text);
+
+            .title {
+                font-weight: bold;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+        }
+    }
+}
+
+[data-name="Received"]::before,
+[data-name="Sent"]::before {
+    content: "";
+    width: 20px;
+    height: 5px;
+    display: block;
+    border-radius: 10px;   
+}
+
+[data-name="Received"]::before {
+    background-color: var(--color-primary);
+}
+
+[data-name="Sent"]::before {
+    background-color: var(--color-accent);
+}

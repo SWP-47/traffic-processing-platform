@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive TimescaleDB schema specification (`packet_flows` hypertable with `BIGSERIAL` and composite PK) and retention policies in `system-documentation.md`. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 - `PacketMetadata` schema definition and strict UDP MTU constraint (< 1400 bytes) guidelines across `README.md`, `openapi.yaml`, and `system-documentation.md`. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 - Architectural descriptions of the new `Ingestion Worker` (UDP to DB) and `Reporting Worker` (DB to WebSocket) in CnSS responsibilities. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
+- Line chart component (apache echarts library) to preview historical data ([#153](https://github.com/SWP-47/traffic-processing-platform/issues/153))
 
 ### Changed
 - Updated CnSS responsibilities in the System Architecture to include in-memory `WSClientSession` management and targeted broadcasting for resource optimization. ([#167](https://github.com/SWP-47/traffic-processing-platform/issues/167))

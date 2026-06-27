@@ -48,7 +48,7 @@ Link checking (Lychee) does not satisfy the Assignment 4 additional QA check req
 Manual tests, observations, or exploratory checks that do not qualify as automated Quality Requirement Tests (QRTs).
 | Evidence | Scope | Result | Follow-up PBI or issue |
 |---|---|---|---|
-| End-to-end smoke test of the deployed MVP v1 (TP → CN → CnSS → MUI) on the Innopolis University testbed | Full telemetry pipeline | Passed — real-time packet counters and channel activity indicator update correctly | [None] |
+| End-to-end smoke test of the deployment (TP → CN → CnSS → MUI) on the Innopolis University testbed | Full telemetry pipeline | Passed — real-time packet counters and channel activity indicator update correctly | [None] |
 | Manual verification of the FPGA bitstream deployment on the ARTIX-7 AX7201 board | TP hardware data plane | Passed — packets forwarded at wire speed with no observable latency | [None] |
 | Exploratory UI check of the MUI dashboard on desktop and mobile viewports | MUI Dashboard responsiveness | Passed with minor feedback — customer requested higher contrast on the activity indicator | [#145 — Increase contrast on StatusIndicator component](https://github.com/SWP-47/traffic-processing-platform/issues/145) |
 

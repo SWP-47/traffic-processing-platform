@@ -7,7 +7,7 @@ on:
 
 jobs:
   traffic-processor:
-    name: Traffic Processor Check
+    name: TP Check
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -36,7 +36,7 @@ jobs:
         run: pytest tests/ -q
 
   communication-node:
-    name: Communication Node Check
+    name: CN Check
     runs-on: ubuntu-latest
     defaults:
       run:

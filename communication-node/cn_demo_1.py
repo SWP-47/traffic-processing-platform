@@ -32,6 +32,8 @@ required_vars = {
 for var_name, var_value in required_vars.items():
     if var_value is None:
         raise ValueError(f"Environment variable {var_name} is not set!")
+    if var_name == "TIME_WINDOW" and var_value > 60:
+        raise ValueError(f"Please set the time wingow less than 60 ms to avoid fragmentation problems! Your current time window: {var_value}")
 
 
 packet_queue = queue.Queue()

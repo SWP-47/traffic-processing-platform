@@ -62,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added graceful error handling and lazy pool re-initialization in `app/db.py` and `app/udp_server.py` to ensure the UDP listener never crashes if TimescaleDB becomes temporarily unreachable (AC 4). ([#145](https://github.com/SWP-47/traffic-processing-platform/issues/145), [#146](https://github.com/SWP-47/traffic-processing-platform/issues/146))
 - Resolved `pytest-asyncio` collection errors caused by invalid method signatures in WebSocket integration tests. ([#146](https://github.com/SWP-47/traffic-processing-platform/issues/146))
 - Fixed case-sensitivity mismatch in UDP invalid UTF-8 logging assertion in `test_udp_server.py`. ([#146](https://github.com/SWP-47/traffic-processing-platform/issues/146))
+- Upper bound for time window of sending packets by CN was added to fix problems with fragmentation. ([#89](https://github.com/SWP-47/traffic-processing-platform/issues/89))
 
 ### Security
 - Documented UDP MTU enforcement (< 1400 bytes) as a critical mitigation against network-level fragmentation and silent packet drops in the CN Trust Model section. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))

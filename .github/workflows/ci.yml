@@ -33,7 +33,9 @@ jobs:
           flake8 .
 
       - name: Run unit tests
-        run: pytest tests/ -q
+        run: |
+          pip install pytest
+          pytest tests/ -q
 
   communication-node:
     name: CN Check
@@ -62,7 +64,9 @@ jobs:
           flake8 .
 
       - name: Run unit tests
-        run: pytest tests/ -q
+        run: |
+          pip install pytest
+          pytest tests/ -q
 
   cnss:
     name: CnSS Check

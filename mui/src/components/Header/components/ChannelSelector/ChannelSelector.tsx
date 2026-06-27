@@ -23,11 +23,6 @@ function ChannelSelector() {
     connectChannel(selectedChannelId);
   }, [selectedChannelId]);
 
-  useEffect(() => {
-    // TODO: fix loading
-    updateChannelsList();
-  }, []);
-
   return (
     <select
       className={styles.select}

@@ -14,7 +14,7 @@ This document defines the automated tests and CI checks that verify the measurab
 
 **Automated command or CI check:** `docker compose -f cnss/docker-compose.test.yml up --build --abort-on-container-exit`
 
-**Expected measurable result:** The CnSS health endpoint returns `200 OK` with a valid `components.cnss` value and a `timestamp` field, and the integration test suite passes.
+**Expected measurable result:** The CnSS health endpoint returns `200 OK` with a valid `components.cnss` value and a `timestamp` field within 1 second, and the integration test suite passes.
 
 **Evidence link:** Latest protected-branch CI run showing the CnSS integration job result.
 
@@ -30,7 +30,7 @@ This document defines the automated tests and CI checks that verify the measurab
 
 **Automated command or CI check:** `docker compose -f cnss/docker-compose.test.yml up --build --abort-on-container-exit`
 
-**Expected measurable result:** Authorized admin requests succeed, invalid credentials return `401 Unauthorized`, and viewer scope is limited to authorized channel IDs only.
+**Expected measurable result:** Authorized admin requests succeed, invalid credentials return `401 Unauthorized` with 100% rejection rate, and viewer scope is limited to authorized channel IDs only.
 
 **Evidence link:** Latest protected-branch CI run showing the CnSS integration job result.
 

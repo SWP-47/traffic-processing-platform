@@ -72,12 +72,8 @@ class TestProcessPacket:
             "src_port": 9090,
             "dst_port": 1547,
         }
-        fake_pkt_payload_bin = json.dumps(fake_pkt_payload).encode(
-            "utf-8"
-        )
-        fake_pkt = (
-            Ether() / IP() / UDP() / Raw(load=fake_pkt_payload_bin)
-        )
+        fake_pkt_payload_bin = json.dumps(fake_pkt_payload).encode("utf-8")
+        fake_pkt = Ether() / IP() / UDP() / Raw(load=fake_pkt_payload_bin)
 
         cn_demo_1.process_packet(fake_pkt)
 
@@ -106,12 +102,8 @@ class TestProcessPacket:
             "src_port": 9090,
             "dst_port": 1547,
         }
-        fake_pkt_payload_bin = json.dumps(fake_pkt_payload).encode(
-            "utf-8"
-        )
-        fake_pkt = (
-            Ether() / IP() / UDP() / Raw(load=fake_pkt_payload_bin)
-        )
+        fake_pkt_payload_bin = json.dumps(fake_pkt_payload).encode("utf-8")
+        fake_pkt = Ether() / IP() / UDP() / Raw(load=fake_pkt_payload_bin)
 
         cn_demo_1.process_packet(fake_pkt)
 

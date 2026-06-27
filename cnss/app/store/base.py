@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import List, Set, Any, Optional
+from typing import List, Set, Optional
 from datetime import datetime
 from ..models import ChannelState
+from ..models import WSClientSession
 
 
 class StateStore(ABC):
@@ -35,21 +36,6 @@ class StateStore(ABC):
         pass
 
     @abstractmethod
-    async def add_listener(self, channel_id: str, listener: Any) -> bool:
-        """Add a WebSocket listener to a channel."""
-        pass
-
-    @abstractmethod
-    async def remove_listener(self, channel_id: str, listener: Any) -> bool:
-        """Remove a WebSocket listener from a channel."""
-        pass
-
-    @abstractmethod
-    async def get_listeners(self, channel_id: str) -> Set[Any]:
-        """Get a copy of the listeners set for broadcasting."""
-        pass
-
-    @abstractmethod
     async def set_channel_inactive(self, channel_id: str) -> bool:
         """Mark a channel as inactive."""
         pass
@@ -68,4 +54,26 @@ class StateStore(ABC):
     @abstractmethod
     async def set_channel_active(self, channel_id: str, is_active: bool) -> bool:
         """Set the active status of a channel."""
+        pass
+
+    @abstractmethod
+    async def add_listener(self, channel_id: str, listener: WSClientSession) -> bool:
+        """Add a WebSocket session to a channel."""
+        pass
+
+    @abstractmethod
+    async def remove_listener(self, channel_id: str, listener: WSClientSession) -> bool:
+        """Remove a WebSocket session from a channel."""
+        pass
+
+    @abstractmethod
+    async def get_listeners(self, channel_id: str) -> Set[WSClientSession]:
+        """Get a copy of the sessions set for broadcasting."""
+        pass
+
+    @abstractmethod
+    async def get_subscribers_by_target(
+        self, channel_id: str, target: str
+    ) -> List[WSClientSession]:
+        """Get all sessions subscribed to a specific target (e.g., 'lan_hosts')."""
         pass

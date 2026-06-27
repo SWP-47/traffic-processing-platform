@@ -31,9 +31,3 @@ This document defines the shared minimum completion standard for all work in the
 - [ ] **Published/Merged**: Documentation is merged into the protected default branch.
 - [ ] **Links Verified**: All internal and external links pass the Lychee CI check.
 - [ ] **Clarity & Accuracy**: The documentation accurately reflects the current state of the system and is free of placeholders or outdated architectural diagrams.
-
-## 5. Additional Assignment 4 Quality Gates
-
-- [ ] Issue-linked PR/MR includes evidence that the updated Definition of Done is satisfied.
-- [ ] The additional QA check selected for Assignment 4 is configured and passing in CI.
-- [ ] Testing evidence is preserved in PR/MR comments, docs, or linked issue history.

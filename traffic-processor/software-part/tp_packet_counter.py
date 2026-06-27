@@ -18,7 +18,7 @@ required_vars = {
     "OUT_INTERFACE": OUT_INTERFACE,
     "MY_MAC": MY_MAC,
     "MY_IP": MY_IP,
-    "CN_IP": CN_IP
+    "CN_IP": CN_IP,
 }
 
 for var_name, var_value in required_vars.items():
@@ -29,6 +29,7 @@ packet_queue_in = queue.Queue()
 packet_queue_out = queue.Queue()
 
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
 
 def get_json_payload(pkt, direction):
     src_ip = 0
@@ -50,9 +51,9 @@ def get_json_payload(pkt, direction):
         dst_ip = None
         src_port = None
         dst_port = None
-    
+
     json_payload = {
-        "direction": direction,   
+        "direction": direction,
         "src_ip": src_ip,
         "dst_ip": dst_ip,
         "src_port": src_port,
@@ -60,37 +61,39 @@ def get_json_payload(pkt, direction):
     }
     return json_payload
 
+
 def sending_data_to_cnss():
     while True:
         try:
             if not packet_queue_in.empty():
                 packet_to_cn = packet_queue_in.get_nowait()
-                packet_to_cn = json.dumps(packet_to_cn).encode('utf-8')
+                packet_to_cn = json.dumps(packet_to_cn).encode("utf-8")
                 udp_socket.sendto(packet_to_cn, (CN_IP, 5140))
                 print("PACKET WAS SENT")
 
             if not packet_queue_out.empty():
                 packet_to_cn = packet_queue_out.get_nowait()
-                packet_to_cn = json.dumps(packet_to_cn).encode('utf-8')
+                packet_to_cn = json.dumps(packet_to_cn).encode("utf-8")
                 udp_socket.sendto(packet_to_cn, (CN_IP, 5140))
                 print("PACKET WAS SENT")
 
             time.sleep(0.3)
         except queue.Empty:
-            pass 
+            pass
         except Exception as e:
             print(f"ERROR whyle sending packets to CN\n {e}")
-            time.sleep(1) 
+            time.sleep(1)
+
 
 def process_packet_in(pkt):
     json_payload = get_json_payload(pkt, 0)
     packet_queue_in.put(json_payload)
 
 
-
 def process_packet_out(pkt):
     json_payload = get_json_payload(pkt, 1)
     packet_queue_out.put(json_payload)
+
 
 if __name__ == "__main__":
     threading.Thread(target=sending_data_to_cnss, daemon=True).start()
@@ -117,4 +120,3 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n Keyboard interruption")
         udp_socket.close()
-

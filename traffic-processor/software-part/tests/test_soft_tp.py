@@ -1,5 +1,5 @@
-import pytest
-from scapy.all import *
+import pytest  # noqa: F401
+from scapy.all import ARP, Ether, ICMP, IP, UDP
 import tp_packet_counter
 
 
@@ -11,7 +11,9 @@ class TestGetJsonPayload:
             / IP(src="192.168.100.1", dst="192.168.100.2")
             / UDP(sport=9090, dport=1547)
         )
-        created_json = tp_packet_counter.get_json_payload(fake_pkt, fake_direction)
+        created_json = tp_packet_counter.get_json_payload(
+            fake_pkt, fake_direction
+        )
         expected_json = {
             "direction": 1,
             "src_ip": "192.168.100.1",
@@ -23,8 +25,12 @@ class TestGetJsonPayload:
 
     def test_ipv4_packet_ports_absent(self):
         fake_direction = 1
-        fake_pkt = Ether() / IP(src="192.168.100.1", dst="192.168.100.2") / ICMP()
-        created_json = tp_packet_counter.get_json_payload(fake_pkt, fake_direction)
+        fake_pkt = (
+            Ether() / IP(src="192.168.100.1", dst="192.168.100.2") / ICMP()
+        )
+        created_json = tp_packet_counter.get_json_payload(
+            fake_pkt, fake_direction
+        )
         expected_json = {
             "direction": 1,
             "src_ip": "192.168.100.1",
@@ -37,7 +43,9 @@ class TestGetJsonPayload:
     def test_not_ipv4_packet(self):
         fake_direction = 1
         fake_pkt = Ether() / ARP()
-        created_json = tp_packet_counter.get_json_payload(fake_pkt, fake_direction)
+        created_json = tp_packet_counter.get_json_payload(
+            fake_pkt, fake_direction
+        )
         expected_json = {
             "direction": 1,
             "src_ip": None,

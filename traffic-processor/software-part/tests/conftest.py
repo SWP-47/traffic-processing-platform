@@ -1,7 +1,9 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+)
 
 os.environ["SNIFF_INTERFACE_IN"] = "fake_eth_in"
 os.environ["SNIFF_INTERFACE_OUT"] = "fake_eth_out"

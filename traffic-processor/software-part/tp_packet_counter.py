@@ -1,7 +1,12 @@
-from scapy.all import *
 import json
 import os
+import queue
+import socket
+import threading
+import time
+
 from dotenv import load_dotenv
+from scapy.all import IP, sniff
 
 load_dotenv()
 
@@ -81,7 +86,7 @@ def sending_data_to_cnss():
         except queue.Empty:
             pass
         except Exception as e:
-            print(f"ERROR whyle sending packets to CN\n {e}")
+            print(f"ERROR while sending packets to CN\n {e}")
             time.sleep(1)
 
 

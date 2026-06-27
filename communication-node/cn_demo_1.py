@@ -1,5 +1,5 @@
 import json
-from scapy.all import *
+from scapy.all import Raw, sniff
 import socket
 import queue
 import threading
@@ -26,14 +26,17 @@ required_vars = {
     "MY_IP": MY_IP,
     "CNSS_IP": CNSS_IP,
     "TIME_WINDOW": TIME_WINDOW,
-    "CHANNEL_ID": CHANNEL_ID
+    "CHANNEL_ID": CHANNEL_ID,
 }
 
 for var_name, var_value in required_vars.items():
     if var_value is None:
         raise ValueError(f"Environment variable {var_name} is not set!")
-    if var_name == "TIME_WINDOW" and var_value > 60:
-        raise ValueError(f"Please set the time wingow less than 60 ms to avoid fragmentation problems! Your current time window: {var_value}")
+    if var_name == "TIME_WINDOW" and int(var_value) > 60:
+        raise ValueError(
+            f"Please set the time window less than 60 ms to avoid \
+            fragmentation problems! Your current time window: {var_value}"
+        )
 
 
 packet_queue = queue.Queue()
@@ -42,7 +45,9 @@ sequence = 0
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 try:
-    udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, OUT_INTERFACE.encode())
+    udp_socket.setsockopt(
+        socket.SOL_SOCKET, socket.SO_BINDTODEVICE, OUT_INTERFACE.encode()
+    )
     print(f"Socket bound to interface: {OUT_INTERFACE}")
 except (AttributeError, OSError) as e:
     print(f"Warning: Could not bind socket to {OUT_INTERFACE}: {e}")
@@ -55,28 +60,28 @@ json_from_tp_schema = {
         "src_ip": {"type": ["string", "null"]},
         "dst_ip": {"type": ["string", "null"]},
         "src_port": {"type": ["integer", "null"]},
-        "dst_port": {"type": ["integer", "null"]}
+        "dst_port": {"type": ["integer", "null"]},
     },
-    "required": ["direction", "src_ip", "dst_ip", "src_port", "dst_port"]
+    "required": ["direction", "src_ip", "dst_ip", "src_port", "dst_port"],
 }
 
 
 def make_json_for_cnss(packets_to_send, sequence):
     packet_to_cnss = {
-            "channel_id": CHANNEL_ID,
-            "timestamp": int(time.time()),
-            "sequence": sequence,
-            "window_ms": int(TIME_WINDOW),
-            "packets": packets_to_send
-        }
+        "channel_id": CHANNEL_ID,
+        "timestamp": int(time.time()),
+        "sequence": sequence,
+        "window_ms": int(TIME_WINDOW),
+        "packets": packets_to_send,
+    }
     return packet_to_cnss
 
 
 def sending_data_to_cnss():
     global sequence
     while True:
-        time.sleep(int(TIME_WINDOW)/1000.0)
-        
+        time.sleep(int(TIME_WINDOW) / 1000.0)
+
         sequence += 1
 
         packets_to_send = []
@@ -85,7 +90,7 @@ def sending_data_to_cnss():
             packets_to_send.append(packet_queue.get_nowait())
 
         packet_to_cnss = make_json_for_cnss(packets_to_send, sequence)
-        packet_to_cnss = json.dumps(packet_to_cnss).encode('utf-8')
+        packet_to_cnss = json.dumps(packet_to_cnss).encode("utf-8")
         udp_socket.sendto(packet_to_cnss, (CNSS_IP, 5140))
         print("PACKET WAS SENT")
 
@@ -97,7 +102,7 @@ def process_packet(pkt):
             parsed_json = json.loads(raw_data)
             try:
                 validate(instance=parsed_json, schema=json_from_tp_schema)
-            except ValidationError as e:
+            except ValidationError:
                 return
             print(parsed_json)
 
@@ -105,6 +110,7 @@ def process_packet(pkt):
 
         except json.JSONDecodeError:
             return
+
 
 if __name__ == "__main__":
     threading.Thread(target=sending_data_to_cnss, daemon=True).start()

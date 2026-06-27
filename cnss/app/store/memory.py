@@ -1,9 +1,10 @@
 import asyncio
 import logging
-from typing import List, Set, Any, Optional, Dict
+from typing import List, Set, Optional, Dict
 from datetime import datetime, timezone
 from .base import StateStore
 from ..models import ChannelState
+from ..models import WSClientSession
 
 logger = logging.getLogger(__name__)
 
@@ -33,63 +34,6 @@ class InMemoryStateStore(StateStore):
                 )
             return self._channels[channel_id]
 
-    async def update_channel_activity(
-        self, channel_id: str, incoming_sequence: int, server_received_at: datetime
-    ) -> int:
-        async with self._lock:
-            if channel_id not in self._channels:
-                self._channels[channel_id] = ChannelState(
-                    channel_id=channel_id,
-                    is_active=True,
-                    last_activity_timestamp=server_received_at,
-                    last_sequence=incoming_sequence,
-                )
-                return 0
-
-            channel = self._channels[channel_id]
-            dropped_batches = 0
-
-            if channel.last_sequence is not None:
-                # AC 3: Detect dropped batches
-                if incoming_sequence > channel.last_sequence + 1:
-                    dropped_batches = incoming_sequence - (channel.last_sequence + 1)
-                    logger.warning(
-                        f"Channel {channel_id}: Detected {dropped_batches} dropped batches."
-                    )
-
-                # AC 4 FIX: Only advance the sequence counter, never regress it
-                if incoming_sequence > channel.last_sequence:
-                    channel.last_sequence = incoming_sequence
-            else:
-                # Fallback if last_sequence was somehow None
-                channel.last_sequence = incoming_sequence
-
-            # Always update activity timestamp and active status
-            channel.last_activity_timestamp = server_received_at
-            channel.is_active = True
-
-            return dropped_batches
-
-    async def add_listener(self, channel_id: str, listener: Any) -> bool:
-        async with self._lock:
-            if channel_id in self._channels:
-                self._channels[channel_id].listeners.add(listener)
-                return True
-            return False
-
-    async def remove_listener(self, channel_id: str, listener: Any) -> bool:
-        async with self._lock:
-            if channel_id in self._channels:
-                self._channels[channel_id].listeners.discard(listener)
-                return True
-            return False
-
-    async def get_listeners(self, channel_id: str) -> Set[Any]:
-        async with self._lock:
-            if channel_id in self._channels:
-                return self._channels[channel_id].listeners.copy()
-            return set()
-
     async def set_channel_inactive(self, channel_id: str) -> bool:
         async with self._lock:
             if channel_id in self._channels:
@@ -106,3 +50,83 @@ class InMemoryStateStore(StateStore):
                 )
                 return True
             return False
+
+    async def update_channel_activity(
+        self, channel_id: str, incoming_sequence: int, server_received_at: datetime
+    ) -> int:
+        async with self._lock:
+            if channel_id not in self._channels:
+                self._channels[channel_id] = ChannelState(
+                    channel_id=channel_id,
+                    is_active=True,
+                    last_activity_timestamp=server_received_at,
+                    last_sequence=incoming_sequence,
+                    dropped_batches=0,
+                )
+                return 0
+
+            channel = self._channels[channel_id]
+            dropped_batches = 0
+            if channel.last_sequence is not None:
+                if incoming_sequence > channel.last_sequence + 1:
+                    dropped_batches = incoming_sequence - (channel.last_sequence + 1)
+                    channel.dropped_batches += dropped_batches  # <-- Accumulate
+                    logger.warning(
+                        f"Channel {channel_id}: Detected {dropped_batches} dropped batches."
+                    )
+
+                if incoming_sequence > channel.last_sequence:
+                    channel.last_sequence = incoming_sequence
+            else:
+                channel.last_sequence = incoming_sequence
+
+            channel.last_activity_timestamp = server_received_at
+            channel.is_active = True
+            return dropped_batches
+
+    async def get_and_reset_dropped_batches(self, channel_id: str) -> int:
+        async with self._lock:
+            if channel_id in self._channels:
+                dropped = self._channels[channel_id].dropped_batches
+                self._channels[channel_id].dropped_batches = 0
+                return dropped
+            return 0
+
+    async def set_channel_active(self, channel_id: str, is_active: bool) -> bool:
+        async with self._lock:
+            if channel_id in self._channels:
+                self._channels[channel_id].is_active = is_active
+                return True
+            return False
+
+    async def add_listener(self, channel_id: str, listener: WSClientSession) -> bool:
+        async with self._lock:
+            if channel_id in self._channels:
+                self._channels[channel_id].listeners.add(listener)
+                return True
+            return False
+
+    async def remove_listener(self, channel_id: str, listener: WSClientSession) -> bool:
+        async with self._lock:
+            if channel_id in self._channels:
+                self._channels[channel_id].listeners.discard(listener)
+                return True
+            return False
+
+    async def get_listeners(self, channel_id: str) -> Set[WSClientSession]:
+        async with self._lock:
+            if channel_id in self._channels:
+                return self._channels[channel_id].listeners.copy()
+            return set()
+
+    async def get_subscribers_by_target(
+        self, channel_id: str, target: str
+    ) -> List[WSClientSession]:
+        async with self._lock:
+            if channel_id in self._channels:
+                return [
+                    session
+                    for session in self._channels[channel_id].listeners
+                    if target in session.subscriptions
+                ]
+            return []

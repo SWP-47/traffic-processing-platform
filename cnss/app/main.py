@@ -4,6 +4,11 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 import re
 import logging
+import json
+from .db import get_channel_history, get_top_hosts
+from .models import WSClientSession, WSControlMessage
+from .broadcast import broadcast_hosts_update
+
 
 from .udp_server import start_udp_server
 from .store import state_store
@@ -15,7 +20,18 @@ import asyncio
 
 from fastapi import WebSocket, WebSocketDisconnect, Query
 from .auth import get_ws_user
-from .tasks import background_timeout_and_gc_task
+from .tasks import background_timeout_and_gc_task, reporting_worker_task
+
+from .db import (
+    init_db_pool,
+    close_db_pool,
+    get_all_channels_from_db,
+    get_channel_status_from_db,
+    get_health_metrics_from_db,
+    is_db_healthy,
+)
+
+from datetime import timedelta
 
 
 class TokenMaskingFilter(logging.Filter):
@@ -59,26 +75,32 @@ udp_transport = None
 async def lifespan(app: FastAPI):
     global udp_transport
     logger.info(f"Starting CnSS on {settings.cnss_host}:{settings.cnss_http_port}")
+
+    await init_db_pool()
+
     logger.info(f"Opening UDP Telemetry Listener on port {settings.cnss_udp_port}")
     udp_transport = await start_udp_server(
         host=settings.cnss_host, port=settings.cnss_udp_port
     )
-
     bg_task = asyncio.create_task(background_timeout_and_gc_task())
-
+    reporting_task = asyncio.create_task(reporting_worker_task())
     yield
+
+    # Shutdown
     if udp_transport:
         udp_transport.close()
         logger.info("UDP Telemetry Listener stopped.")
-
     bg_task.cancel()
+    reporting_task.cancel()
+    try:
+        await reporting_task
+    except asyncio.CancelledError:
+        pass
     try:
         await bg_task
     except asyncio.CancelledError:
         pass
-
-    if udp_transport:
-        udp_transport.close()
+    await close_db_pool()
 
 
 app = FastAPI(
@@ -87,7 +109,6 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
-
 
 # GLOBAL ERROR HANDLER
 
@@ -168,29 +189,42 @@ async def login(request: LoginRequest):
 async def list_channels(user: TokenPayload = Depends(get_current_user)):
     """
     Returns a list of channels accessible to the authenticated user.
-    Requires a valid JWT token in the Authorization header.
+    Queries TimescaleDB directly for channel existence and activity.
     """
-    all_channels = await state_store.get_all_channels()
+
+    channels_data = await get_all_channels_from_db()
 
     # Filter channels according to the Authorization Matrix
     if user.role == "admin":
-        # Admin sees all existing channels
-        accessible_channels = all_channels
+        accessible_channels = channels_data
     else:
-        # Viewer sees only channels present in their JWT scope
-        accessible_channels = [ch for ch in all_channels if ch.channel_id in user.scope]
+        accessible_channels = [
+            ch for ch in channels_data if ch["channel_id"] in user.scope
+        ]
 
-    # Format the response according to OpenAPI ChannelsResponse schema
-    response_channels = [
-        {
-            "channel_id": ch.channel_id,
-            "is_active": ch.is_active,
-            "last_activity_timestamp": ch.last_activity_timestamp.isoformat().replace(
-                "+00:00", "Z"
-            ),
-        }
-        for ch in accessible_channels
-    ]
+    now = datetime.now(timezone.utc)
+    timeout_td = timedelta(milliseconds=settings.activity_timeout_ms)
+
+    response_channels = []
+    for ch in accessible_channels:
+        last_activity = ch["last_activity_timestamp"]
+        is_active = False
+        if last_activity:
+            if last_activity.tzinfo is None:
+                last_activity = last_activity.replace(tzinfo=timezone.utc)
+            is_active = (now - last_activity) <= timeout_td
+
+        response_channels.append(
+            {
+                "channel_id": ch["channel_id"],
+                "is_active": is_active,
+                "last_activity_timestamp": (
+                    last_activity.isoformat().replace("+00:00", "Z")
+                    if last_activity
+                    else None
+                ),
+            }
+        )
 
     return {"channels": response_channels, "total": len(response_channels)}
 
@@ -201,16 +235,10 @@ async def get_channel_status(
 ):
     """
     REST fallback for a specific channel's activity indicator.
+    Queries TimescaleDB directly.
     """
-    # Check if channel exists
-    channel = await state_store.get_channel(channel_id)
-    if not channel:
-        return JSONResponse(
-            status_code=404,
-            content={"error": "not_found", "message": "Channel not found."},
-        )
 
-    # Check Authorization Matrix (Viewer scope enforcement)
+    # Check Authorization Matrix (Viewer scope enforcement) BEFORE DB lookup
     if user.role != "admin" and channel_id not in user.scope:
         return JSONResponse(
             status_code=403,
@@ -220,11 +248,28 @@ async def get_channel_status(
             },
         )
 
+    channel_data = await get_channel_status_from_db(channel_id)
+    if not channel_data:
+        return JSONResponse(
+            status_code=404,
+            content={"error": "not_found", "message": "Channel not found."},
+        )
+
+    now = datetime.now(timezone.utc)
+    timeout_td = timedelta(milliseconds=settings.activity_timeout_ms)
+    last_activity = channel_data["last_activity_timestamp"]
+
+    is_active = False
+    if last_activity:
+        if last_activity.tzinfo is None:
+            last_activity = last_activity.replace(tzinfo=timezone.utc)
+        is_active = (now - last_activity) <= timeout_td
+
     return {
-        "channel_id": channel.channel_id,
-        "is_active": channel.is_active,
-        "last_activity_timestamp": channel.last_activity_timestamp.isoformat().replace(
-            "+00:00", "Z"
+        "channel_id": channel_id,
+        "is_active": is_active,
+        "last_activity_timestamp": (
+            last_activity.isoformat().replace("+00:00", "Z") if last_activity else None
         ),
     }
 
@@ -232,17 +277,27 @@ async def get_channel_status(
 @app.get("/api/v1/health")
 async def health_check(user: TokenPayload = Depends(get_current_user)):
     """
-    Verify operational status of the CnSS and aggregate channel statistics.
+    Verify operational status of the CnSS and aggregate channel statistics from DB.
+    Returns 503 if the database is unreachable.
     """
-    channels = await state_store.get_all_channels()
-    active_count = sum(1 for c in channels if c.is_active)
-    return {
-        "status": "healthy",
-        "components": {"cnss": "active"},
-        "channels_active": active_count,
-        "channels_total": len(channels),
-        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-    }
+
+    db_healthy = await is_db_healthy()
+    metrics = await get_health_metrics_from_db()
+
+    status = "healthy" if db_healthy else "unhealthy"
+    cnss_status = "active" if db_healthy else "error"
+    status_code = 200 if db_healthy else 503
+
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "status": status,
+            "components": {"cnss": cnss_status},
+            "channels_active": metrics["channels_active"],
+            "channels_total": metrics["channels_total"],
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        },
+    )
 
 
 @app.websocket("/api/v1/ws/telemetry")
@@ -280,18 +335,101 @@ async def websocket_telemetry(
         await websocket.close(code=4004, reason="channel_not_found")
         return
 
-    # 5. Accept & Register Listener (Normal flow)
+    # 5. Accept & Register Listener
     await websocket.accept()
-    await state_store.add_listener(channel_id, websocket)
+
+    # AC 1: Create WSClientSession
+    session = WSClientSession(websocket=websocket, user=user, channel_id=channel_id)
+    await state_store.add_listener(channel_id, session)
 
     try:
         while True:
-            # Keep connection alive, handle basic ping/pong
             data = await websocket.receive_text()
             if data == "ping":
                 await websocket.send_text("pong")
+                continue
+
+            # Handle Control Messages
+            try:
+                msg_dict = json.loads(data)
+                msg = WSControlMessage(**msg_dict)
+
+                if msg.action == "subscribe" and msg.target in [
+                    "lan_hosts",
+                    "wan_hosts",
+                ]:
+                    # Update session subscriptions
+                    session.subscriptions[msg.target] = {
+                        "sort_by": msg.sort_by or "sent",
+                        "limit": msg.limit or 5,
+                    }
+
+                    # Initial Snapshot (Query DB and send ONLY to this client)
+                    sub_params = session.subscriptions[msg.target]
+                    hosts = await get_top_hosts(
+                        channel_id=channel_id,
+                        target=msg.target,
+                        sort_by=sub_params["sort_by"],
+                        limit=sub_params["limit"],
+                        window_sec=settings.reporting_window_sec,
+                    )
+
+                    await broadcast_hosts_update(
+                        channel_id=channel_id,
+                        target=msg.target,
+                        hosts=hosts,
+                        sessions=[session],
+                    )
+
+                elif msg.action == "unsubscribe" and msg.target in [
+                    "lan_hosts",
+                    "wan_hosts",
+                ]:
+                    # Remove subscription
+                    session.subscriptions.pop(msg.target, None)
+
+            except Exception as e:
+                logger.warning(f"Invalid WS control message: {e}")
+
     except WebSocketDisconnect:
         pass
     finally:
-        # Ensure listener is removed on disconnect (Memory Leak Prevention)
-        await state_store.remove_listener(channel_id, websocket)
+        # Garbage Collection
+        await state_store.remove_listener(channel_id, session)
+
+
+@app.get("/api/v1/channel/{channel_id}/history")
+async def get_channel_history_endpoint(
+    channel_id: str, period: str, user: TokenPayload = Depends(get_current_user)
+):
+    # Auth & Scope check
+    if user.role != "admin" and channel_id not in user.scope:
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "forbidden",
+                "message": "You do not have access to this channel.",
+            },
+        )
+
+    channel_data = await get_channel_status_from_db(channel_id)
+    if not channel_data:
+        return JSONResponse(
+            status_code=404,
+            content={"error": "not_found", "message": "Channel not found."},
+        )
+
+    if period not in ["1h", "24h", "7d", "30d"]:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "bad_request", "message": "Invalid period."},
+        )
+
+    interval_sec, points = await get_channel_history(channel_id, period)
+
+    return {
+        "channel_id": channel_id,
+        "period": period,
+        "interval_sec": interval_sec,
+        "points": points,
+    }

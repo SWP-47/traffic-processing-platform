@@ -1,51 +1,51 @@
 # Quality Requirement Tests (QRT)
 
-This document defines the automated tests and CI checks that verify the measurable scenarios outlined in [docs/quality-requirements.md](quality-requirements.md)
+This document defines the automated tests and CI checks that verify the measurable scenarios outlined in [docs/quality-requirements.md](quality-requirements.md).
 
 ---
 
-## QRT-001: [Match the Short Title from QR-001]
+## QRT-001: CnSS health API responsiveness
 
 **Linked quality requirement:** QR-001
 
-**Verification method:** [e.g., Automated integration test, Automated CI check, Automated unit test]
+**Verification method:** Automated integration test.
 
-**Test data, setup, or environment:** [Describe the environment, e.g., Standard CI build environment with CnSS running via Docker Compose]
+**Test data, setup, or environment:** CnSS running in the standard CI container test environment with a healthy backend database and a valid admin JWT token.
 
-**Automated command or CI check:** [e.g., `pytest tests/integration/test_api_performance.py`]
+**Automated command or CI check:** `docker compose -f cnss/docker-compose.test.yml up --build --abort-on-container-exit`
 
-**Expected measurable result:** [e.g., The test asserts that 95% of 100 sequential requests complete in ≤ 200ms.]
+**Expected measurable result:** The CnSS health endpoint returns `200 OK` with a valid `components.cnss` value and a `timestamp` field within 1 second, and the integration test suite passes.
 
-**Evidence link:** [Latest CI run] (add link from CI check in develop)
+**Evidence link:** Latest protected-branch CI run showing the CnSS integration job result.
 
 ---
 
-## QRT-002: [Match the Short Title from QR-002]
+## QRT-002: JWT scope enforcement
 
 **Linked quality requirement:** QR-002
 
-**Verification method:** [Verification method]
+**Verification method:** Automated integration test.
 
-**Test data, setup, or environment:** [Environment description]
+**Test data, setup, or environment:** CnSS running in the CI container environment with authorized and unauthorized JWT tokens, verifying access to `POST /api/v1/auth/login` and scoped channel results.
 
-**Automated command or CI check:** [Command or CI job name]
+**Automated command or CI check:** `docker compose -f cnss/docker-compose.test.yml up --build --abort-on-container-exit`
 
-**Expected measurable result:** [Measurable assertion]
+**Expected measurable result:** Authorized admin requests succeed, invalid credentials return `401 Unauthorized` with 100% rejection rate, and viewer scope is limited to authorized channel IDs only.
 
-**Evidence link:** [Latest CI run] (add link from CI check in develop)
+**Evidence link:** Latest protected-branch CI run showing the CnSS integration job result.
 
 ---
 
-## QRT-003: [Match the Short Title from QR-003]
+## QRT-003: Critical module unit coverage
 
 **Linked quality requirement:** QR-003
 
-**Verification method:** [Verification method]
+**Verification method:** Automated coverage gate.
 
-**Test data, setup, or environment:** [Environment description]
+**Test data, setup, or environment:** Standard CI Python environment for the CnSS backend.
 
-**Automated command or CI check:** [Command or CI job name]
+**Automated command or CI check:** `pytest --cov=app --cov-report=term-missing --cov-fail-under=30 tests/`
 
-**Expected measurable result:** [Measurable assertion]
+**Expected measurable result:** The backend test suite completes successfully and the coverage gate enforces at least 30% line coverage for the CnSS codebase.
 
-**Evidence link:** [Latest CI run] (add link from CI check in develop)
+**Evidence link:** Latest protected-branch CI run showing the CnSS coverage gate result.

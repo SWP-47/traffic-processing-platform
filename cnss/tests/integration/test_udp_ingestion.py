@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from unittest.mock import patch, AsyncMock
 
 from app.udp_server import start_udp_server
-from app.store.memory import InMemoryStateStore
+from app.store import StateStore as InMemoryStateStore
 
 
 @pytest.mark.asyncio
@@ -52,7 +52,6 @@ async def test_udp_socket_receives_and_updates_state():
             channel = await test_store.get_channel("integration-test-ch")
             assert channel is not None
             assert channel.last_sequence == 100
-            assert channel.is_active is True
 
             # Verify DB insert was attempted with correct data
             mock_db.assert_called_once()

@@ -3,7 +3,7 @@ import asyncio
 from datetime import datetime, timezone
 from unittest.mock import patch, AsyncMock, MagicMock
 from starlette.websockets import WebSocketDisconnect
-from app.store.memory import InMemoryStateStore
+from app.store import StateStore as InMemoryStateStore
 from app.auth import create_access_token
 from app.broadcast import broadcast_telemetry_update
 from app.models import WSClientSession
@@ -23,11 +23,15 @@ class TestWebSocketTelemetry:
         )
         token = self._get_token("admin")
         url = f"/api/v1/ws/telemetry?token={token}&channel_id=test-ch"
-        with patch("app.main.state_store", test_store):
+
+        with patch("app.main.state_store", test_store), patch(
+            "app.main.get_all_channel_ids_from_db",
+            new_callable=AsyncMock,
+            return_value=["test-ch"],
+        ):
             with client.websocket_connect(url) as websocket:
                 assert "test-ch" in test_store._channels
                 assert len(test_store._channels["test-ch"].listeners) == 1
-
                 # Verify ping/pong keep-alive works
                 websocket.send_text("ping")
                 data = websocket.receive_text()

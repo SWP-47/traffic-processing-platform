@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime, timezone, timedelta
-from app.store.memory import InMemoryStateStore
+from app.store import StateStore as InMemoryStateStore
 from app.models import WSClientSession
 from unittest.mock import MagicMock
 
@@ -13,7 +13,7 @@ def store():
 
 # --- Auto-create new channel ---
 @pytest.mark.asyncio
-async def test_ac2_auto_create_channel(store):
+async def test_auto_create_channel(store):
     channel_id = "new-channel"
     now = datetime.now(timezone.utc)
 
@@ -28,7 +28,6 @@ async def test_ac2_auto_create_channel(store):
     channel = await store.get_channel(channel_id)
     assert channel is not None
     assert channel.channel_id == channel_id
-    assert channel.is_active is True
     assert channel.last_activity_timestamp == now
     assert channel.last_sequence == 1
     assert isinstance(channel.listeners, set)

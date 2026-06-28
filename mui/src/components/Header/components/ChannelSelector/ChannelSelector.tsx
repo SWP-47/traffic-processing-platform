@@ -1,7 +1,7 @@
 import { getChannels } from '@/services/channels';
 import { useState, useEffect } from 'react';
 import styles from './ChannelSelector.module.css';
-import telemetry from '@/services/telemetry';
+import websocket from '@/services/websocket';
 
 function ChannelSelector() {
   const [channels, setChannels] = useState<string[]>([]);
@@ -18,7 +18,7 @@ function ChannelSelector() {
   useEffect(() => {
     const connectChannel = async (channelId: string) => {
       if (channelId === '') return;
-      telemetry.connect({ channel_id: channelId });
+      websocket.connect({ channel_id: channelId });
     };
     connectChannel(selectedChannelId);
   }, [selectedChannelId]);
@@ -26,9 +26,8 @@ function ChannelSelector() {
   return (
     <select
       className={styles.select}
-      defaultValue=""
       value={selectedChannelId}
-      onFocus={updateChannelsList}
+      onClick={updateChannelsList}
       onChange={(e) => setSelectedChannelId(e.target.value)}>
         <option value="" disabled className={styles.option} style={{display: 'none'}}>Select a channel</option>
         {

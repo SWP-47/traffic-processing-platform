@@ -2,7 +2,7 @@ import pytest
 import asyncio
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch, MagicMock
-from app.store.memory import InMemoryStateStore
+from app.store import StateStore as InMemoryStateStore
 from app.models import WSClientSession
 from app.tasks import reporting_worker_task
 

@@ -42,14 +42,13 @@ class TelemetryUDPProtocol(asyncio.DatagramProtocol):
         asyncio.create_task(self._process_batch(batch, server_received_at))
 
     async def _process_batch(self, batch: TelemetryBatch, received_at: datetime):
-        # in-memory sequence tracking (no DB query)
+        # in-memory sequence tracking
         await state_store.update_channel_activity(
             channel_id=batch.channel_id,
             incoming_sequence=batch.sequence,
             server_received_at=received_at,
         )
         try:
-            # persist to TimescaleDB
             await insert_packet_flows(
                 channel_id=batch.channel_id,
                 timestamp=batch.timestamp,

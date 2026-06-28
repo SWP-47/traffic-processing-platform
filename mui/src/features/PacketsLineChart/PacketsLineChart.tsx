@@ -4,6 +4,15 @@ import type { MouseEvent } from 'react';
 import { init, type EChartsType } from 'echarts';
 import telemetry from '@/services/telemetry';
 import chartOptions from './chartOptions';
+import { getHistory, type HistoryPeriod } from '@/services/history';
+import { useWebSocket } from '@/hooks/useWebSocket';
+
+const timeScaleMap: { [index: number]: HistoryPeriod } = {
+  [3600]: '1h',
+  [3600*24]: '24h',
+  [3600*24*7]: '7d',
+  [3600*24*30]: '30d'
+}
 
 function PacketsLineChart() {
   const chartElementRef = useRef<HTMLDivElement>(null);
@@ -11,10 +20,12 @@ function PacketsLineChart() {
   const chartRef = useRef<EChartsType>(null);
   const [ selectedSeries, setSelectedSeries ] = useState<{ [index: string] : boolean }>({ "Received": true, "Sent": true });
   const [ timeScale, setTimeScale ] = useState<number>(3600);
+  const { channelId } = useWebSocket();
 
   // Init chart
   useEffect(() => {
     if (!chartElementRef.current) return;
+    if (!channelId) return;
 
     const chart = init(chartElementRef.current);
     chartRef.current = chart;
@@ -41,7 +52,6 @@ function PacketsLineChart() {
 
       if (zoomData.end == 100) showRealTime.current = true;
       else showRealTime.current = false;
-      console.log(chart.getOption());
 
       // @ts-expect-error Type is not defined
       currentStart = chart.getOption().dataZoom[0].startValue;
@@ -49,16 +59,43 @@ function PacketsLineChart() {
       currentEnd = chart.getOption().dataZoom[0].endValue;
     });
 
-    // TODO: Get previous points, then subscribe to telemetry
-    // Chart already have loading animation.
     // TODO: Make bucket system
 
+    let isLoading = true;
+    chart.showLoading();
+    let bucketSize = 0;
+
+    const loadHistoryData = async () => {
+      const response = await getHistory(channelId, timeScaleMap[timeScale]!);
+      bucketSize = response.interval_sec!;
+
+      response.points?.forEach(point => {
+        const date = Date.parse(point.timestamp!);
+
+        data.Received!.push({
+          name: point.timestamp!,
+          value: [date, point.packets_in_per_sec!, point.is_active! ? 1 : 0, bucketSize]
+        })
+
+        data.Sent!.push({
+          name: point.timestamp!,
+          value: [date, point.packets_out_per_sec!, point.is_active! ? 1 : 0, bucketSize]
+        })
+      })
+
+      isLoading = false;
+      chart.hideLoading();
+    }
+
+    loadHistoryData();
+
     const unsubscribeTelemetry = telemetry.subscribe(() => {
+      if (isLoading) return;
       if (!chartRef.current) return;
       if (!data.Received || !data.Sent) return;
 
       const snapshot = telemetry.getLastUpdate();
-      if (!snapshot?.data) return;
+      if (!snapshot) return;
 
       const min = Date.now() - timeScale * 1000;
 
@@ -69,19 +106,19 @@ function PacketsLineChart() {
       }
 
       // Collect data
-      const date = Date.parse(snapshot.data.timestamp!);
-      const packetsIn = snapshot.data.metrics?.direction_in?.packets_per_sec;
-      const packetsOut = snapshot.data.metrics?.direction_out?.packets_per_sec;
-      const channelActivity = snapshot.data.is_active ? 1 : 0;
-      const windowSize = snapshot.data.window_ms;
+      const date = Date.parse(snapshot.timestamp!);
+      const packetsIn = snapshot.metrics?.direction_in?.packets_per_sec;
+      const packetsOut = snapshot.metrics?.direction_out?.packets_per_sec;
+      const channelActivity = snapshot.is_active ? 1 : 0;
+      const windowSize = snapshot.window_ms;
 
       data.Received.push({
-        name: snapshot.data.timestamp!,
+        name: snapshot.timestamp!,
         value: [date, packetsIn!, channelActivity!, windowSize!]
       })
 
       data.Sent.push({
-        name: snapshot.data.timestamp!,
+        name: snapshot.timestamp!,
         value: [date, packetsOut!, channelActivity!, windowSize!]
       })
 
@@ -111,7 +148,7 @@ function PacketsLineChart() {
       resizeObserver.disconnect();
       chart.dispose();
     }
-  }, [timeScale])
+  }, [channelId, timeScale])
 
 
   // Configure selection
@@ -149,7 +186,7 @@ function PacketsLineChart() {
   
 
   return (
-    <div className={style.component}>
+    <div className={`${style.component} card`}>
       <div className={style.header}>
         <div className={style.left}>
           <h1>RX/TX Rate over time</h1>
@@ -160,9 +197,9 @@ function PacketsLineChart() {
         </div>
         <div className={style.filters}>
           <button onClick={selectScale} data-value={3600}       className={`${style.filter} ${style.active}`}>1h</button>
-          <button onClick={selectScale} data-value={3600*24}    className={style.filter}>1d</button>
-          <button onClick={selectScale} data-value={3600*24*7}  className={style.filter}>1w</button>
-          <button onClick={selectScale} data-value={3600*24*30} className={style.filter}>1m</button>
+          <button onClick={selectScale} data-value={3600*24}    className={style.filter}>24h</button>
+          <button onClick={selectScale} data-value={3600*24*7}  className={style.filter}>7d</button>
+          <button onClick={selectScale} data-value={3600*24*30} className={style.filter}>30d</button>
         </div>
       </div>
       <div ref={chartElementRef} className={style.chart} />

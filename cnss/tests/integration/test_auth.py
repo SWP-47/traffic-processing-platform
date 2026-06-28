@@ -1,7 +1,5 @@
-import asyncio
 from unittest.mock import patch
-from datetime import datetime, timezone
-from app.store.memory import InMemoryStateStore
+from unittest.mock import AsyncMock
 
 
 class TestLoginEndpoint:
@@ -40,51 +38,31 @@ class TestLoginEndpoint:
         }
 
     def test_scope_intersection_viewer(self, client):
-        """Viewer scope must be an intersection of configured and existing channels."""
-        test_store = InMemoryStateStore()
-        loop = asyncio.new_event_loop()
-        # Add only one of the viewer's allowed channels to the store
-        loop.run_until_complete(
-            test_store.update_channel_activity(
-                "bridge-berlin-01", 1, datetime.now(timezone.utc)
-            )
-        )
-        loop.close()
-
-        with patch("app.main.state_store", test_store):
+        """Viewer scope must be an intersection of configured and existing channels (from DB)."""
+        with patch(
+            "app.main.get_all_channel_ids_from_db",
+            new_callable=AsyncMock,
+            return_value=["bridge-berlin-01"],
+        ):
             response = client.post(
                 "/api/v1/auth/login",
                 json={"username": "viewer", "password": "viewer123"},
             )
-
-        assert response.status_code == 200
-        data = response.json()
-        # Viewer is configured with ["bridge-berlin-01", "bridge-prague-01"] in MOCK_USERS
-        # But only "bridge-berlin-01" exists in the store
-        assert data["scope"] == ["bridge-berlin-01"]
-        assert "bridge-prague-01" not in data["scope"]
+            assert response.status_code == 200
+            data = response.json()
+            assert data["scope"] == ["bridge-berlin-01"]
+            assert "bridge-prague-01" not in data["scope"]
 
     def test_scope_intersection_admin(self, client):
-        """Admin scope must contain ALL existing channels in the store."""
-        test_store = InMemoryStateStore()
-        loop = asyncio.new_event_loop()
-        loop.run_until_complete(
-            test_store.update_channel_activity(
-                "new-ch-1", 1, datetime.now(timezone.utc)
-            )
-        )
-        loop.run_until_complete(
-            test_store.update_channel_activity(
-                "new-ch-2", 1, datetime.now(timezone.utc)
-            )
-        )
-        loop.close()
-
-        with patch("app.main.state_store", test_store):
+        """Admin scope must contain ALL existing channels in the DB."""
+        with patch(
+            "app.main.get_all_channel_ids_from_db",
+            new_callable=AsyncMock,
+            return_value=["new-ch-1", "new-ch-2"],
+        ):
             response = client.post(
                 "/api/v1/auth/login", json={"username": "admin", "password": "admin123"}
             )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert set(data["scope"]) == {"new-ch-1", "new-ch-2"}
+            assert response.status_code == 200
+            data = response.json()
+            assert set(data["scope"]) == {"new-ch-1", "new-ch-2"}

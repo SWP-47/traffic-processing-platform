@@ -252,23 +252,20 @@ async def is_db_healthy() -> bool:
     except Exception:
         return False
 
-
-# Add to the end of app/db.py
-
-
 async def get_channel_history(channel_id: str, period: str) -> tuple[int, list[dict]]:
     """
     Fetches aggregated history points. Returns (interval_sec, points).
+    Fills gaps with 0.0 to ensure a continuous time series for charts.
     """
     if not pool:
         return 60, []
 
     # Dynamically calculate optimal time_bucket interval based on period
     period_map = {
-        "1h": 10,  # ~360 points
-        "24h": 60,  # ~1440 points
-        "7d": 600,  # ~1008 points (10 min buckets)
-        "30d": 3600,  # ~720 points (1 hour buckets)
+        "1h": 3,
+        "24h": 60,
+        "7d": 7*60,
+        "30d": 30*60,
     }
     period_sql_map = {
         "1h": "1 hour",
@@ -282,15 +279,30 @@ async def get_channel_history(channel_id: str, period: str) -> tuple[int, list[d
 
     try:
         query = f"""
+            WITH time_buckets AS (
+                SELECT DISTINCT time_bucket('{interval_sec} seconds', gs) AS bucket
+                FROM generate_series(
+                    NOW() - INTERVAL '{period_sql}',
+                    NOW(),
+                    INTERVAL '{interval_sec} seconds'
+                ) AS gs
+            ),
+            aggregated_data AS (
+                SELECT
+                    time_bucket('{interval_sec} seconds', time) AS bucket,
+                    SUM(CASE WHEN direction = 0 THEN 1 ELSE 0 END)::float / {interval_sec} AS packets_in_per_sec,
+                    SUM(CASE WHEN direction = 1 THEN 1 ELSE 0 END)::float / {interval_sec} AS packets_out_per_sec
+                FROM packet_flows
+                WHERE channel_id = $1 AND time > NOW() - INTERVAL '{period_sql}'
+                GROUP BY bucket
+            )
             SELECT
-                time_bucket('{interval_sec} seconds', time) AS bucket,
-                SUM(CASE WHEN direction = 0 THEN 1 ELSE 0 END)::float / {interval_sec} AS packets_in_per_sec,
-                SUM(CASE WHEN direction = 1 THEN 1 ELSE 0 END)::float / {interval_sec} AS packets_out_per_sec,
-                MAX(time) AS last_activity
-            FROM packet_flows
-            WHERE channel_id = $1 AND time > NOW() - INTERVAL '{period_sql}'
-            GROUP BY bucket
-            ORDER BY bucket
+                tb.bucket,
+                COALESCE(ad.packets_in_per_sec, 0.0) AS packets_in_per_sec,
+                COALESCE(ad.packets_out_per_sec, 0.0) AS packets_out_per_sec
+            FROM time_buckets tb
+            LEFT JOIN aggregated_data ad ON tb.bucket = ad.bucket
+            ORDER BY tb.bucket;
         """
         rows = await pool.fetch(query, channel_id)
 
@@ -303,7 +315,7 @@ async def get_channel_history(channel_id: str, period: str) -> tuple[int, list[d
                     "timestamp": row["bucket"].isoformat().replace("+00:00", "Z"),
                     "packets_in_per_sec": p_in,
                     "packets_out_per_sec": p_out,
-                    "is_active": (p_in + p_out) > 0,
+                    "is_active": (p_in + p_out) > 0, 
                 }
             )
         return interval_sec, points

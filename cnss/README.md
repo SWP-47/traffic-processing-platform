@@ -2,15 +2,6 @@
 
 Backend component responsible for aggregating telemetry data from the Communication Node (CN) and exposing operational status and real-time metrics to the Management User Interface (MUI).
 
-## MVP v0 Scope
-
-This is the minimal technical foundation (MVP v0) for the CnSS component. It currently provides:
-- A containerized FastAPI application.
-- Distinct build configurations for Local Development (Dev) and Virtual Machine deployment (Prod).
-- A single `/health` endpoint to verify service availability and operational status.
-
-*Note: UDP ingestion, WebSocket streaming, and database persistence will be implemented in subsequent iterations (MVP v1).*
-
 ---
 
 ## Prerequisites

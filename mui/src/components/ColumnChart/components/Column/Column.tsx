@@ -5,7 +5,7 @@ function Column({ value, label, legend, heightFactor }: ColumnRenderData) {
   return (
     <div className={styles.column}>
       <div className={styles.data}>
-        <p className={styles.value}>{label ?? value}</p>
+        <p className={styles.value}>{label ?? value.toFixed(2)}</p>
         <div
           className={styles.data_representation}
           style={{ height: `${heightFactor * 100}%` }}>

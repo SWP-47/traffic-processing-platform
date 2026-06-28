@@ -1,57 +1,57 @@
-# System Architecture & Data Flow Specification (MVP v1)
+# System Architecture & Data Flow Specification (MVP v2)
 
 ## 1. Overview
+The architecture is strictly decoupled into a hardware-accelerated data plane (for packet forwarding) and a software-defined telemetry side-channel (for monitoring). Failure in monitoring components must not impact the core packet forwarding (US-005, US-007, US-009).
 
-The architecture is strictly decoupled into a **hardware-accelerated data plane** (for packet forwarding) and a **software-defined telemetry side-channel** (for monitoring). Failure in monitoring components **must not** impact the core packet forwarding (US-005, US-007, US-009).
+The system supports multiple Communication Nodes (CNs) feeding a single Control and Status Server (CnSS), and multiple Management User Interfaces (MUIs) consuming data from the same CnSS. 
 
-The system supports **multiple Communication Nodes (CNs)** feeding a single Control and Status Server (CnSS), and **multiple Management User Interfaces (MUIs)** consuming data from the same CnSS. Each MUI authenticates with credentials, receives a JWT token with a scoped list of accessible channels, and subscribes to a specific channel for real-time telemetry.
+The CnSS persists **raw packet metadata** (IPs, ports, directions) into a Time-Series Database (TimescaleDB). Real-time metrics for the MUI are aggregated via periodic SQL queries. This provides historical data, prevents memory leaks during traffic spikes, and allows for flexible future reporting.
 
 ## 2. Component Architecture & Conceptual Responsibilities
 
 ### 2.1. Traffic Processor (TP)
-- **Role:** Core packet forwarding and telemetry extraction engine.
-- **Responsibilities:**
-  1. **Data Plane (Passthrough):** Operates as a transparent inline bridge, passing network packets in both directions at wire speed with negligible latency.
-  2. **Telemetry Plane (Extraction):** Independently observes the passing traffic, extracts packet metadata, and generates a high-frequency stream of raw telemetry.
-  3. **Local Dispatch:** Pushes the raw telemetry stream to the local Communication Node (CN) for further processing.
+
+**Role:** Core packet forwarding and telemetry extraction engine.
+
+**Responsibilities:**
+*   **Data Plane (Passthrough):** Operates as a transparent inline bridge, passing network packets in both directions at wire speed with negligible latency.
+*   **Telemetry Plane (Extraction):** Independently observes the passing traffic, extracts packet metadata, and generates a high-frequency stream of raw telemetry.
+*   **Local Dispatch:** Pushes the raw telemetry stream to the local Communication Node (CN) for further processing.
 
 ### 2.2. Communication Node (CN)
-- **Role:** Local telemetry aggregation and forwarding node.
-- **Responsibilities:** 
-  1. **Ingestion:** Receives the high-frequency stream of raw telemetry from the local TP.
-  2. **Buffering & Aggregation:** Buffers incoming events in memory and aggregates them into fixed time windows (e.g., `window_ms: 500`).
-  3. **Remote Dispatch:** Transforms the aggregated window into a `TelemetryBatch` payload and forwards it to the remote Control and Status Server (CnSS).
-  4. **Channel Identity:** Each CN is configured with a unique `channel_id` (e.g., `bridge-berlin-01`), which is included in every `TelemetryBatch`. The `channel_id` serves as the primary key for per-channel state in CnSS.
 
-> **Note:** In MVP v1, CNs are **not authenticated** — they are trusted components operating in a controlled network. The `channel_id` is a trusted assertion. Future versions will introduce mTLS/DTLS for CN-to-CnSS authentication.
+**Role:** Local telemetry batching and forwarding node.
+
+**Responsibilities:**
+*   **Ingestion:** Receives the high-frequency stream of raw telemetry from the local TP.
+*   **Buffering & Batching:** Buffers incoming raw packet metadata and groups them into fixed, small time windows (e.g., `window_ms: 50`).
+*   **Remote Dispatch:** Transforms the batch into a `TelemetryBatch` payload and forwards it to the remote CnSS via UDP.
+*   **UDP MTU Constraint:** CN is strictly responsible for ensuring the serialized JSON payload does not exceed the network MTU (recommended `< 1400 bytes`). CN must dynamically or statically adjust `window_ms` to prevent IP fragmentation and silent UDP drops.
+*   **Channel Identity:** Each CN is configured with a unique `channel_id`, which is included in every batch.
 
 ### 2.3. Control and Status Server (CnSS)
-- **Role:** Backend aggregation, state management, API gateway, and authentication server.
-- **Responsibilities:** 
-  1. **Authentication:** Validates user credentials (username/password) via `POST /api/v1/auth/login` and issues JWT tokens containing `role` and `scope` (list of accessible `channel_id`).
-  2. **Multi-Channel State:** Maintains an in-memory registry of channels: `Dict[channel_id → ChannelState]`. Each channel has its own `last_activity_timestamp`, `is_active` flag, `last_sequence`, and set of subscribed WebSocket listeners.
-  3. **Ingestion:** Listens for incoming UDP `TelemetryBatch` datagrams from **one or multiple CNs**. Routes each batch to the appropriate channel by `channel_id`. If a channel does not exist, CnSS creates it on first receipt.
-  4. **Normalization:** Calculates normalized metrics per channel.
-  5. **Per-Channel Push:** Broadcasts `telemetry_update` events **only to MUI clients subscribed to that specific channel**.
-  6. **Access Control:** Validates JWT tokens on all REST and WebSocket endpoints. Enforces per-channel access via the `scope` claim. (ignored for users with `role=admin`)
-  7. **REST API:** Exposes endpoints for authentication (`/auth/login`), channel listing (`/channels`), per-channel status (`/channel/{channel_id}/status`), and health checks (`/health`).
-  8. **Lifecycle Management:** Automatically removes channels that have been inactive (no UDP, no listeners) for a configurable retention period (default: 24 hours) to prevent memory leaks.
+
+**Role:** Backend ingestion, persistent storage, aggregation, API gateway, and authentication server.
+
+**Responsibilities:**
+*   **Authentication:** Validates user credentials and issues JWT tokens containing `role` and `scope`.
+*   **Persistent Storage (TimescaleDB):** Stores all raw packet metadata received from CNs into a time-series database.
+*   **Ingestion Worker:** Listens for incoming UDP `TelemetryBatch` datagrams. Parses JSON, tracks `sequence` numbers to detect dropped datagrams, and performs batch `INSERT` operations into the `packet_flows` TimescaleDB table.
+*   **Reporting Worker:** A background task that runs every 1 second. It queries TimescaleDB to aggregate metrics (packet counts per direction) for the last second, determines channel `is_active` status, and pushes `telemetry_update` events to subscribed MUI clients via WebSocket.
+*   **Access Control:** Validates JWT tokens on all REST and WebSocket endpoints. Enforces per-channel access via the `scope` claim.
+*   **REST API & WebSocket:** Exposes endpoints for MUI authentication, channel discovery, and real-time telemetry streaming.
+*   **Session Management**: Maintains in-memory `WSClientSession` objects to track user context and active WebSocket subscriptions (e.g., LAN/WAN host tables). This enables targeted broadcasting and resource optimization.
+*   **History API**: Provides REST endpoints for lazy-loading historical telemetry data (Line Chart) with dynamic time-bucketing.
+*   **Targeted Reporting**: The Reporting Worker checks active subscriptions and pushes targeted `hosts_update` events only to subscribed MUI clients, skipping heavy DB queries if no one is listening.
 
 ### 2.4. Management User Interface (MUI)
-- **Role:** Frontend dashboard for real-time visualization.
-- **Responsibilities:** 
-  1. **Authentication:** Prompts the user for username and password, sends them to `POST /api/v1/auth/login`, and receives a JWT token.
-  2. **Channel Discovery:** Fetches the list of accessible channels via `GET /api/v1/channels` (automatically filtered by JWT `scope`).
-  3. **Channel Selection:** Presents the list of available channels to the user. The user selects a channel to monitor.
-  4. **WebSocket Connection:** Establishes a persistent WebSocket connection **scoped to the selected `channel_id`** using `?token={{access_token}}&channel_id={{channel_id}}`.
-  5. **Visualization:** Reactively renders:
-     - Binary channel activity indicator (Green/Red) (US-001).
-     - Bidirectional packet volume counters/graphs (US-002).
-  6. **Channel Switching:** Allows the user to switch between channels by closing the current WebSocket and opening a new one with a different `channel_id`.
 
-Multiple MUI clients may subscribe to the same channel concurrently — CnSS broadcasts to all listeners of that channel.
+**Role:** Frontend dashboard for real-time visualization.
 
----
+**Responsibilities:**
+*   **Authentication & Discovery:** Prompts for credentials, fetches accessible channels.
+*   **WebSocket Connection:** Establishes a persistent WebSocket connection scoped to the selected `channel_id`.
+*   **Visualization:** Reactively renders binary channel activity indicators and bidirectional packet volume graphs.
 
 ## 3. Data Flow & Sequence Diagrams
 
@@ -97,193 +97,291 @@ sequenceDiagram
 ```
 
 ### 3.2. Multi-Channel End-to-End Telemetry Pipeline (Happy Path)
-This diagram illustrates the normal flow of aggregated telemetry from multiple network bridges to multiple administrators' dashboards.
+This diagram illustrates the new flow: raw data ingestion to DB, and periodic aggregation to WS.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant NetA as External Network A
-    participant NetB as External Network B
     participant TP1 as TP #1 (bridge-berlin)
-    participant TP2 as TP #2 (bridge-prague)
     participant CN1 as CN #1 (channel: bridge-berlin)
-    participant CN2 as CN #2 (channel: bridge-prague)
-    participant CnSS as Control & Status Server (CnSS)
+    participant CnSS_Ingest as CnSS (Ingestion Worker)
+    participant DB as TimescaleDB
+    participant CnSS_Report as CnSS (Reporting Worker)
     participant MUI_A as MUI Admin A
-    participant MUI_B as MUI Admin B
-    participant MUI_C as MUI Admin C
 
-    NetA->>TP1: Raw Packets
-    TP1->>CN1: Raw telemetry
-    CN1->>CnSS: UDP TelemetryBatch<br/>{"channel_id":"bridge-berlin", ...}
-
-    NetB->>TP2: Raw Packets
-    TP2->>CN2: Raw telemetry
-    CN2->>CnSS: UDP TelemetryBatch<br/>{"channel_id":"bridge-prague", ...}
-
-    CnSS->>CnSS: channels["bridge-berlin"].update(batch)
-    CnSS->>CnSS: channels["bridge-prague"].update(batch)
-
-    MUI_A->>CnSS: WS connect ?token=T_A&channel_id=bridge-berlin
-    CnSS->>CnSS: channels["bridge-berlin"].listeners.add(MUI_A)
-
-    MUI_B->>CnSS: WS connect ?token=T_B&channel_id=bridge-prague
-    CnSS->>CnSS: channels["bridge-prague"].listeners.add(MUI_B)
-
-    MUI_C->>CnSS: WS connect ?token=T_C&channel_id=bridge-berlin
-    CnSS->>CnSS: channels["bridge-berlin"].listeners.add(MUI_C)
-
-    CN1->>CnSS: UDP batch (bridge-berlin)
-    CnSS->>MUI_A: WS push telemetry_update
-    CnSS->>MUI_C: WS push telemetry_update
-    Note over MUI_B: Does NOT receive — subscribed to bridge-prague
-
-    CN2->>CnSS: UDP batch (bridge-prague)
-    CnSS->>MUI_B: WS push telemetry_update
-    Note over MUI_A,MUI_C: Do NOT receive
+    Note over CN1: Batches raw packet metadata
+    CN1->>CnSS_Ingest: UDP TelemetryBatch <br/> {channel_id, packets: [...]}
+    
+    CnSS_Ingest->>CnSS_Ingest: Track sequence (detect drops)
+    CnSS_Ingest->>DB: Batch INSERT INTO packet_flows
+    
+    Note over CnSS_Report: Runs every 1 second
+    CnSS_Report->>DB: SELECT COUNT, GROUP BY channel, direction <br/> WHERE time > NOW() - reporting_window_sec
+    DB-->>CnSS_Report: Aggregated metrics
+    
+    CnSS_Report->>MUI_A: WS push telemetry_update <br/> {metrics: {direction_out: {...}, ...}}
 ```
 
 ### 3.3. Channel Timeout & Fallback Mechanism (Per-Channel)
-This diagram illustrates how the system handles a loss of telemetry for a specific channel without affecting other channels.
+Timeouts are now determined by querying the database for recent activity, rather than checking an in-memory dictionary.
 
 ```mermaid
 sequenceDiagram
     participant CN1 as CN #1 (bridge-berlin)
-    participant CN2 as CN #2 (bridge-prague)
-    participant CnSS as CnSS
+    participant CnSS_Report as CnSS (Reporting Worker)
+    participant DB as TimescaleDB
     participant MUI_A as MUI Admin A
-    participant MUI_B as MUI Admin B
 
-    Note over CnSS: channels["bridge-berlin"].last_activity = t₀
-    Note over CnSS: channels["bridge-prague"].last_activity = t₀
-
-    rect rgb(44, 21, 21)
-    Note over CnSS: Timeout Detected for bridge-berlin only (No UDP for > 5000ms)
-    CnSS->>CnSS: channels["bridge-berlin"].is_active = false
-    CnSS->>MUI_A: WS Push: {"channel_id":"bridge-berlin", "is_active":false}
-    MUI_A->>MUI_A: Indicator turns Red
-    Note over MUI_B: Unaffected — bridge-prague is still active
+    Note over CnSS_Report: Timeout Check (Every 1s)
+    CnSS_Report->>DB: SELECT MAX(time) FROM packet_flows <br/> WHERE channel_id = 'bridge-berlin'
+    DB-->>CnSS_Report: last_seen = 6 seconds ago
+    
+    alt last_seen > 5000ms
+        CnSS_Report->>MUI_A: WS Push: {"channel_id": "bridge-berlin", "is_active": false}
+        MUI_A->>MUI_A: Indicator turns Inactive
     end
 
-    Note over CN1, CnSS: Recovery
-    CN1->>CnSS: UDP batch resumes (bridge-berlin)
-    CnSS->>CnSS: channels["bridge-berlin"].is_active = true
-    CnSS->>MUI_A: WS Push: {"channel_id":"bridge-berlin", "is_active":true}
-    MUI_A->>MUI_A: Indicator turns Green
+    Note over CN1, CnSS_Ingest: Recovery
+    CN1->>CnSS_Ingest: UDP batch resumes
+    CnSS_Ingest->>DB: Batch INSERT
+    CnSS_Report->>DB: SELECT MAX(time) ...
+    DB-->>CnSS_Report: last_seen = just now
+    CnSS_Report->>MUI_A: WS Push: {"channel_id": "bridge-berlin", "is_active": true}
 ```
-
-### 3.4. Access Control Flow
-This diagram illustrates how JWT `scope` enforces per-channel access.
+### 3.4. Line Chart History Retrieval (REST)
+This diagram illustrates how MUI lazy-loads historical data for the Line Chart.
 
 ```mermaid
 sequenceDiagram
-    participant MUI as MUI (viewer, scope=["bridge-prague"])
-    participant CnSS as CnSS
+    autonumber
+    actor Admin as System Administrator
+    participant MUI as Management UI (MUI)
+    participant CnSS as Control & Status Server (CnSS)
+    participant DB as TimescaleDB
 
-    MUI->>CnSS: WS connect ?token=T&channel_id=bridge-berlin
-    CnSS->>CnSS: Decode JWT → scope=["bridge-prague"]
-    CnSS->>CnSS: "bridge-berlin" not in scope
-    CnSS-->>MUI: Close code 4003, reason "channel_forbidden"
-
-    MUI->>CnSS: WS connect ?token=T&channel_id=bridge-prague
-    CnSS->>CnSS: "bridge-prague" in scope ✓
-    CnSS-->>MUI: Connection established
-    CnSS-->>MUI: telemetry_update (push)
+    Admin->>MUI: Select time period (e.g., "24h")
+    MUI->>CnSS: GET /api/v1/channel/{channel_id}/history?period=24h <br/> Authorization: Bearer ...
+    CnSS->>CnSS: Calculate optimal time_bucket interval (e.g., 1m)
+    CnSS->>DB: SELECT time_bucket(...), SUM(direction=0), SUM(direction=1) ...
+    DB-->>CnSS: Aggregated buckets
+    CnSS-->>MUI: 200 OK { points: [{timestamp, packets_in_per_sec, packets_out_per_sec, is_active}] }
 ```
 
----
+### 3.5. WebSocket Subscription for Host Tables (LAN/WAN)
+This diagram illustrates the "Initial Snapshot on Subscribe" pattern for real-time host tables.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant MUI as Management UI (MUI)
+    participant CnSS_WS as CnSS (WebSocket Handler)
+    participant CnSS_Report as CnSS (Reporting Worker)
+    participant DB as TimescaleDB
+
+    MUI->>CnSS_WS: WS Send: {"action": "subscribe", "target": "lan_hosts", "sort_by": "sent", "limit": 5}
+    CnSS_WS->>CnSS_WS: Update WSClientSession.subscriptions in memory
+    CnSS_WS->>DB: SELECT Top 5 LAN Hosts (Immediate query for initial snapshot)
+    DB-->>CnSS_WS: Top 5 LAN Hosts data (packets/sec)
+    CnSS_WS-->>MUI: WS Push: {"type": "hosts_update", "target": "lan_hosts", "hosts": [...]} (Initial Snapshot)
+
+    Note over CnSS_Report: Reporting Worker ticks (1s later)
+    CnSS_Report->>CnSS_Report: Check if any session has "lan_hosts" subscription
+    alt Subscribers exist
+        CnSS_Report->>DB: SELECT Top 5 LAN Hosts (Periodic query)
+        DB-->>CnSS_Report: Updated Top 5 data
+        CnSS_Report-->>MUI: WS Push: {"type": "hosts_update", "target": "lan_hosts", "hosts": [...]} (Update)
+    end
+```
 
 ## 4. Protocol Specifications
 
 ### 4.1. TP to CN (Local Telemetry Stream)
-- **Transport:** Local network (UDP or IPC, implementation-dependent).
-- **Direction:** TP to CN (unidirectional).
-- **Payload:** Per-event metadata JSON (e.g., `{"size": 1500, "srcIP": "...", "L5proto": "TCP"}`).
-- **Frequency:** High (per-packet or near per-packet).
+*   **Transport:** Local network (UDP or IPC).
+*   **Direction:** TP to CN (unidirectional).
+*   **Payload:** Per-event metadata JSON.
 
 ### 4.2. CN to CnSS (Remote Aggregation)
-- **Transport:** UDP 
-- **Endpoint:** `{{cnss_host}}:{{cnss_udp_port}}` (Default: `5140`).
-- **Routing:** CnSS uses `channel_id` from the payload to route the batch to the correct `ChannelState`. If the channel does not exist, CnSS creates it on first receipt.
-- **Payload Schema (`TelemetryBatch`):**
-  ```json
-  {
-    "channel_id": "{{channel_id}}",
-    "sequence": 1042,
-    "window_ms": 500,
-    "direction_out": { "packets": 150 },
-    "direction_in": { "packets": 140 },
-    "timestamp": "2026-06-17T12:00:00Z"
-  }
-  ```
+*   **Transport:** UDP
+*   **Endpoint:** `{{cnss_host}}:{{cnss_udp_port}}` (Default: `5140`).
+*   **UDP Size Constraint:** CN must ensure the serialized JSON payload does not exceed the network MTU (recommended `< 1400 bytes`). CN must adjust `window_ms` to prevent IP fragmentation.
+*   **Payload Schema (`TelemetryBatch`):**
+```json
+{
+  "channel_id": "main_tp_dev",
+  "timestamp": 1718625600,
+  "sequence": 1,
+  "window_ms": 50,
+  "packets": [
+    {
+      "direction": 0,
+      "src_ip": "192.168.1.100",
+      "dst_ip": "8.8.8.8",
+      "src_port": 12345,
+      "dst_port": 53
+    },
+    {
+      "direction": 1,
+      "src_ip": "8.8.8.8",
+      "dst_ip": "192.168.1.100",
+      "src_port": 53,
+      "dst_port": 12345
+    }
+  ]
+}
+```
+**Fields:**
+| Field | Type | Description |
+| --- | --- | --- |
+| channel_id | string | Identifier of the monitored channel/bridge. |
+| timestamp | integer | Unix timestamp (seconds) of the window start. |
+| sequence | integer | Monotonically increasing sequence number per channel. |
+| window_ms | integer | Duration of the batching window in milliseconds. |
+| packets | array | Array of raw packet metadata objects. |
+| packets[].direction | integer | `0` for IN, `1` for OUT. |
+| packets[].src_ip | string | Source IP address (IPv4/IPv6). |
+| packets[].dst_ip | string | Destination IP address (IPv4/IPv6). |
+| packets[].src_port | integer | Source port. |
+| packets[].dst_port | integer | Destination port. |
 
 ### 4.3. CnSS to MUI (WebSocket Real-time Push)
-- **Transport:** WebSocket (WSS recommended for US-014 Remote Access).
-- **Endpoint:** `wss://{{cnss_host}}:{{cnss_http_port}}/api/v1/ws/telemetry?token={{access_token}}&channel_id={{channel_id}}`
-- **Authentication & Authorization:**
-  - Token extracted from the `token` query parameter.
-  - `channel_id` extracted from the `channel_id` query parameter.
-  - CnSS validates the token signature and expiration, then checks that `channel_id` is within the JWT's `scope` (or the user is an unrestricted `admin`).
-  - CnSS **MUST NOT** log the full request URL to prevent token leakage.
-- **WebSocket Close Codes:**
+*   **Transport:** WebSocket (WSS recommended).
+*   **Endpoint:** `wss://{{cnss_host}}:{{cnss_ws_port}}/api/v1/ws/telemetry?token={{access_token}}&channel_id={{channel_id}}`
+*   **Payload Schema (`telemetry_update`):** *(Unchanged from MVP v1 to preserve frontend compatibility. Data is sourced from DB aggregation).*
+```json
+{
+   "type": "telemetry_update",
+   "channel_id": "bridge-berlin-01",
+   "is_active": true,
+   "window_ms": int(reporting_window_sec*1000),
+   "dropped_batches": 0,
+   "metrics": {
+     "direction_out": { "packets_per_sec": 300.0, "packets": 15 },
+     "direction_in": { "packets_per_sec": 280.0, "packets": 14 }
+  },
+   "timestamp": "2026-06-17T12:00:00Z",
+   "received_at": "2026-06-17T12:00:00.050Z"
+}
+```
 
-| Code | Reason | Meaning |
-|:----:|--------|---------|
-| `4001` | `invalid_token` | Token is missing, malformed, expired, or has invalid signature. |
-| 4002 | missing_channel | The `channel_id` query parameter is entirely absent from the WebSocket request URL. |
-| 4003 | channel_forbidden | Token is valid, but the user does not have access to the requested channel. |
-| 4004 | channel_not_found | The `channel_id` query parameter is present, but its value does not match any known or active channel in the CnSS registry. |
-| `1011` | `internal_error` | Unexpected server error. |
+### 4.4. MUI to CnSS (WebSocket Control Messages)
+*   **Transport**: WebSocket (Text frames).
+*   **Direction**: MUI to CnSS.
+*   **Purpose**: Manage real-time subscriptions for host tables.
 
-- **Payload Schema (`telemetry_update`):**
-  ```json
-  {
-    "type": "telemetry_update",
-    "channel_id": "{{channel_id}}",
-    "is_active": true,
-    "window_ms": 500,
-    "dropped_batches": 0,
-    "metrics": {
-      "direction_out": { "packets_per_sec": 300, "packets": 150 },
-      "direction_in": { "packets_per_sec": 280, "packets": 140 }
-    },
-    "timestamp": "2026-06-17T12:00:00Z",
-    "received_at": "2026-06-17T12:00:00.050Z"
-  }
-  ```
+Payload Schema (Subscribe):
 
----
+```json
+{
+    "action": "subscribe",
+    "target": "lan_hosts",  // Enum: "lan_hosts", "wan_hosts"
+    "sort_by": "sent",      // Enum: "sent", "received", "last_seen"
+    "limit": 5              // Integer, default: 5
+}
+```
 
-## 5. Reliability & Edge Cases
+Payload Schema (Unsubscribe):
 
-### 5.1. Uninterrupted Traffic Flow (US-005, US-007, US-009)
-The TP's Data Plane operates independently of the Telemetry Plane and the rest of the system. If the CN process crashes, the local link between TP and CN fails, or the CnSS is unreachable, the TP **continues to forward packets** at wire speed without interruption. Monitoring degradation does not equal service degradation.
+```json
+{
+    "action": "unsubscribe",
+    "target": "lan_hosts"   // Enum: "lan_hosts", "wan_hosts"
+}
+```
 
-### 5.2. UDP Sequence Tracking & Out-of-Order Delivery (CnSS)
-Sequence tracking is performed **per channel**. UDP does not guarantee order. To prevent false `dropped_batches` spikes:
-1. If `incoming_sequence > last_sequence + 1`:  
-   `dropped = incoming_sequence - (last_sequence + 1)`
-2. If `incoming_sequence <= last_sequence`:  
-   **Ignore the sequence check** (`dropped = 0` for this packet). This gracefully handles out-of-order or duplicated packets without breaking the counter, while still updating `last_activity`.
+### 4.5. CnSS to MUI (WebSocket Host Updates)
+*   **Transport**: WebSocket (Text frames).
+*   **Direction**: CnSS to MUI.
+*   **Purpose**: Push real-time updates for LAN/WAN host tables. Sent immediately upon subscription (Initial Snapshot) and then periodically (1 Hz) by the *   **Reporting** Worker.
 
-### 5.3. Memory Leak Prevention (CnSS)
-- On WebSocket `onclose` or `onerror`, the socket object must be immediately removed from the in-memory `listeners` set of the corresponding channel.
-- A WebSocket `ping/pong` mechanism (e.g., every 30 seconds) must be implemented. If a client fails to `pong` within 10 seconds, the connection is forcefully closed.
-- **Channel GC:** Channels that have been inactive (`is_active = false`) for longer than `channel_retention_ms` (default: 24 hours) AND have zero listeners are removed from the in-memory registry.
+Payload Schema (`hosts_update`):
 
-### 5.4. MUI Client-Side Timeout Fallback
-Since CnSS does not push "last known state" on initial connect (MVP v1 constraint), if the MUI WebSocket connects successfully but receives **no** `telemetry_update` within **6000ms**, the MUI must locally assume `is_active = false` and display the channel as Offline. This prevents the UI from hanging indefinitely.
+```json
+{
+    "type": "hosts_update",
+    "target": "lan_hosts",
+    "channel_id": "bridge-berlin-01",
+    "timestamp": "2026-06-17T12:00:05Z",
+    "hosts": [
+        {
+            "ip": "192.168.1.100",
+            "sent_per_sec": 15.5,
+            "received_per_sec": 120.0,
+            "last_seen": "2026-06-17T12:00:04Z"
+        }
+    ]
+}
+```
 
-### 5.5. Channel ID Collisions
-If two distinct CNs accidentally use the same `channel_id`, their telemetry will be merged into a single channel state, causing incorrect metrics. Mitigation:
-- `channel_id` should be globally unique (e.g., UUID, or `<site>-<device>-<index>`).
-- CnSS should log a warning if a batch arrives with a large sequence jump inconsistent with the current channel state (possible indicator of a collision).
+## 5. Database Schema (TimescaleDB)
 
----
+CnSS utilizes TimescaleDB (an extension of PostgreSQL) for persistent, high-performance time-series storage.
 
-## 6. Security & Access Control (US-012, US-014)
+### 5.1. `packet_flows` Hypertable
+Stores every individual packet's metadata.
 
-### 6.1. Authentication
+```sql
+-- Creation of the table with auto-incrementing BIGSERIAL
+CREATE TABLE packet_flows (
+    id BIGSERIAL,
+    time TIMESTAMPTZ NOT NULL,
+    channel_id TEXT NOT NULL,
+    direction SMALLINT NOT NULL, -- 0 = IN, 1 = OUT
+    src_ip INET NOT NULL,
+    dst_ip INET NOT NULL,
+    src_port INTEGER NOT NULL,
+    dst_port INTEGER NOT NULL,
+    
+    -- Composite Primary Key (TimescaleDB requirement for hypertables)
+    PRIMARY KEY (id, time) 
+);
+
+-- Convert to hypertable partitioned by time
+SELECT create_hypertable('packet_flows', 'time');
+
+-- Index for fast aggregation by channel and time
+CREATE INDEX idx_channel_time ON packet_flows (channel_id, time DESC);
+```
+
+### 5.2. Data Retention
+To prevent infinite disk growth, CnSS (or a cronjob) should configure a retention policy:
+```sql
+-- Example: Automatically drop chunks older than 7 days
+SELECT add_retention_policy('packet_flows', INTERVAL '7 days');
+```
+
+### 5.3. Data Aggregation Strategies (TimescaleDB)
+To support the Line Chart and Host Tables without degrading performance, CnSS uses specific TimescaleDB features:
+
+1. Line Chart (History): Uses `time_bucket()` to group raw packet flows into fixed time intervals based on the requested period (e.g., 1h -> 1s buckets, 24h -> 1m buckets).
+2. Host Tables (LAN/WAN): 
+   - LAN Sent: `COUNT(*)` where `direction = 1` (OUT), grouped by `src_ip`.
+   - LAN Received: `COUNT(*)` where `direction = 0` (IN), grouped by `dst_ip`.
+   - WAN Sent: `COUNT(*)` where `direction = 0` (IN), grouped by `src_ip`.
+   - WAN Received: `COUNT(*)` where `direction = 1` (OUT), grouped by `dst_ip`.
+   - The results are combined using `UNION ALL` and grouped by IP to calculate `packets_per_sec` (count / window_sec).
+  
+## 6. Reliability & Edge Cases
+
+### 6.1. Uninterrupted Traffic Flow (US-005, US-007, US-009)
+The TP's Data Plane operates independently. If CN crashes or CnSS/DB is unreachable, TP continues forwarding packets at wire speed.
+
+### 6.2. UDP Sequence Tracking & Out-of-Order Delivery (CnSS Ingestion Worker)
+Sequence tracking is performed per channel in memory by the Ingestion Worker before DB insertion.
+*   If `incoming_sequence > last_sequence + 1`: `dropped = incoming_sequence - (last_sequence + 1)`.
+*   If `incoming_sequence <= last_sequence`: Ignore (`dropped = 0`), handling out-of-order gracefully.
+The calculated `dropped_batches` metric is passed to the Reporting Worker to be included in the WebSocket payload.
+
+### 6.3. Database & Memory Leak Prevention
+*   **WebSocket GC**: On WebSocket `onclose`, the `WSClientSession` object (containing the socket and subscription context) is removed from the channel's listener registry. If a channel loses all subscribers for a specific target (e.g., `lan_hosts`), the Reporting Worker skips the heavy DB query for that target.
+*   **Database GC:** Handled natively by TimescaleDB retention policies (e.g., dropping chunks older than X days).
+*   **Ingestion Memory:** The Ingestion Worker only keeps the `last_sequence` integer per channel in memory. No raw packet data is held in memory.
+
+### 6.4. MUI Client-Side Timeout Fallback
+If MUI connects to WS but receives no `telemetry_update` within 6000ms, it locally assumes `is_active = false`.
+
+## 7. Security & Access Control (US-012, US-014)
+
+### 7.1. Authentication
 All REST and WebSocket endpoints require a valid `{{access_token}}` (JWT). The JWT is issued via `POST /api/v1/auth/login` after successful credential validation. The JWT payload contains:
 
 ```json
@@ -304,7 +402,7 @@ All REST and WebSocket endpoints require a valid `{{access_token}}` (JWT). The J
 | `role` | string | `admin` or `viewer`. |
 | `scope` | array[string] | List of `channel_id` the user may access. `role=admin` means unrestricted access, List of all channels. |
 
-### 6.2. Authorization Matrix
+### 7.2. Authorization Matrix
 
 
 | Role | `scope` | Access |
@@ -312,25 +410,23 @@ All REST and WebSocket endpoints require a valid `{{access_token}}` (JWT). The J
 | `admin` | missing or any value | All channels (including dynamically added ones) |
 | `viewer` | specified | Only channels listed in the scope array. |
 
-### 6.3. Transport Security
+### 7.3. Transport Security
 WebSocket connections should use `wss://` (TLS) to protect telemetry data and tokens in transit, especially for remote MUI access (US-014). In MVP v1, HTTP is permitted as a conscious trade-off for simplicity, but this introduces risks (token interception via MITM).
 
-### 6.4. Logging
+### 7.4. Logging
 CnSS must sanitize logs. Query parameters containing tokens must be masked or omitted from access logs (e.g., replace `?token=eyJhbG...` with `?token=[REDACTED]`).
 
-### 6.5. CN Trust Model (MVP v1)
-In MVP v1, CNs are **not authenticated** — the `channel_id` is a trusted assertion. CnSS accepts UDP datagrams from any source. Mitigations:
+### 7.5. CN Trust Model (MVP v1)
+CNs are **not authenticated** — the `channel_id` is a trusted assertion. CnSS accepts UDP datagrams from any source. Mitigations:
 - Network-level ACLs: CnSS should only accept UDP from known CN IP addresses.
 - Future versions: mTLS / DTLS with client certificates, with `channel_id` embedded in the certificate's Subject Alternative Name.
 
-### 6.6. Token Storage (MUI)
+### 7.6. Token Storage (MUI)
 The MUI must store the JWT token **exclusively in memory** (JavaScript variable). Do not use `localStorage` or `sessionStorage` — these are vulnerable to XSS attacks. On page reload, the user must re-authenticate.
 
----
+## 8. REST API Endpoints
 
-## 7. REST API Endpoints
-
-### 7.1. `POST /api/v1/auth/login`
+### 8.1. `POST /api/v1/auth/login`
 **Purpose:** Authenticate user and issue JWT token.  
 **Auth:** None (public endpoint).  
 **Request Body:**
@@ -359,7 +455,7 @@ The MUI must store the JWT token **exclusively in memory** (JavaScript variable)
 }
 ```
 
-### 7.2. `GET /api/v1/channels`
+### 8.2. `GET /api/v1/channels`
 **Purpose:** List all channels accessible to the authenticated user. For `viewer`, the list is filtered by JWT scope. For `admin`, all known channels are returned.
 **Auth:** `Authorization: Bearer {{access_token}}`  
 **Response 200:**
@@ -381,7 +477,7 @@ The MUI must store the JWT token **exclusively in memory** (JavaScript variable)
 }
 ```
 
-### 7.3. `GET /api/v1/channel/{channel_id}/status`
+### 8.3. `GET /api/v1/channel/{channel_id}/status`
 **Purpose:** REST fallback for a specific channel's activity indicator.  
 **Auth:** `Authorization: Bearer {{access_token}}`  
 **Response 200:**
@@ -407,7 +503,7 @@ The MUI must store the JWT token **exclusively in memory** (JavaScript variable)
 }
 ```
 
-### 7.4. `GET /api/v1/health`
+### 8.4. `GET /api/v1/health`
 **Purpose:** Verify operational status of the CnSS itself.  
 **Auth:** `Authorization: Bearer {{access_token}}`  
 **Response 200:**
@@ -421,3 +517,50 @@ The MUI must store the JWT token **exclusively in memory** (JavaScript variable)
   "channels_total": 4,
   "timestamp": "2026-06-17T12:00:00Z"
 }
+```
+
+### 8.5. `GET /api/v1/channel/{channel_id}/history`
+**Purpose**: Lazy-load historical telemetry data for the Line Chart. CnSS dynamically calculates the optimal `time_bucket` interval based on the requested period to return a reasonable number of points.
+**Auth**: `Authorization: Bearer {{access_token}}`
+
+Path Parameters:
+| Parameter | Type | Description |
+| --- | --- | --- |
+| channel_id | string | Identifier of the channel to query. |
+
+Query Parameters:
+| Parameter | Type | Description |
+| --- | --- | --- |
+| period | string | Time period to query. Enum: `1h`, `24h`, `7d`, `30d`. |
+
+
+Response 200:
+```json
+{
+    "channel_id": "bridge-berlin-01",
+    "period": "24h",
+    "interval_sec": 60,
+    "points": [
+        {
+            "timestamp": "2026-06-17T12:00:00Z",
+            "packets_in_per_sec": 280.5,
+            "packets_out_per_sec": 300.0,
+            "is_active": true
+        }
+    ]
+}
+```
+Response 403:
+```json
+{
+  "error": "forbidden",
+  "message": "You do not have access to this channel."
+}
+```
+Response 404:
+```json
+{
+  "error": "not_found",
+  "message": "Channel not found."
+}
+```

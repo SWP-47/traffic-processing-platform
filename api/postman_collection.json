@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Traffic Processing Platform API",
-    "description": "API collection for CnSS REST and WebSocket endpoints. Includes placeholders for environment variables.",
+    "description": "API collection for CnSS REST and WebSocket endpoints (MVP v2). Includes placeholders for environment variables.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -17,7 +17,7 @@
                 "exec": [
                   "var jsonData = pm.response.json();",
                   "if (pm.response.code === 200) {",
-                  "    pm.collectionVariables.set(\"access_token\", jsonData.access_token);",
+                  "    pm.collectionVariables.set('access_token', jsonData.access_token);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -137,7 +137,7 @@
                 }
               ]
             },
-            "description": "Connect to this WebSocket endpoint to receive real-time telemetry updates for a specific channel.\n\n**Connection Lifecycle & Close Codes:**\n- Auth via query parameters `?token={{access_token}}&channel_id={{channel_id}}`.\n- Close codes: `4001` (invalid_token), `4002` (missing_channel: query parameter absent), `4003` (channel_forbidden), `4004` (channel_not_found: query parameter value not in registry).\n- CnSS pushes `telemetry_update` frames (2-10 Hz).\n- **Keep-Alive:** CnSS sends periodic `ping` frames. MUI must respond with `pong`.\n- If no telemetry from CN for 5000ms, CnSS sends `is_active: false`.\n\n*Security Note: CnSS MUST NOT log the full request URL to prevent token leakage.*"
+            "description": "Connect to this WebSocket endpoint to receive real-time telemetry updates for a specific channel.\n\n**Connection Lifecycle & Close Codes:**\n- Auth via query parameters `?token={{access_token}}&channel_id={{channel_id}}`.\n- Close codes: `4001` (invalid_token), `4002` (missing_channel: query parameter absent), `4003` (channel_forbidden), `4004` (channel_not_found: query parameter value not in registry).\n- CnSS pushes `telemetry_update` frames at 1 Hz (aggregated by Reporting Worker from TimescaleDB).\n- **Keep-Alive:** CnSS sends periodic `ping` frames. MUI must respond with `pong`.\n- If no telemetry from CN for 5000ms, CnSS sends `is_active: false`.\n\n**Security Note:** CnSS MUST NOT log the full request URL to prevent token leakage."
           }
         }
       ]

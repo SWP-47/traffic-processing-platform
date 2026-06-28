@@ -39,7 +39,7 @@
     --gradient-button: linear-gradient(90deg, #6140EC 0%, #53A2E7 100%);
 
     /* Other */
-    --card-border-radius: 40px;
+    --card-border-radius: 35px;
 }
 
 
@@ -49,7 +49,7 @@ html {
     font-family: "Manrope", sans-serif;
 }
 
-p, h1, h2, h3, h4, h5, h6 {
+p, h1, h2, h3, h4, h5, h6, span {
     color: var(--color-text);
 }
 
@@ -62,7 +62,7 @@ button {
     font-weight: bold;
 }
 
-p {
+p, span {
     font-size: 1rem;
 }
 

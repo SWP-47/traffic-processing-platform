@@ -1,23 +1,47 @@
 services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    environment:
+      POSTGRES_USER: traffic
+      POSTGRES_PASSWORD: traffic
+      POSTGRES_DB: traffic_db
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U traffic -d traffic_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
   cnss:
     build:
       context: .
       dockerfile: Dockerfile.prod
     ports:
       - "8000:8000"
-    restart: always # Automatic restart on crash or VM reboot
+      - "5140:5140/udp"
+    restart: always
     environment:
       - ENV=production
       - PORT=8000
+      - DATABASE_URL=postgresql://traffic:traffic@timescaledb:5432/traffic_db
+    
+    # OVERRIDE: Force a single worker to prevent UDP port binding conflicts 
+    # and ensure the in-memory StateStore works correctly for WebSockets.
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+
     # Strict health check without installing curl in slim image
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
-    # Resource limits (optional, but recommended for VM)
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+
+volumes:
+  timescaledb_data:

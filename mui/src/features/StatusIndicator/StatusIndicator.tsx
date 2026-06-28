@@ -1,12 +1,12 @@
 import { useTelemetrySelector } from '@/hooks/useTelemetry';
 import styles from './StatusIndicator.module.css';
+import { useWebSocket } from '@/hooks/useWebSocket';
 
 function StatusIndicator() {
-  const channelId = useTelemetrySelector((tel) => tel?.data.channel_id);
-  const isActive = useTelemetrySelector((tel) => tel?.data.is_active);
+  const channelId = useTelemetrySelector((tel) => tel?.channel_id);
+  const isActive = useTelemetrySelector((tel) => tel?.is_active);
 
-  const WSStatus = useTelemetrySelector((tel) => tel?.status);
-  const WSError = useTelemetrySelector((tel) => tel?.error);
+  const { connectionStatus: WSStatus, message: WSError } = useWebSocket();
 
   let cardStyle: string = 'card';
   let message: string = '';

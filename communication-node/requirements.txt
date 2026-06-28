@@ -1,6 +1,7 @@
 # Main dependencies for Traffic Processor to work
 scapy==2.5.0
 python-dotenv==1.0.1
+jsonschema==4.26.0
 
 # Pre-Push Verification tools
 black==23.12.1

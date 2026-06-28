@@ -49,7 +49,7 @@ for _ in range(random.randint(10, 50)):
 payload["packets"] = packets
 
 # 2. Configure UDP socket
-UDP_IP = "127.0.0.1"
+UDP_IP = "10.93.26.186"
 UDP_PORT = 5140
 
 # 3. Send the datagram

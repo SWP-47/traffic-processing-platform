@@ -14,11 +14,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 512M
+
 
   cnss:
     build:
@@ -32,17 +28,17 @@ services:
       - ENV=production
       - PORT=8000
       - DATABASE_URL=postgresql://traffic:traffic@timescaledb:5432/traffic_db
+    
+    # OVERRIDE: Force a single worker to prevent UDP port binding conflicts 
+    # and ensure the in-memory StateStore works correctly for WebSockets.
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+
     # Strict health check without installing curl in slim image
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
     depends_on:
       timescaledb:
         condition: service_healthy

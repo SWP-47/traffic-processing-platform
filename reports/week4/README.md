@@ -19,7 +19,7 @@ This is a monorepo containing minimally intrusive network traffic monitoring sys
 
 * **Sprint Goal**: transition from in-memory storage to a persistent database, implement database integration for historical data retention, and deliver initial historical data visualization in the MUI
 * **Sprint Dates**: June 22, 2026 – June 28, 2026
-* **Total Sprint Size**: --
+* **Total Sprint Size**: 81 story points
 * **Scope Summary**:
   * **Backend**: Migrated from in-memory storage to TimescaleDB. Refactored UDP ingestion to accept raw packet metadata arrays. Implemented a 1Hz Reporting Worker for real-time aggregation and migrated REST APIs to read from the DB.
   * **Frontend**: Implemented Line Chart History API and created the Line Chart Component.
@@ -49,6 +49,7 @@ This sprint transitioned the platform from basic packet counting to advanced tel
 ### Deployment & Access
 
 * **Deployed Product**: [http://10.93.26.186](http://10.93.26.186) *(Only accessible via UniversityStudent Wi-Fi)*
+![deployed artifact](images/deployed-sprint-2.png)
 * **Access / Run Instructions**: [Local Setup & Deployment Guide](../../README.md#local-setup-instructions)
 
 ---
@@ -58,7 +59,7 @@ This sprint transitioned the platform from basic packet counting to advanced tel
 | Feedback Point | Resulting PBI / Issue | Status | Response |
 | :--- | :--- | :--- | :--- |
 | Add a toggle switch for RX/TX raw numbers vs column chart visualization. | x | Not planned for this Sprint | Deferred. Acknowledged as a valid UI/UX improvement, but prioritized backend DB stability and core metadata pipeline for this sprint. Added to Product Backlog. |
-| Make line charts more "rigid" (remove heavy smoothing, only round bucket corners). | [#176](https://github.com/SWP-47/traffic-processing-platform/issues/176) | Done | Addressed in the MUI redesign. Chart interpolation was removed; only corner rounding is applied. |
+| Make line charts more "rigid" (remove heavy smoothing, only round bucket corners). | [#176](https://github.com/SWP-47/traffic-processing-platform/pull/176) | Done | Addressed in the MUI redesign. Chart interpolation was removed; only corner rounding is applied. |
 | Articulate "Top 5" tables with a "View all" button/link. | x | Not planned for this Sprint | "Top 5" headers will be added to the MUI figma design, but the tables themsleves were not implemented in this sprint and will be created with this feedback in mind in a future sprint. |
 | Define 3 automated Quality Requirements (e.g., performance at different channel speeds). | [#164](https://github.com/SWP-47/traffic-processing-platform/issues/164) | Done | Defined QR-001 (Time Behaviour), QR-002 (Fault Tolerance), and QR-003 (Testability) with automated QRTs in CI. |
 
@@ -154,7 +155,7 @@ All Assignment 4 tests, CI checks, QRTs, and the Definition of Done are maintain
 
 ## Demo
 
-* **Public Sanitized Demo Video (< 2 mins)**: [Watch Demo PLACEHOLDER]
+* **Public Sanitized Demo Video**: [Watch Demo](https://disk.yandex.ru/i/tVOTiQnLE1rRMQ)
 
 ---
 

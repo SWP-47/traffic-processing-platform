@@ -105,7 +105,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="CnSS MVP v1",
     description="Control and Status Server",
-    version="1.0.0",
+    version="1.1.0",
     lifespan=lifespan,
 )
 

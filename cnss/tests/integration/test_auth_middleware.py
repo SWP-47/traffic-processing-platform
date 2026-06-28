@@ -6,8 +6,7 @@ import jwt
 from datetime import datetime, timezone
 from app.config import get_settings
 from unittest.mock import patch, AsyncMock
-from app.store.memory import InMemoryStateStore  # FIX 1: Correct import path
-
+from app.store import StateStore as InMemoryStateStore
 
 class TestAuthMiddleware:
 
@@ -46,7 +45,7 @@ class TestAuthMiddleware:
     def test_invalid_signature_returns_401(self, client):
         """Given a token with wrong signature, Then return 401."""
         token = jwt.encode(
-            {"sub": "u", "exp": 9999999999}, "wrong-secret", algorithm="HS256"
+            {"sub": "u", "exp": 9999999999}, "wrong-secret-key-that-is-long-enough", algorithm="HS256"
         )
         response = client.get("/api/v1/channels", headers=self._get_headers(token))
         assert response.status_code == 401

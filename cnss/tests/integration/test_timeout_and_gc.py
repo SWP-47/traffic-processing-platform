@@ -2,7 +2,7 @@ import pytest
 import asyncio
 from datetime import datetime, timezone, timedelta
 from unittest.mock import AsyncMock, patch
-from app.store.memory import InMemoryStateStore
+from app.store import StateStore as InMemoryStateStore
 from app.tasks import reporting_worker_task
 
 @pytest.fixture
@@ -46,10 +46,7 @@ async def test_timeout_detection_broadcasts_inactive(mock_store, mock_settings):
     
     mock_broadcast = await run_reporting_iteration(mock_store, last_seen_map)
     
-    # Проверяем, что broadcast вызывался для обоих каналов
     assert mock_broadcast.call_count == 2
-    
-    # Собираем аргументы вызовов
     calls = {call.kwargs["channel_id"]: call.kwargs for call in mock_broadcast.call_args_list}
     
     assert calls["ch-a"]["is_active"] is False, "Timed out channel should broadcast as inactive"

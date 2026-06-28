@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from unittest.mock import patch, AsyncMock
 
 from app.udp_server import start_udp_server
-from app.store.memory import InMemoryStateStore
+from app.store import StateStore as InMemoryStateStore
 
 
 @pytest.mark.asyncio

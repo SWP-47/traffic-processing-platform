@@ -45,6 +45,7 @@ class WSClientSession:
 
 class ChannelState(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
+    channel_id: str
     last_activity_timestamp: datetime
     last_sequence: Optional[int] = None
     dropped_batches: int = 0

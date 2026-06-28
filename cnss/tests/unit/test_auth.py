@@ -81,7 +81,7 @@ class TestDecodeToken:
             "role": "admin",
             "scope": [],
         }
-        token = jwt.encode(payload, "wrong-secret-key", algorithm="HS256")
+        token = jwt.encode(payload, "wrong-secret-key-that-is-long-enough", algorithm="HS256")
 
         with pytest.raises(HTTPException) as excinfo:
             decode_token(token)

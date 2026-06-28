@@ -3,7 +3,7 @@ import socket
 import json
 import time
 
-UDP_IP = "127.0.0.1"
+UDP_IP = "10.93.26.186"
 UDP_PORT = 5140
 CHANNEL_ID = "test-bridge-0"
 

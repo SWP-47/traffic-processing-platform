@@ -111,9 +111,9 @@ Critical modules were identified based on core user workflows, persistence, and 
 *Coverage evidence:*
 ![coverage](images/test-coverage.png)
 
-* **Unit Tests**: [Link to Unit Tests Directory](<!-- PLACEHOLDER -->)
-* **Integration Tests**: [Link to Integration Tests Directory](<!-- PLACEHOLDER -->)
-* **Automated QRTs**: [Link to QRT Scripts](<!-- PLACEHOLDER -->)
+* **Unit Tests**: [Link to Unit Tests Directory]
+* **Integration Tests**: [Link to Integration Tests Directory]
+* **Automated QRTs**: [Link to QRT Scripts]
 
 ---
 

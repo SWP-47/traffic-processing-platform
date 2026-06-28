@@ -8,6 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+- N/A
+
+### Changed
+
+- N/A
+
+### Deprecated
+
+- N/A
+
+### Fixed
+
+- N/A
+
+### Security
+
+- N/A
+
+## [1.1.0] - 2026-06-28
+
+### Added
 - Native TimescaleDB retention policies for automated historical data cleanup, replacing manual in-memory garbage collection. ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))
 - Documented the new REST endpoint `GET /api/v1/channel/{channel_id}/history` for lazy-loading historical telemetry data (Line Chart) with dynamic time-bucketing based on the requested period. ([#167](https://github.com/SWP-47/traffic-processing-platform/issues/167))
 - Documented WebSocket control messages (`subscribe`/`unsubscribe`) and the `hosts_update` payload schema to support real-time LAN/WAN host tables via the "Initial Snapshot on Subscribe" pattern. ([#167](https://github.com/SWP-47/traffic-processing-platform/issues/167))
@@ -57,6 +79,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ### Deprecated
+
+- N/A
 
 ### Removed
 - Removed the legacy `background_timeout_and_gc_task` and obsolete state mutation methods (e.g., `set_channel_active`, `set_channel_inactive`). ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))

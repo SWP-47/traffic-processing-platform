@@ -1,20 +1,21 @@
 # Traffic Processor
 
 This module contains:
-- FPGA source code for transparent packet processing (top mudule is `frame_receiver_sender.sv`).
-- Python scripts for collecting telemetry and sending data to the Communication Node.
+- hardware part (`hardware_part` folder) - FPGA source code for transparent packet processing (top mudule is `frame_receiver_sender.sv`).
+- software part (`software_part` folder) - containerised Python scripts for collecting telemetry and sending data to the Communication Node.
 
 ## Local setup instructions 
 ### Software part:
-note: Ensure you have Python 3.8 or higher and pip (Python package installer) installed on your system. Create and activate a virtual environment. 
 
-1. Install dependencies  using command `pip install -r requirements.txt`
-2. Create a file of environment using command `cp .env.example .env` for bash or `copy .env.example .env` for PowerShell. Edit `.env` file if necessary
-3. Run the main script as administrator using command `sudo python3 .\software-part\tp_packet_counter.py` for bash or `python3 .\software-part\tp_packet_counter.py` as administrator for PowerShell
+note: The whole TP code was containerised using Docker. The `docket-compose.yml` file for it builds both TP and CN systems simultaniously. 
+
+1. Create a file of environment using command `cp .env.example .env` for bash or `copy .env.example .env` for PowerShell. Edit `.env` file if necessary
+2. Navigate to `./cn-tp-deployment` directory
+3. Run `docket-compose up --build` command
 
 
 ### Hardware part:
-note: Ensure you have AMD Vivado Design Suite installed on your system. The folder contains `top.sv` and `top.xdc` files which are expected to be used to program ARTIX-7 FPGA Development Board AX7201.
+note: Ensure you have AMD Vivado Design Suite installed on your system. The folder contains `frame_receiver_sender.sv` and `frame_receiver_sender.xdc` files which are expected to be used to program ARTIX-7 FPGA Development Board AX7201.
 
 1. Run Vivado IDE and add open `ax7201-ethernet-loopback.xpr` project.
 2. Run synthesis and Implementation process. Than generate bitstream. 
@@ -23,9 +24,9 @@ note: Ensure you have AMD Vivado Design Suite installed on your system. The fold
 
 ## Traffic Processor (TP) Smoke Check
 Step 1: Preparation and Execution.
-Install dependencies  using command `pip install -r requirements.txt` and run the main script as administrator (e.g., `sudo python3 .\software-part\tp_packet_counter.py`).
-- Expected: The script starts without errors (e.g., no ModuleNotFoundError). Initial initialization messages appear in the console.
+Create .env file and run the Docker
+- Expected: The script starts without errors. Initial initialization messages appear in the console.
 
 Step 2: Packet Transmission and Logging Verification.
 Observe the terminal output while the script is running.
-- Expected: The console regularly displays messages confirming successful network packet transmission. For each sent packet, a brief summary of its contents is printed, allowing for visual verification of the generated data integrity.
+- Expected: The console regularly displays messages confirming successful network packet transmission from TP

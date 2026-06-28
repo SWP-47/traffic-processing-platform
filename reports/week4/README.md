@@ -101,6 +101,8 @@ Critical modules were identified based on core user workflows, persistence, and 
 
 > CI checks were linked on the `develop` branch, not protected default branch (`general`). As per our [team-documentation.md](../../docs/team-documentation.md), our team only merges commits into general for the final SemVer release for each assignment. Therefore, it would be impossible for us to link the "latest" CI check in this assignment report without violating our git workflow. Explicit permission was obtained from the course team for us to provide evidence to a CI check on the `develop` branch.
 
+**Table featuring automated QRT links:**
+
 | Critical module | Why critical | Required line coverage | Current line coverage | Evidence |
 | --- | --- | ---: | ---: | --- |
 | `cnss/app/` | Core telemetry ingestion (UDP server), JWT authentication, WebSocket state management, TimescaleDB persistence, and Reporting Worker. Enforces all QRs. | 30% | ≥ 30% (enforced by `--cov-fail-under=30` gate) | [Latest CI run → CnSS Check → "Run coverage gate" step](https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml) |
@@ -111,9 +113,10 @@ Critical modules were identified based on core user workflows, persistence, and 
 *Coverage evidence:*
 ![coverage](images/test-coverage.png)
 
-* **Unit Tests**: [Link to Unit Tests Directory]
+* **Unit Tests**:
+  * [CnSS unit test directory](../../cnss/tests/unit/)
 * **Integration Tests**: [Link to Integration Tests Directory]
-* **Automated QRTs**: [Link to QRT Scripts]
+  * [CnSS integration test directory](../../cnss/tests/integration/)
 
 ---
 

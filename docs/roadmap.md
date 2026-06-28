@@ -74,7 +74,7 @@ Transition from in-memory storage to a persistent database to handle historical 
 
 **Dates:** June 29 to July 5, 2026
 
-**Sprint Goal:** Implement a comprehensive, large-scale table view of all channels and complete deferred telemetry and filtering features.
+**Sprint Goal:** Expanded UI for comprehensive host monitoring. Implement a comprehensive, large-scale table view of all hosts and complete deferred telemetry and filtering features.
 
 **Focus / Expected Outcome:**
 Develop a dedicated, large-scale detailed statistics page featuring a filterable and sortable table of all monitored channels and hosts.

@@ -2,14 +2,12 @@ import asyncio
 import logging
 from typing import List, Set, Optional, Dict
 from datetime import datetime, timezone
-from .base import StateStore
-from ..models import ChannelState
-from ..models import WSClientSession
+from .models import ChannelState, WSClientSession
 
 logger = logging.getLogger(__name__)
 
 
-class InMemoryStateStore(StateStore):
+class StateStore:
     def __init__(self):
         self._channels: Dict[str, ChannelState] = {}
         self._lock = asyncio.Lock()
@@ -28,18 +26,10 @@ class InMemoryStateStore(StateStore):
                 logger.info(f"Auto-creating new channel: {channel_id}")
                 self._channels[channel_id] = ChannelState(
                     channel_id=channel_id,
-                    is_active=True,
                     last_activity_timestamp=datetime.now(timezone.utc),
                     last_sequence=None,
                 )
             return self._channels[channel_id]
-
-    async def set_channel_inactive(self, channel_id: str) -> bool:
-        async with self._lock:
-            if channel_id in self._channels:
-                self._channels[channel_id].is_active = False
-                return True
-            return False
 
     async def remove_channel(self, channel_id: str) -> bool:
         async with self._lock:
@@ -58,7 +48,6 @@ class InMemoryStateStore(StateStore):
             if channel_id not in self._channels:
                 self._channels[channel_id] = ChannelState(
                     channel_id=channel_id,
-                    is_active=True,
                     last_activity_timestamp=server_received_at,
                     last_sequence=incoming_sequence,
                     dropped_batches=0,
@@ -70,7 +59,7 @@ class InMemoryStateStore(StateStore):
             if channel.last_sequence is not None:
                 if incoming_sequence > channel.last_sequence + 1:
                     dropped_batches = incoming_sequence - (channel.last_sequence + 1)
-                    channel.dropped_batches += dropped_batches  # <-- Accumulate
+                    channel.dropped_batches += dropped_batches
                     logger.warning(
                         f"Channel {channel_id}: Detected {dropped_batches} dropped batches."
                     )
@@ -81,7 +70,6 @@ class InMemoryStateStore(StateStore):
                 channel.last_sequence = incoming_sequence
 
             channel.last_activity_timestamp = server_received_at
-            channel.is_active = True
             return dropped_batches
 
     async def get_and_reset_dropped_batches(self, channel_id: str) -> int:
@@ -92,12 +80,6 @@ class InMemoryStateStore(StateStore):
                 return dropped
             return 0
 
-    async def set_channel_active(self, channel_id: str, is_active: bool) -> bool:
-        async with self._lock:
-            if channel_id in self._channels:
-                self._channels[channel_id].is_active = is_active
-                return True
-            return False
 
     async def add_listener(self, channel_id: str, listener: WSClientSession) -> bool:
         async with self._lock:
@@ -130,3 +112,6 @@ class InMemoryStateStore(StateStore):
                     if target in session.subscriptions
                 ]
             return []
+
+
+state_store = StateStore()

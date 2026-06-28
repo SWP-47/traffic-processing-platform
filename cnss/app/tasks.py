@@ -31,9 +31,6 @@ async def reporting_worker_task():
                 else:
                     is_active = False
 
-                # Update in-memory state for REST API consistency
-                await state_store.set_channel_active(ch.channel_id, is_active)
-
                 ch_metrics = metrics.get(ch.channel_id, {0: 0, 1: 0})
                 packets_in = ch_metrics.get(0, 0)
                 packets_out = ch_metrics.get(1, 0)
@@ -89,31 +86,4 @@ async def reporting_worker_task():
             break
         except Exception as e:
             logger.error(f"Error in reporting worker: {e}")
-            await asyncio.sleep(5.0)
-
-
-async def background_timeout_and_gc_task():
-    """Runs periodically to garbage collect inactive channels with no listeners."""
-    logger.info("Background GC task started.")
-    while True:
-        try:
-            await asyncio.sleep(1.0)
-            now = datetime.now(timezone.utc)
-            retention_td = timedelta(milliseconds=settings.channel_retention_ms)
-            channels = await state_store.get_all_channels()
-            for ch in channels:
-                if not ch.is_active:
-                    time_since_activity = now - ch.last_activity_timestamp
-                    if time_since_activity > retention_td:
-                        listeners = await state_store.get_listeners(ch.channel_id)
-                        if not listeners:
-                            logger.info(
-                                f"Channel {ch.channel_id} eligible for GC. Removing."
-                            )
-                            await state_store.remove_channel(ch.channel_id)
-        except asyncio.CancelledError:
-            logger.info("Background GC task cancelled.")
-            break
-        except Exception as e:
-            logger.error(f"Error in background GC task: {e}")
             await asyncio.sleep(5.0)

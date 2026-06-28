@@ -148,24 +148,34 @@ async def get_reporting_data() -> tuple[dict, dict]:
 
 
 async def get_all_channels_from_db() -> list[dict]:
+    if not pool: return []
+    try:
+        # DISTINCT ON + ORDER BY (channel_id, time DESC)
+        rows = await pool.fetch("""
+            SELECT DISTINCT ON (channel_id) 
+                   channel_id, 
+                   time AS last_activity_timestamp
+            FROM packet_flows
+            ORDER BY channel_id, time DESC
+        """)
+        return [dict(row) for row in rows]
+    except Exception as e:
+        logger.error(f"Failed to fetch channels from DB: {e}")
+        return []
+    
+async def get_all_channel_ids_from_db() -> list[str]:
     """
-    Fetches all distinct channels and their last activity timestamp from the DB.
+    Fetches all distinct channels from the DB
     """
     if not pool:
         return []
     try:
         rows = await pool.fetch("""
-            SELECT channel_id, MAX(time) as last_activity_timestamp
+            SELECT channel_id
             FROM packet_flows
             GROUP BY channel_id
         """)
-        return [
-            {
-                "channel_id": row["channel_id"],
-                "last_activity_timestamp": row["last_activity_timestamp"],
-            }
-            for row in rows
-        ]
+        return [row["channel_id"] for row in rows]
     except Exception as e:
         logger.error(f"Failed to fetch channels from DB: {e}")
         return []

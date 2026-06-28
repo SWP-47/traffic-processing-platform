@@ -52,7 +52,6 @@ async def test_udp_socket_receives_and_updates_state():
             channel = await test_store.get_channel("integration-test-ch")
             assert channel is not None
             assert channel.last_sequence == 100
-            assert channel.is_active is True
 
             # Verify DB insert was attempted with correct data
             mock_db.assert_called_once()

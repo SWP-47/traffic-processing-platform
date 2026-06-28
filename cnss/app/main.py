@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import re
 import logging
 import json
-from .db import get_channel_history, get_top_hosts
+from .db import get_channel_history, get_top_hosts, get_all_channel_ids_from_db
 from .models import WSClientSession, WSControlMessage
 from .broadcast import broadcast_hosts_update
 
@@ -20,7 +20,7 @@ import asyncio
 
 from fastapi import WebSocket, WebSocketDisconnect, Query
 from .auth import get_ws_user
-from .tasks import background_timeout_and_gc_task, reporting_worker_task
+from .tasks import reporting_worker_task
 
 from .db import (
     init_db_pool,
@@ -82,7 +82,11 @@ async def lifespan(app: FastAPI):
     udp_transport = await start_udp_server(
         host=settings.cnss_host, port=settings.cnss_udp_port
     )
-    bg_task = asyncio.create_task(background_timeout_and_gc_task())
+    channels = await get_all_channel_ids_from_db()
+    for channel_id in channels:
+        await state_store.get_or_create_channel(channel_id)
+    logger.info("Channels are loaded to state store")
+
     reporting_task = asyncio.create_task(reporting_worker_task())
     yield
 
@@ -90,14 +94,9 @@ async def lifespan(app: FastAPI):
     if udp_transport:
         udp_transport.close()
         logger.info("UDP Telemetry Listener stopped.")
-    bg_task.cancel()
     reporting_task.cancel()
     try:
         await reporting_task
-    except asyncio.CancelledError:
-        pass
-    try:
-        await bg_task
     except asyncio.CancelledError:
         pass
     await close_db_pool()
@@ -159,8 +158,7 @@ async def login(request: LoginRequest):
     role = user["role"]
 
     # Calculate final scope (intersection of permitted and physically existing channels)
-    existing_channels = await state_store.get_all_channels()
-    existing_channel_ids = {ch.channel_id for ch in existing_channels}
+    existing_channel_ids = set(await get_all_channel_ids_from_db())
 
     if role == "admin":
         # Admin gets access to all currently known channels
@@ -329,8 +327,8 @@ async def websocket_telemetry(
         return
 
     # 4. Validate Channel Existence
-    channel = await state_store.get_channel(channel_id)
-    if not channel:
+    channels = await get_all_channel_ids_from_db()
+    if channel_id not in channels:
         await websocket.accept()
         await websocket.close(code=4004, reason="channel_not_found")
         return

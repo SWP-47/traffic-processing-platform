@@ -223,6 +223,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/channel/{channel_id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Historical Telemetry Data (Line Chart)
+         * @description Lazy-loads historical telemetry data for the Line Chart.
+         *     CnSS dynamically calculates the optimal `time_bucket` interval based on the requested period.
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description Time period to query. */
+                    period: "1h" | "24h" | "7d" | "30d";
+                };
+                header?: never;
+                path: {
+                    channel_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Aggregated historical points */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HistoryResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Channel not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ws/telemetry": {
         parameters: {
             query?: never;
@@ -241,9 +307,11 @@ export interface paths {
          *     3. CnSS checks if the `channel_id` query parameter is present in the URL. On failure, closes with code `4002` (missing_channel).
          *     4. CnSS checks access to `channel_id` via JWT scope. On failure, closes with code `4003` (channel_forbidden).
          *     5. CnSS checks if the provided `channel_id` value exists in the registry. On failure, closes with code `4004` (channel_not_found).
-         *     6. CnSS pushes `telemetry_update` frames (2-10 Hz).
+         *     6. CnSS pushes `telemetry_update` frames at 1 Hz (aggregated by Reporting Worker from TimescaleDB).
          *     7. **Keep-Alive:** CnSS sends periodic `ping` frames. MUI must respond with `pong`.
          *     8. If no telemetry from CN for 5000ms, CnSS sends `is_active: false`.
+         *     9. **Control Messages:** MUI can send JSON text frames to manage subscriptions for host tables (e.g., `{"action": "subscribe", "target": "lan_hosts"}`).
+         *     10. **Host Updates:** CnSS pushes `hosts_update` frames to subscribed clients containing real-time LAN/WAN host statistics.
          *
          *     *Security Note: CnSS MUST NOT log the full request URL to prevent token leakage.*
          */
@@ -374,7 +442,40 @@ export interface components {
              */
             last_activity_timestamp?: string;
         };
-        /** @description Payload sent from CN to CnSS over UDP. */
+        /** @description Raw metadata for a single observed packet. */
+        PacketMetadata: {
+            /**
+             * @description 0 for IN, 1 for OUT.
+             * @example 0
+             * @enum {integer}
+             */
+            direction?: 0 | 1;
+            /**
+             * @description Source IP address (IPv4/IPv6).
+             * @example 192.168.1.100
+             */
+            src_ip?: string;
+            /**
+             * @description Destination IP address (IPv4/IPv6).
+             * @example 8.8.8.8
+             */
+            dst_ip?: string;
+            /**
+             * @description Source port.
+             * @example 12345
+             */
+            src_port?: number;
+            /**
+             * @description Destination port.
+             * @example 53
+             */
+            dst_port?: number;
+        };
+        /**
+         * @description Payload sent from CN to CnSS over UDP.
+         *     Contains raw packet metadata for a specific time window.
+         *     CN must keep `window_ms` small enough to ensure the JSON payload fits within a single UDP datagram (ideally < 1400 bytes to avoid IP fragmentation).
+         */
         TelemetryBatch: {
             /**
              * @description Identifier of the monitored channel/bridge. Used by CnSS to route the batch.
@@ -382,27 +483,24 @@ export interface components {
              */
             channel_id?: string;
             /**
-             * @description Monotonically increasing sequence number per channel.
+             * @description Unix timestamp (seconds) of the window start.
+             * @example 1718625600
+             */
+            timestamp?: number;
+            /**
+             * @description Monotonically increasing sequence number per channel. Used by CnSS to detect dropped UDP datagrams.
              * @example 1042
              */
             sequence?: number;
-            /** @example 500 */
-            window_ms?: number;
-            direction_out?: {
-                /** @example 150 */
-                packets?: number;
-            };
-            direction_in?: {
-                /** @example 140 */
-                packets?: number;
-            };
             /**
-             * Format: date-time
-             * @example 2026-06-17T12:00:00Z
+             * @description Duration of the batching window in milliseconds. Must be kept small enough to ensure the JSON fits within the UDP MTU (< 1400 bytes).
+             * @example 50
              */
-            timestamp?: string;
+            window_ms?: number;
+            /** @description Array of raw packet metadata captured during the window. */
+            packets?: components["schemas"]["PacketMetadata"][];
         };
-        /** @description Payload pushed from CnSS to MUI over WebSocket. */
+        /** @description Payload pushed from CnSS to MUI over WebSocket. Aggregated by the Reporting Worker from TimescaleDB at 1 Hz. */
         TelemetryUpdate: {
             /** @example telemetry_update */
             type?: string;
@@ -410,7 +508,7 @@ export interface components {
             channel_id?: string;
             /** @example true */
             is_active?: boolean;
-            /** @example 500 */
+            /** @example 50 */
             window_ms?: number;
             /**
              * @description Number of lost UDP datagrams between the previous and current batch for this channel.
@@ -424,7 +522,7 @@ export interface components {
                      * @example 300
                      */
                     packets_per_sec?: number;
-                    /** @example 150 */
+                    /** @example 15 */
                     packets?: number;
                 };
                 direction_in?: {
@@ -433,22 +531,73 @@ export interface components {
                      * @example 280
                      */
                     packets_per_sec?: number;
-                    /** @example 140 */
+                    /** @example 14 */
                     packets?: number;
                 };
             };
             /**
              * Format: date-time
-             * @description Original timestamp from the CN batch.
+             * @description Original timestamp from the latest CN batch.
              * @example 2026-06-17T12:00:00Z
              */
             timestamp?: string;
             /**
              * Format: date-time
-             * @description Server time at CnSS when the UDP datagram was received.
+             * @description Server time at CnSS when the aggregation was generated by the Reporting Worker.
              * @example 2026-06-17T12:00:00.050Z
              */
             received_at?: string;
+        };
+        HistoryResponse: {
+            channel_id?: string;
+            /** @enum {string} */
+            period?: "1h" | "24h" | "7d" | "30d";
+            /** @description The calculated time bucket size in seconds. */
+            interval_sec?: number;
+            points?: components["schemas"]["HistoryPoint"][];
+        };
+        HistoryPoint: {
+            /** Format: date-time */
+            timestamp?: string;
+            /** Format: float */
+            packets_in_per_sec?: number;
+            /** Format: float */
+            packets_out_per_sec?: number;
+            is_active?: boolean;
+        };
+        /** @description Text frame sent from MUI to CnSS to manage WebSocket subscriptions. */
+        WSControlMessage: {
+            /** @enum {string} */
+            action?: "subscribe" | "unsubscribe";
+            /** @enum {string} */
+            target?: "lan_hosts" | "wan_hosts";
+            /**
+             * @description Required if action is 'subscribe'.
+             * @enum {string}
+             */
+            sort_by?: "sent" | "received" | "last_seen";
+            /** @description Required if action is 'subscribe'. Default 5. */
+            limit?: number;
+        };
+        /** @description JSON frame pushed from CnSS to MUI with real-time host table data. */
+        HostsUpdate: {
+            /** @example hosts_update */
+            type?: string;
+            /** @enum {string} */
+            target?: "lan_hosts" | "wan_hosts";
+            channel_id?: string;
+            /** Format: date-time */
+            timestamp?: string;
+            hosts?: components["schemas"]["HostEntry"][];
+        };
+        HostEntry: {
+            ip?: string;
+            /** Format: float */
+            sent_per_sec?: number;
+            /** Format: float */
+            received_per_sec?: number;
+            /** Format: date-time */
+            last_seen?: string;
         };
     };
     responses: never;

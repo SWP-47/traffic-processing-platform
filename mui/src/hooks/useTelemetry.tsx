@@ -1,9 +1,8 @@
 import { useSyncExternalStore } from 'react';
-import telemetryService from '@/services/telemetry';
-import type { TelemetryState } from '@/services/telemetry';
+import telemetryService, { type TelemetryUpdate } from '@/services/telemetry';
 
 export function useTelemetrySelector<T>(
-    selector: (data: TelemetryState | null) => T
+    selector: (data: TelemetryUpdate | null) => T
 ): T {
     return useSyncExternalStore(
         telemetryService.subscribe.bind(telemetryService),

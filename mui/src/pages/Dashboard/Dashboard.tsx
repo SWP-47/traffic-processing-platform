@@ -10,8 +10,10 @@ function Dashboard() {
       <Header />
       <div className={styles.page}>
         <StatusIndicator />
-        <PacketsColumnChart />
-        <PacketsLineChart />
+        <div className={styles.row}>
+          <PacketsColumnChart />
+          <PacketsLineChart />
+        </div>
       </div>
     </>
   );

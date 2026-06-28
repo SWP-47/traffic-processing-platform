@@ -13,6 +13,7 @@ const chartOptions: EChartsOption = {
     // X Axis
     xAxis: {
         type: "time",
+        // TODO: dynamic interval size
         minInterval: 1000,
 
         offset: 20,
@@ -76,7 +77,7 @@ const chartOptions: EChartsOption = {
             return `
                 <div class="${style.tooltip}">
                     <p class="${style.date}">${timeLabel}</p>
-                    <p class="${style.window}">${windowSize}</p>
+                    <p class="${style.window}">${windowSize}s window size</p>
                     <div class="${style.props}">
                         <div class="${style.prop}">
                         <span class="${style.title}">Status:</span>
@@ -86,12 +87,11 @@ const chartOptions: EChartsOption = {
                             params.map(param => (`
                                 <div class="${style.prop}">
                                     <span class="${style.title}" data-name="${param.seriesName}">${param.seriesName}:</span>
-                                    <span>${(param.value as OptionDataValue[])[1]} pkt/s</span>
+                                    <span>${((param.value as OptionDataValue[])[1] as number).toFixed(2)} pkt/s</span>
                                 </div>
                             `)).join("\n")
                         }
                     </div>
-                    <p class="${style.details}">Click for details</p>
                 </div>
             `;
         }

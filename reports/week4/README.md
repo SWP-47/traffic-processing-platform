@@ -19,10 +19,10 @@ This is a monorepo containing minimally intrusive network traffic monitoring sys
 
 * **Sprint Goal**: transition from in-memory storage to a persistent database, implement database integration for historical data retention, and deliver initial historical data visualization in the MUI
 * **Sprint Dates**: June 22, 2026 – June 28, 2026
-* **Total Sprint Size**: 74 Story Points
+* **Total Sprint Size**: --
 * **Scope Summary**:
   * **Backend**: Migrated from in-memory storage to TimescaleDB. Refactored UDP ingestion to accept raw packet metadata arrays. Implemented a 1Hz Reporting Worker for real-time aggregation and migrated REST APIs to read from the DB.
-  * **Frontend**: Implemented Line Chart History API, Real-Time Host Tables via WebSocket, and created the Line Chart Component.
+  * **Frontend**: Implemented Line Chart History API and created the Line Chart Component.
   * **Infrastructure/Core**: Containerized TP and CN using Docker. Implemented correct packet fragmentation logic in CN. Refactored software TP to extract per-packet metadata.
 
 ### Board & Milestone Links
@@ -43,7 +43,7 @@ This sprint transitioned the platform from basic packet counting to advanced tel
 1. **TimescaleDB Integration**: Replaced the legacy `InMemoryStateStore` with TimescaleDB to support historical data queries and prevent memory leaks.
 2. **Raw Metadata Pipeline**: The TP now extracts `src_ip`, `dst_ip`, `src_port`, `dst_port`, and the CN forwards these as a JSON array. The CnSS parses and batch-inserts these into the `packet_flows` hypertable.
 3. **Real-Time Host Tables**: Introduced a WebSocket subscription model (`WSClientSession`) to push Top-N LAN/WAN host statistics to the MUI only when clients are actively listening, optimizing DB load.
-4. **MUI Dashboard Redesign**: Implemented the new Line Chart for historical RX/TX trends and integrated the Top-5 host tables.
+4. **MUI Dashboard Redesign**: Implemented the new Line Chart for historical RX/TX trends.
 5. **Containerization**: TP and CN are now fully containerized via Docker for streamlined deployment.
 
 ### Deployment & Access

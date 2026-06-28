@@ -33,7 +33,11 @@ class TestWebSocketHosts:
 
         with patch("app.main.state_store", test_store), patch(
             "app.main.get_top_hosts", new_callable=AsyncMock, return_value=mock_hosts
-        ), patch("app.main.get_all_channel_ids_from_db", new_callable=AsyncMock, return_value=["test-ch"]):
+        ), patch(
+            "app.main.get_all_channel_ids_from_db",
+            new_callable=AsyncMock,
+            return_value=["test-ch"],
+        ):
             with client.websocket_connect(url) as websocket:
                 # Send subscribe message
                 sub_msg = {
@@ -71,7 +75,11 @@ class TestWebSocketHosts:
         url = f"/api/v1/ws/telemetry?token={token}&channel_id=test-ch"
         with patch("app.main.state_store", test_store), patch(
             "app.main.get_top_hosts", new_callable=AsyncMock, return_value=[]
-        ), patch("app.main.get_all_channel_ids_from_db", new_callable=AsyncMock, return_value=["test-ch"]):
+        ), patch(
+            "app.main.get_all_channel_ids_from_db",
+            new_callable=AsyncMock,
+            return_value=["test-ch"],
+        ):
             with client.websocket_connect(url) as websocket:
                 # Subscribe first
                 websocket.send_text(
@@ -113,7 +121,11 @@ class TestWebSocketHosts:
         token = self._get_token()
         url = f"/api/v1/ws/telemetry?token={token}&channel_id=test-ch"
 
-        with patch("app.main.state_store", test_store), patch("app.main.get_all_channel_ids_from_db", new_callable=AsyncMock, return_value=["test-ch"]):
+        with patch("app.main.state_store", test_store), patch(
+            "app.main.get_all_channel_ids_from_db",
+            new_callable=AsyncMock,
+            return_value=["test-ch"],
+        ):
             with client.websocket_connect(url) as websocket:
                 # Send invalid JSON
                 websocket.send_text("not a json")

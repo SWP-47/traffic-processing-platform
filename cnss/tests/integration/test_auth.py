@@ -1,7 +1,6 @@
-import asyncio
 from unittest.mock import patch
-from datetime import datetime, timezone
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock
+
 
 class TestLoginEndpoint:
     def test_ac1_valid_credentials(self, client):
@@ -40,7 +39,11 @@ class TestLoginEndpoint:
 
     def test_scope_intersection_viewer(self, client):
         """Viewer scope must be an intersection of configured and existing channels (from DB)."""
-        with patch("app.main.get_all_channel_ids_from_db", new_callable=AsyncMock, return_value=["bridge-berlin-01"]):
+        with patch(
+            "app.main.get_all_channel_ids_from_db",
+            new_callable=AsyncMock,
+            return_value=["bridge-berlin-01"],
+        ):
             response = client.post(
                 "/api/v1/auth/login",
                 json={"username": "viewer", "password": "viewer123"},
@@ -52,7 +55,11 @@ class TestLoginEndpoint:
 
     def test_scope_intersection_admin(self, client):
         """Admin scope must contain ALL existing channels in the DB."""
-        with patch("app.main.get_all_channel_ids_from_db", new_callable=AsyncMock, return_value=["new-ch-1", "new-ch-2"]):
+        with patch(
+            "app.main.get_all_channel_ids_from_db",
+            new_callable=AsyncMock,
+            return_value=["new-ch-1", "new-ch-2"],
+        ):
             response = client.post(
                 "/api/v1/auth/login", json={"username": "admin", "password": "admin123"}
             )

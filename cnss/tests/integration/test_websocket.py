@@ -23,8 +23,12 @@ class TestWebSocketTelemetry:
         )
         token = self._get_token("admin")
         url = f"/api/v1/ws/telemetry?token={token}&channel_id=test-ch"
-        
-        with patch("app.main.state_store", test_store), patch("app.main.get_all_channel_ids_from_db", new_callable=AsyncMock, return_value=["test-ch"]):
+
+        with patch("app.main.state_store", test_store), patch(
+            "app.main.get_all_channel_ids_from_db",
+            new_callable=AsyncMock,
+            return_value=["test-ch"],
+        ):
             with client.websocket_connect(url) as websocket:
                 assert "test-ch" in test_store._channels
                 assert len(test_store._channels["test-ch"].listeners) == 1

@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from .store import state_store
 from .config import settings
 from .broadcast import broadcast_telemetry_update, broadcast_hosts_update

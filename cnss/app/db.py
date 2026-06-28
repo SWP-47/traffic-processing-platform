@@ -148,12 +148,13 @@ async def get_reporting_data() -> tuple[dict, dict]:
 
 
 async def get_all_channels_from_db() -> list[dict]:
-    if not pool: return []
+    if not pool:
+        return []
     try:
         # DISTINCT ON + ORDER BY (channel_id, time DESC)
         rows = await pool.fetch("""
-            SELECT DISTINCT ON (channel_id) 
-                   channel_id, 
+            SELECT DISTINCT ON (channel_id)
+                   channel_id,
                    time AS last_activity_timestamp
             FROM packet_flows
             ORDER BY channel_id, time DESC
@@ -162,7 +163,8 @@ async def get_all_channels_from_db() -> list[dict]:
     except Exception as e:
         logger.error(f"Failed to fetch channels from DB: {e}")
         return []
-    
+
+
 async def get_all_channel_ids_from_db() -> list[str]:
     """
     Fetches all distinct channels from the DB
@@ -252,6 +254,7 @@ async def is_db_healthy() -> bool:
     except Exception:
         return False
 
+
 async def get_channel_history(channel_id: str, period: str) -> tuple[int, list[dict]]:
     """
     Fetches aggregated history points. Returns (interval_sec, points).
@@ -264,8 +267,8 @@ async def get_channel_history(channel_id: str, period: str) -> tuple[int, list[d
     period_map = {
         "1h": 3,
         "24h": 60,
-        "7d": 7*60,
-        "30d": 30*60,
+        "7d": 7 * 60,
+        "30d": 30 * 60,
     }
     period_sql_map = {
         "1h": "1 hour",
@@ -315,7 +318,7 @@ async def get_channel_history(channel_id: str, period: str) -> tuple[int, list[d
                     "timestamp": row["bucket"].isoformat().replace("+00:00", "Z"),
                     "packets_in_per_sec": p_in,
                     "packets_out_per_sec": p_out,
-                    "is_active": (p_in + p_out) > 0, 
+                    "is_active": (p_in + p_out) > 0,
                 }
             )
         return interval_sec, points

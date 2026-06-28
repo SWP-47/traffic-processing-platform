@@ -85,7 +85,7 @@ async def lifespan(app: FastAPI):
     channels = await get_all_channel_ids_from_db()
     for channel_id in channels:
         await state_store.get_or_create_channel(channel_id)
-    logger.info(f"Channels are loaded to state store")
+    logger.info("Channels are loaded to state store")
 
     reporting_task = asyncio.create_task(reporting_worker_task())
     yield

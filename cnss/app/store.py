@@ -80,7 +80,6 @@ class StateStore:
                 return dropped
             return 0
 
-
     async def add_listener(self, channel_id: str, listener: WSClientSession) -> bool:
         async with self._lock:
             if channel_id in self._channels:

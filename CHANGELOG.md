@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `PacketMetadata` schema definition and strict UDP MTU constraint (< 1400 bytes) guidelines across `README.md`, `openapi.yaml`, and `system-documentation.md`. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 - Architectural descriptions of the new `Ingestion Worker` (UDP to DB) and `Reporting Worker` (DB to WebSocket) in CnSS responsibilities. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 - Line chart component (apache echarts library) to preview historical data ([#153](https://github.com/SWP-47/traffic-processing-platform/issues/153))
+- Information aboud how to build Docker containers added to CN and TP loacl README files ([#181](https://github.com/SWP-47/traffic-processing-platform/issues/181))
 
 ### Changed
 - Migrated CnSS telemetry storage from the legacy in-memory MVP v1 dictionary to TimescaleDB, restricting the in-memory `StateStore` strictly to lightweight metadata tracking and WebSocket session management. ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))

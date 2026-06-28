@@ -45,13 +45,13 @@ Install dependencies using the command:
 pip install -r requirements.txt
 ```
 
-run the main script as administrator:
+ run the main script as administrator:
 
- ```bash
- sudo python3 .\demo_1\tp_packet_counter.py
- ```
+```bash
+sudo python3 demo_1/tp_packet_counter.py
+```
 
-*Expected: The script starts without errors (e.g., no ModuleNotFoundError). Initial initialization messages appear in the console.*
+*Expected: The script starts without errors (e.g., no ModuleNotFoundError). Initidependenciesal initialization messages appear in the console.*
 
 #### Step 2: Packet Transmission and Logging Verification
 

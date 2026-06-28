@@ -35,9 +35,18 @@ cd traffic-processing-platform
 ##### Software part:
 note: Ensure you have Python 3.8 or higher and pip (Python package installer) installed on your system. Create and activate a virtual environment. 
 
-1. Install dependencies  using command `pip install -r requirements.txt`
-2. Create a file of environment using command `cp .env.example .env` for bash or `copy .env.example .env` for PowerShell. Edit `.env` file if necessary
-3. Run the main script as administrator using command `sudo python3 .\software-part\tp_packet_counter.py` for bash or `python3 .\software-part\tp_packet_counter.py` as administrator for PowerShell
+1. Install dependencies using command `pip install -r requirements.txt`
+2. Create an environment file using `cp .env.example .env` (POSIX) or `copy .env.example .env` (PowerShell). Edit `.env` if necessary.
+3. Run the main script:
+
+```bash
+sudo python3 software-part/tp_packet_counter.py
+```
+or on Windows PowerShell:
+
+```powershell
+python3 .\software-part\tp_packet_counter.py
+```
 
 
 ##### Hardware part:
@@ -52,29 +61,32 @@ note: Ensure you have AMD Vivado Design Suite installed on your system. The fold
 
 note: Ensure you have Python 3.8 or higher and pip (Python package installer) installed on your system. Create and activate a virtual environment. 
 
-1. Install dependencies  using command 
+1. Install dependencies using:
+
 ```bash
-pip install -r requirements.txt 
+pip install -r requirements.txt
 ```
-2. Create a file of environment using command 
+2. Create an environment file:
+
 ```bash
 cp .env.example .env
 ```
-for bash or 
-```PowerShell
+or on PowerShell:
+
+```powershell
 copy .env.example .env
 ```
-for PowerShell. Edit `.env` file if necessary
 
-3. Run the main script as administrator using command 
+3. Run the Communication Node script (the actual demo script is `communication-node/cn_demo_1.py`):
+
 ```bash
-sudo python3 .\cn_packet_counter.py
+sudo python3 communication-node/cn_demo_1.py
 ```
-for bash or 
-```PowerShell
-python3 .\cn_packet_counter.py
+or on Windows PowerShell:
+
+```powershell
+python3 .\communication-node\cn_demo_1.py
 ```
- as administrator for PowerShell
 
 #### **Control and Status Server (CnSS)**
 

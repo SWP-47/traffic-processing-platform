@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Native TimescaleDB retention policies for automated historical data cleanup, replacing manual in-memory garbage collection. ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))
 - Documented the new REST endpoint `GET /api/v1/channel/{channel_id}/history` for lazy-loading historical telemetry data (Line Chart) with dynamic time-bucketing based on the requested period. ([#167](https://github.com/SWP-47/traffic-processing-platform/issues/167))
 - Documented WebSocket control messages (`subscribe`/`unsubscribe`) and the `hosts_update` payload schema to support real-time LAN/WAN host tables via the "Initial Snapshot on Subscribe" pattern. ([#167](https://github.com/SWP-47/traffic-processing-platform/issues/167))
 - Added new Sequence Diagrams for Line Chart history retrieval and WebSocket host table subscriptions to the Data Flow & Sequence Diagrams section. ([#167](https://github.com/SWP-47/traffic-processing-platform/issues/167))
@@ -27,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Line chart component (apache echarts library) to preview historical data ([#153](https://github.com/SWP-47/traffic-processing-platform/issues/153))
 
 ### Changed
+- Migrated CnSS telemetry storage from the legacy in-memory MVP v1 dictionary to TimescaleDB, restricting the in-memory `StateStore` strictly to lightweight metadata tracking and WebSocket session management. ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))
+- Refactored the `ChannelState` Pydantic model to drop the persistent `is_active` flag, shifting channel activity status to be computed on-the-fly based on `last_activity_timestamp`. ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))
+- Updated the Reporting Worker to derive channel activity timeouts directly from database timestamps instead of relying on legacy in-memory state flags. ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))
+- Updated the test suite to eliminate assertions against deprecated in-memory legacy behaviors and mock DB queries for scope intersection. ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))
 - Updated CnSS responsibilities in the System Architecture to include in-memory `WSClientSession` management and targeted broadcasting for resource optimization. ([#167](https://github.com/SWP-47/traffic-processing-platform/issues/167))
 - Updated the Database & Memory Leak Prevention section to reflect WebSocket GC for `WSClientSession` objects and conditional DB querying based on active subscriptions. ([#167](https://github.com/SWP-47/traffic-processing-platform/issues/167))
 - Updated `broadcast_telemetry_update` to accept and correctly apply the `window_sec` parameter for accurate rate calculations instead of hardcoding a 1-second window. ([#148](https://github.com/SWP-47/traffic-processing-platform/issues/148))
@@ -53,6 +58,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Deprecated
 
 ### Removed
+- Removed the legacy `background_timeout_and_gc_task` and obsolete state mutation methods (e.g., `set_channel_active`, `set_channel_inactive`). ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))
+- Removed obsolete unit and integration tests (`test_recovery.py`, GC-related tests in `test_timeout_and_gc.py`) that validated deprecated in-memory state mutations. ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))
 - Dead code and unused variable assignments (e.g., `dropped` return value in `udp_server.py`, unused `batch` object in `test_websocket.py`) to improve code clarity and maintainability. ([#148](https://github.com/SWP-47/traffic-processing-platform/issues/148))
 - Immediate WebSocket broadcasting from the UDP ingestion path (`udp_server.py`), shifting all push responsibilities to the reporting worker. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
 - Timeout detection and broadcasting logic from the background GC task. ([#147](https://github.com/SWP-47/traffic-processing-platform/issues/147))
@@ -60,6 +67,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - References to in-memory `Dict` state management and legacy aggregated counter payloads (`direction_out`, `direction_in` objects) from all API and system documentation. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 
 ### Fixed
+- Fixed an issue where the JWT scope intersection during login relied on the in-memory store, causing empty scopes after a server restart before the first UDP packet arrived. The scope is now correctly derived from the database. ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))
+- Fixed runtime `AttributeError` in the Reporting Worker caused by calls to the removed `state_store.set_channel_active()` method. ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))
 - Added graceful error handling and lazy pool re-initialization in `app/db.py` and `app/udp_server.py` to ensure the UDP listener never crashes if TimescaleDB becomes temporarily unreachable (AC 4). ([#145](https://github.com/SWP-47/traffic-processing-platform/issues/145), [#146](https://github.com/SWP-47/traffic-processing-platform/issues/146))
 - Resolved `pytest-asyncio` collection errors caused by invalid method signatures in WebSocket integration tests. ([#146](https://github.com/SWP-47/traffic-processing-platform/issues/146))
 - Fixed case-sensitivity mismatch in UDP invalid UTF-8 logging assertion in `test_udp_server.py`. ([#146](https://github.com/SWP-47/traffic-processing-platform/issues/146))

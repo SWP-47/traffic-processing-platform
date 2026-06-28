@@ -20,7 +20,7 @@ info:
     - **Payload Schema**: `TelemetryUpdate` (defined in components/schemas)
     - **Frequency**: 1 Hz (aggregated by Reporting Worker from TimescaleDB)
     - **Keep-Alive**: CnSS sends periodic `ping` frames. MUI must respond with `pong`.
-  version: 2.0.0
+  version: 1.1.0
 
 servers:
   - url: https://{{cnss_host}}

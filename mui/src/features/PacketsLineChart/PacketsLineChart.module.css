@@ -1,7 +1,6 @@
 .component {
     padding: 30px;
-    background: var(--gradient-card);
-    border-radius: var(--card-border-radius);
+    width: 100%;
 }
 
 .header {
@@ -93,7 +92,7 @@
 /* Chart */
 
 .chart {
-    height: 250px;
+    height: 180px;
     width: 100%;
 }
 

@@ -172,8 +172,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CnSS now sanitizes access logs to prevent `access_token` leakage via query parameters. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 
 
-[Unreleased]: https://github.com/SWP-47/traffic-processing-platform/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/SWP-47/traffic-processing-platform/compare/v1.1.0...HEAD
 [1.0.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.0.0
+[1.1.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.1.0
 
 <!-- 
 RELEASE TEMPLATE (For Release Manager use only):

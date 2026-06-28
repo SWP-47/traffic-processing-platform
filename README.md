@@ -1,6 +1,6 @@
 # Traffic Processing Platform
 
-[![Release](https://img.shields.io/github/v/release/SWP-47/traffic-processing-platform?label=MVP%20v1)](https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.0.0)
+[![Release](https://img.shields.io/badge/release-v1.1.0-orange)](https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.1.0)
 
 ## Project Overview
 

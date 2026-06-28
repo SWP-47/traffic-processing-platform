@@ -19,7 +19,7 @@ This is a monorepo containing minimally intrusive network traffic monitoring sys
 
 * **Sprint Goal**: transition from in-memory storage to a persistent database, implement database integration for historical data retention, and deliver initial historical data visualization in the MUI
 * **Sprint Dates**: June 22, 2026 – June 28, 2026
-* **Total Sprint Size**: --
+* **Total Sprint Size**: 81 story points
 * **Scope Summary**:
   * **Backend**: Migrated from in-memory storage to TimescaleDB. Refactored UDP ingestion to accept raw packet metadata arrays. Implemented a 1Hz Reporting Worker for real-time aggregation and migrated REST APIs to read from the DB.
   * **Frontend**: Implemented Line Chart History API and created the Line Chart Component.
@@ -49,6 +49,7 @@ This sprint transitioned the platform from basic packet counting to advanced tel
 ### Deployment & Access
 
 * **Deployed Product**: [http://10.93.26.186](http://10.93.26.186) *(Only accessible via UniversityStudent Wi-Fi)*
+![deployed artifact](images/deployed-sprint-2.png)
 * **Access / Run Instructions**: [Local Setup & Deployment Guide](../../README.md#local-setup-instructions)
 
 ---
@@ -154,7 +155,7 @@ All Assignment 4 tests, CI checks, QRTs, and the Definition of Done are maintain
 
 ## Demo
 
-* **Public Sanitized Demo Video (< 2 mins)**: [Watch Demo PLACEHOLDER]
+* **Public Sanitized Demo Video**: [Watch Demo](https://disk.yandex.ru/i/tVOTiQnLE1rRMQ)
 
 ---
 

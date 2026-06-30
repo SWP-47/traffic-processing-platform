@@ -29,8 +29,7 @@ make install
 
 ### 2. Environment Setup
 
-Copy the example environment file and adjust the variables if necessary.
-*Note: Ensure `DATABASE_URL` and `REDIS_URL` point to `localhost` if you plan to run Python services directly on your host machine, or keep them as `timescaledb`/`redis` if running inside Docker.*
+Copy the example environment file and adjust the variables if necessary:
 
 ```bash
 cp .env.example .env
@@ -41,7 +40,7 @@ cp .env.example .env
 Start the required infrastructure services (TimescaleDB, Redis, pgAdmin) in detached mode using Docker Compose:
 
 ```bash
-make up
+make dev
 ```
 
 ### 4. Database Migrations
@@ -54,6 +53,27 @@ make migrate
 
 ## Development
 
+### Running Microservices Locally
+
+For active development, run microservices directly on your host machine to benefit from hot-reload and IDE debugging:
+
+**Run individual services:**
+
+```bash
+make run-api          # REST API (http://localhost:8000)
+make run-websocket    # WebSocket service (ws://localhost:8001)
+make run-ingestion    # UDP ingestion worker
+make run-reporting    # Background aggregator
+```
+
+**Run all services at once:**
+
+```bash
+make dev-all          # Start all services in background
+make logs             # Tail all service logs
+make stop-dev         # Stop all services
+```
+
 ### Running Tests
 
 Execute the test suite (unit, integration, e2e):
@@ -64,17 +84,55 @@ make test
 
 ### Linting and Formatting
 
-The project uses `black`, `flake8`, `ruff`, and `mypy` for code quality.
-Check code quality:
+The project uses `black`, `flake8`, `ruff`, and `mypy` for code quality:
 
 ```bash
-make lint
+make lint             # Check code quality
+make format           # Automatically format code
 ```
 
-Automatically format code:
+### Makefile Help
+
+View all available commands:
 
 ```bash
-make format
+make help
+```
+
+## Production Deployment
+
+For production deployment, all services run in Docker containers:
+
+```bash
+make prod
+```
+
+This builds and starts the complete stack including:
+
+- All 4 microservices (API, WebSocket, Ingestion, Reporting)
+- TimescaleDB (persistent storage)
+- Redis (ephemeral buffer and pub/sub)
+- Nginx (reverse proxy and TLS termination)
+
+## Project Structure
+
+```text
+cnss/
+├── core/                   # Shared core modules
+│   ├── contracts/          # Pydantic models for data contracts
+│   ├── models/             # SQLAlchemy ORM models
+│   ├── redis/              # Redis client and Lua scripts
+│   └── security/           # JWT, passwords, scopes
+├── services/               # Microservices
+│   ├── api/                # REST API & Auth service
+│   ├── ingestion/          # UDP ingestion worker
+│   ├── reporting/          # Background aggregator
+│   └── websocket/          # WebSocket gateway
+├── docker/                 # Dockerfiles and configs
+├── migrations/             # Alembic database migrations
+├── sql/                    # TimescaleDB setup scripts
+├── tests/                  # Test suite
+└── docs/                   # Documentation
 ```
 
 ## Documentation

@@ -34,3 +34,7 @@ build/
 # Local service logs and PID files
 logs/
 *.pid
+
+# Cache
+.mypy_cache/
+.pytest_cache/

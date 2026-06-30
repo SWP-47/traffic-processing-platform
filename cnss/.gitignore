@@ -30,3 +30,7 @@ build/
 
 # Logs
 *.log
+
+# Local service logs and PID files
+logs/
+*.pid

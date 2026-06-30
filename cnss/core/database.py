@@ -8,6 +8,8 @@ import asyncpg
 
 from core.config import settings
 
+from core.exceptions import DatabaseError
+
 # --- Global Pool State ---
 # Holds the single instance of the asyncpg connection pool across the application lifecycle.
 _db_pool: asyncpg.Pool | None = None
@@ -59,6 +61,6 @@ def get_db_pool() -> asyncpg.Pool:
     Raises RuntimeError if the pool has not been initialized yet.
     """
     if _db_pool is None:
-        raise RuntimeError("Database pool is not initialized. Call init_db_pool() first.")
+        raise DatabaseError("Database pool is not initialized. Call init_db_pool() first.")
     
     return _db_pool

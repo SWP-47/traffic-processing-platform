@@ -5,7 +5,7 @@ services:
   # --- TimescaleDB (Persistent Storage) ---
   timescaledb:
     image: timescale/timescaledb:latest-pg15
-    container_name: cnss_timescaledb
+    container_name: cnss-timescaledb
     environment:
       # Database credentials matching the component name for consistency
       POSTGRES_USER: cnss
@@ -29,7 +29,7 @@ services:
   # Configured to run WITHOUT persistence (no RDB/AOF) to maximize IOPS as per architecture.
   redis:
     image: redis:7-alpine
-    container_name: cnss_redis
+    container_name: cnss-redis
     ports:
       - "6379:6379"
     volumes:

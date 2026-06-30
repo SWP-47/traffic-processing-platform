@@ -44,7 +44,10 @@ The CnSS is deployed as a set of Docker containers. If any container crashes, Do
    - **Atomic Flush to DB**: Every 1 second, uses a **Lua script** (or `HGETDEL` in Redis 7.4+) to atomically read and reset `dropped_delta` from Redis, preventing race conditions. It then performs a batched `UPDATE` on the `channels` table.
    - **Reactivation**: The SQL `UPDATE` **always sets `is_active = TRUE`** for channels that successfully received a flush, ensuring channels reactivate immediately upon receiving new traffic.
    - **Mass Timeout Calculation**: Executes a single SQL query to mark inactive channels: `UPDATE channels SET is_active = FALSE WHERE is_active = TRUE AND last_activity_at < NOW() - INTERVAL '5 seconds'`.
-6. **SQL Injection Prevention**: Since SQL identifiers (like column names in ORDER BY) cannot be parameterized, the Reporting Worker must use a strict whitelist mapping for sort_by (e.g., mapping "received" to SUM(direction=0)) and sort_order (strictly "ASC" or "DESC"). Direct string interpolation of user input into SQL queries is strictly prohibited.
+6. **SQL Injection Prevention**: Since SQL identifiers (like column nam es in ORDER BY) cannot be parameterized, the Reporting Worker must use a strict whitelist mapping for sort_by (e.g., mapping "received" to SUM(direction=0)) and sort_order (strictly "ASC" or "DESC"). Direct string interpolation of user input into SQL queries is strictly prohibited.
+7. **Atomic Drop Flushing:** The Reporting Worker reads all pending drops using `LRANGE udp:drops:{channel_id} 0 -1`, sums them up, and executes the `UPDATE channels` query in PostgreSQL. **ONLY AFTER** receiving a successful commit acknowledgment from PostgreSQL, the worker trims the Redis list using `LTRIM udp:drops:{channel_id} 0 -1` (or `DEL`).
+8. **Ghost Subscription Prevention:** If the WebSocket Service container crashes, it may leave stale `client_id`s in `sub:listeners:{hash}`. Before executing the SQL query, the Reporting Worker MUST validate the listeners. It retrieves the set via `SMEMBERS sub:listeners:{hash}` and checks if the corresponding `ws:session:{client_id}` key exists in Redis (`EXISTS`). If the session key is missing (expired or crashed), the worker removes the stale `client_id` from the listener set using `SREM`. If the listener set becomes empty, the SQL query is skipped.
+9. **Channel Reactivation Lifecycle:** The Reporting Worker marks channels as `is_active = FALSE` if `last_activity_at < NOW() - 5s`. However, when the Ingestion Worker receives a new valid batch, it immediately updates the Redis state (`HSET channel:state:{channel_id} is_active TRUE`). The Reporting Worker's 1-second flush reads this Redis state and executes `UPDATE channels SET is_active = TRUE, last_activity_at = NOW()`, ensuring channels reactivate instantly upon receiving new traffic.
 
 ### 2.3 WebSocket Service (Client Gateway)
 
@@ -57,7 +60,11 @@ The CnSS is deployed as a set of Docker containers. If any container crashes, Do
 1. **Connection Lifecycle**: Handles MUI WebSocket upgrades. Validates JWT tokens, checks `channel_id` presence, verifies JWT `scope` against the channel, and confirms channel existence. Returns specific close codes (`4001`-`4004`) on failure. Before accepting the connection, the service checks the token's `jti` (JWT ID) against a Redis revocation set (`jwt:revoked`). If the token has been revoked, the connection is closed with code `4001`.
 2. **Subscription Management**: Receives JSON control messages from MUI. Generates a deterministic `query_hash` for the subscription parameters.
 3. **Redis State Sync**: Registers the subscription in Redis (`sub:registry:{hash}`) and adds the client ID to the listener set (`sub:listeners:{hash}`).
-4. **Initial Snapshot**: Executes an immediate, lightweight read-only query against TimescaleDB to provide the client with an initial data snapshot without waiting for the 1-second Reporting Worker tick.
+4. **Initial Snapshot (Race-condition safe):** To prevent missing updates that occur between the DB query and the Pub/Sub subscription, the WebSocket Service MUST follow this strict order:
+    - Execute `SUBSCRIBE ws:push:{query_hash}` in Redis.
+    - Execute the read-only query against TimescaleDB (Initial Snapshot).
+    - Push the Initial Snapshot to the client.
+    > *(Note: The client must be designed to handle and deduplicate minor overlaps based on timestamps).*
 5. **Pub/Sub Consumption**: Subscribes to the corresponding `ws:push:{query_hash}` Redis channels. Upon receiving messages, it maps the `query_hash` back to the connected WebSocket client IDs and pushes the JSON payload.
 6. **Garbage Collection**: On client disconnect, removes the client ID from Redis listener sets. If a listener set becomes empty, it deletes the subscription registry key to stop the Reporting Worker from querying the DB.
 7. **Session Heartbeat & TTL**: The `ws:session:{ws_client_id}` key in Redis is created with a strict **TTL of 10 seconds**. The WebSocket Service must periodically refresh this TTL (e.g., every 5 seconds) via a background heartbeat task. If the container crashes, the keys automatically expire, preventing orphaned subscriptions and memory leaks.
@@ -105,6 +112,29 @@ CREATE INDEX idx_channel_time ON packet_flows (channel_id, time DESC);
 SELECT add_retention_policy('packet_flows', INTERVAL '7 days');
 ```
 
+**Performance Optimization (Continuous Aggregates):** To prevent the Reporting Worker from executing heavy `GROUP BY` queries on the raw `packet_flows` table every second, TimescaleDB Continuous Aggregates are used.
+
+```sql
+-- 1-second bucket for real-time telemetry and host tables
+CREATE MATERIALIZED VIEW telemetry_1s
+WITH (timescaledb.continuous) AS
+SELECT 
+    channel_id, 
+    time_bucket('1 second', time) AS bucket,
+    COUNT(*) FILTER (WHERE direction = 0) AS packets_in,
+    COUNT(*) FILTER (WHERE direction = 1) AS packets_out
+FROM packet_flows 
+GROUP BY channel_id, bucket;
+
+-- Add refresh policy to run every 1 second
+SELECT add_continuous_aggregate_policy('telemetry_1s', 
+    start_offset => INTERVAL '5 seconds', 
+    end_offset => INTERVAL '1 second', 
+    schedule_interval => INTERVAL '1 second');
+```
+
+*Note: The Reporting Worker must query `telemetry_1s` (or a 1-minute equivalent for history) instead of `packet_flows`.*
+
 #### **`channels` (Persistent Registry)**
 
 Acts as the persistent, "cold" registry for channel metadata. While real-time status (`is_active`) is served from the Redis state buffer for sub-millisecond latency by REST/WS services, this table is periodically updated (every 1s) by the Reporting Worker to maintain historical records, audit logs, and state recovery. The Reporting Worker is solely responsible for toggling `is_active` based on the flushed `last_activity_at`.
@@ -143,7 +173,7 @@ Redis serves as the central nervous system, handling buffering, state synchroniz
 
 #### **Subscription Registry**
 
-- `sub:registry:{query_hash}` (String, TTL 1 hour): Stores the JSON definition of the subscription.
+- `sub:registry:{query_hash}` (String, **No TTL**). Stores the JSON definition. It is explicitly deleted by the WebSocket Service ONLY when the last listener is removed from `sub:listeners:{query_hash}`.
 - `sub:listeners:{query_hash}` (Set): Stores the IDs of connected WebSocket clients requesting this specific data.
 
 #### *Session & Buffer Management**

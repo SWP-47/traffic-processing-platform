@@ -49,8 +49,6 @@ services:
           target: /app
           ignore:
             - nginx.conf
-    
-    restart: unless-stopped
 
     env_file:
       - .env

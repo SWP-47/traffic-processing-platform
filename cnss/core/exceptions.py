@@ -11,6 +11,7 @@ from typing import Optional
 # --- Root Exception ---
 class CnSSBaseError(Exception):
     """Root exception for all application-specific errors."""
+
     pass
 
 
@@ -23,13 +24,8 @@ class ClientResponseError(CnSSBaseError):
     Carries HTTP status, machine-readable error code, human message,
     and optional WebSocket close code for unified routing.
     """
-    def __init__(
-        self,
-        status_code: int,
-        error_code: str,
-        message: str,
-        ws_close_code: Optional[int] = None
-    ):
+
+    def __init__(self, status_code: int, error_code: str, message: str, ws_close_code: Optional[int] = None):
         self.status_code = status_code
         self.error_code = error_code
         self.message = message
@@ -40,23 +36,27 @@ class ClientResponseError(CnSSBaseError):
 # --- Authentication Errors (HTTP 401 / WS 4001) ---
 class AuthError(ClientResponseError):
     """Base class for authentication and identity failures."""
+
     def __init__(self, message: str = "Invalid username or password."):
         super().__init__(status_code=401, error_code="unauthorized", message=message, ws_close_code=4001)
 
 
 class InvalidCredentialsError(AuthError):
     """Raised when username or password is incorrect during login."""
+
     pass
 
 
 class TokenExpiredError(AuthError):
     """Raised when a JWT has exceeded its 'exp' claim."""
+
     def __init__(self, message: str = "Token has expired."):
         super().__init__(message=message)
 
 
 class TokenRevokedError(AuthError):
     """Raised when a structurally valid JWT is found in the 'jwt:revoked' Redis set."""
+
     def __init__(self, message: str = "Token has been revoked."):
         super().__init__(message=message)
 
@@ -64,6 +64,7 @@ class TokenRevokedError(AuthError):
 # --- Authorization Errors (HTTP 403 / WS 4003) ---
 class AuthorizationError(ClientResponseError):
     """Raised when an authenticated user lacks the required scope for a channel."""
+
     def __init__(self, message: str = "You do not have access to this channel."):
         super().__init__(status_code=403, error_code="forbidden", message=message, ws_close_code=4003)
 
@@ -71,6 +72,7 @@ class AuthorizationError(ClientResponseError):
 # --- Validation Errors (HTTP 400) ---
 class ValidationError(ClientResponseError):
     """Base class for invalid input data or business logic violations."""
+
     def __init__(self, error_code: str = "bad_request", message: str = "Invalid request parameters."):
         super().__init__(status_code=400, error_code=error_code, message=message)
 
@@ -78,6 +80,7 @@ class ValidationError(ClientResponseError):
 # --- Resource Errors (HTTP 404 / WS 4004) ---
 class ResourceNotFoundError(ClientResponseError):
     """Raised when a requested entity does not exist in the database."""
+
     def __init__(self, message: str = "Resource not found."):
         super().__init__(status_code=404, error_code="not_found", message=message, ws_close_code=4004)
 
@@ -87,6 +90,7 @@ class ResourceNotFoundError(ClientResponseError):
 # These typically map to HTTP 5xx and do not expose internal details to the client.
 class ServerInternalError(CnSSBaseError):
     """Base exception for infrastructure or unexpected backend failures."""
+
     def __init__(self, message: str, details: Optional[str] = None):
         self.message = message
         self.details = details
@@ -95,17 +99,20 @@ class ServerInternalError(CnSSBaseError):
 
 class DatabaseError(ServerInternalError):
     """Raised on TimescaleDB query, connection, or transaction failures."""
+
     def __init__(self, message: str = "Database operation failed."):
         super().__init__(message=message)
 
 
 class RedisError(ServerInternalError):
     """Raised on Redis connection, buffer, or Lua script execution failures."""
+
     def __init__(self, message: str = "Cache or state synchronization failed."):
         super().__init__(message=message)
 
 
 class ConfigurationError(ServerInternalError):
     """Raised when required environment variables or settings are invalid."""
+
     def __init__(self, message: str = "Invalid application configuration."):
         super().__init__(message=message)

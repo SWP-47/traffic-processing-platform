@@ -4,8 +4,8 @@
 # Loads environment variables from .env file or system environment.
 # ==============================================================================
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -26,17 +26,11 @@ class Settings(BaseSettings):
 
     # --- Database Configuration (TimescaleDB) ---
     # Async connection URL for PostgreSQL/TimescaleDB
-    database_url: str = Field(
-        default="postgresql+asyncpg://cnss:cnss@timescaledb:5432/cnss",
-        alias="DATABASE_URL"
-    )
+    database_url: str = Field(default="postgresql+asyncpg://cnss:cnss@timescaledb:5432/cnss", alias="DATABASE_URL")
 
     # --- Security & JWT ---
     # Secret key for signing JWT tokens (HS256). MUST be changed in production!
-    jwt_secret_key: str = Field(
-        default="change-this-to-a-secure-random-string-in-production",
-        alias="JWT_SECRET_KEY"
-    )
+    jwt_secret_key: str = Field(default="change-this-to-a-secure-random-string-in-production", alias="JWT_SECRET_KEY")
     # JWT signing algorithm
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
     # Token expiration time in hours (default 24h)
@@ -49,7 +43,7 @@ class Settings(BaseSettings):
     # --- Service Hosts & Ports (Local Development) ---
     # Host for local microservices binding
     cnss_host: str = Field(default="0.0.0.0", alias="CnSS_HOST")
-    
+
     # Port for the REST API and WebSocket services.
     # FastAPI natively handles both HTTP and WS on the same port (matching legacy design).
     # External routing (wss:// and https://) is handled by the Nginx reverse proxy.
@@ -62,12 +56,7 @@ class Settings(BaseSettings):
     reporting_window_sec: float = Field(default=5.0, alias="REPORTING_WINDOW_SEC")
 
     # Pydantic V2 configuration for environment variables
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=False,
-        extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore")
 
 
 # Global singleton instance of settings to be imported across the application

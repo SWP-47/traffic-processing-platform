@@ -4,10 +4,11 @@
 # Handles automatic loading of Lua scripts for atomic operations.
 # ==============================================================================
 
-import redis.asyncio as aioredis
 from pathlib import Path
-from redis.exceptions import RedisError as RedisDriverError
 from typing import Any
+
+import redis.asyncio as aioredis
+from redis.exceptions import RedisError as RedisDriverError
 
 from core.config import settings
 from core.exceptions import RedisError
@@ -28,32 +29,29 @@ LUA_SCRIPTS_DIR = Path(__file__).parent / "lua"
 
 # --- Client Lifecycle Management ---
 
+
 async def init_redis_client() -> aioredis.Redis:
     """
     Initializes the global Redis client and loads Lua scripts.
     Must be called during application startup (e.g., FastAPI lifespan).
     """
-    global _redis_client, _lua_scripts
-    
+    global _redis_client
+
     # Return existing client if already initialized to prevent duplicate connections
     if _redis_client is not None:
         return _redis_client
-        
+
     try:
         # Create the async Redis client from the configured URL
         # decode_responses=True ensures strings are returned instead of bytes
-        _redis_client = aioredis.from_url(
-            settings.redis_url,
-            encoding="utf-8",
-            decode_responses=True
-        )
-        
+        _redis_client = aioredis.from_url(settings.redis_url, encoding="utf-8", decode_responses=True)
+
         # Verify connection to ensure Redis is reachable before proceeding
         await _redis_client.ping()
-        
+
         # Load Lua scripts into the client for atomic execution
         await _load_lua_scripts()
-        
+
         return _redis_client
     except RedisDriverError as e:
         raise RedisError(f"Failed to connect to Redis at {settings.redis_url}") from e
@@ -69,21 +67,21 @@ async def _load_lua_scripts() -> None:
     """
     if _redis_client is None:
         return
-        
+
     # Ensure the scripts directory exists before attempting to scan it
     if not LUA_SCRIPTS_DIR.exists():
         # Directory missing is not a fatal error; just means no scripts are loaded
         return
-        
+
     # Iterate over all .lua files in the scripts directory
     for lua_file in LUA_SCRIPTS_DIR.glob("*.lua"):
         # Use the filename without extension as the script identifier
         script_name = lua_file.stem
-        
+
         try:
             # Read the Lua script content from the file system
             lua_content = lua_file.read_text(encoding="utf-8")
-            
+
             # Register the script with the Redis client for atomic execution
             _lua_scripts[script_name] = _redis_client.register_script(lua_content)
         except RedisDriverError as e:
@@ -97,7 +95,7 @@ def get_redis_client() -> aioredis.Redis:
     """
     if _redis_client is None:
         raise RedisError("Redis client is not initialized. Call init_redis_client() first.")
-    
+
     return _redis_client
 
 
@@ -108,7 +106,7 @@ def get_lua_script(name: str) -> Any:
     """
     if name not in _lua_scripts:
         raise RedisError(f"Lua script '{name}' is not registered.")
-    
+
     return _lua_scripts[name]
 
 
@@ -117,8 +115,8 @@ async def close_redis_client() -> None:
     Closes the global Redis client gracefully.
     Must be called during application shutdown to release resources.
     """
-    global _redis_client, _lua_scripts
-    
+    global _redis_client
+
     if _redis_client is not None:
         await _redis_client.close()
         _redis_client = None

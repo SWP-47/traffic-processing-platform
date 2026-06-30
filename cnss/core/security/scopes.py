@@ -9,6 +9,7 @@ from core.exceptions import AuthorizationError
 
 # --- Scope Verification Logic ---
 
+
 def verify_channel_access(payload: TokenPayload, channel_id: str) -> None:
     """
     Validates if the authenticated user has access to the specified channel.
@@ -20,6 +21,4 @@ def verify_channel_access(payload: TokenPayload, channel_id: str) -> None:
 
     # Viewers are strictly limited to the channel IDs explicitly granted in their scope
     if channel_id not in payload.scope:
-        raise AuthorizationError(
-            message=f"Access denied to channel '{channel_id}'."
-        )
+        raise AuthorizationError(message=f"Access denied to channel '{channel_id}'.")

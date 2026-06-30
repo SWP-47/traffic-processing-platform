@@ -1,0 +1,23 @@
+# Flake8 configuration file.
+# Placed in the root directory because flake8 does not natively support pyproject.toml.
+
+[flake8]
+# Match the line-length configured in Ruff and Black
+max-line-length = 120
+
+# Ignore specific rules that conflict with Black's formatting:
+# E203: Whitespace before ':' (Black formats slices like `a[1 : 2]`, flake8 complains)
+# W503: Line break occurred before a binary operator (Black prefers breaking before operators)
+extend-ignore = E203, W503
+
+# Exclude directories from linting
+exclude = 
+    .venv,
+    .git,
+    __pycache__,
+    .pytest_cache,
+    htmlcov,
+    migrations/versions,
+    *.egg-info,
+    build,
+    dist

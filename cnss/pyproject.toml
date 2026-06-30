@@ -72,3 +72,9 @@ testpaths = ["tests"]
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+# Explicitly tell Hatchling which directories contain the installable Python code.
+# By default, it looks for a folder named after the project (cnss/), 
+# but our code is split between 'core' and 'services'.
+[tool.hatch.build.targets.wheel]
+packages = ["core", "services"]

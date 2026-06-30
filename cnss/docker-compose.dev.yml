@@ -1,0 +1,61 @@
+# Infrastructure services for local development.
+# Microservices (API, WS, Ingestion, Reporting) are intended to be run locally via IDE or `uv run`.
+
+services:
+  # --- TimescaleDB (Persistent Storage) ---
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: cnss_timescaledb
+    environment:
+      # Database credentials matching the component name for consistency
+      POSTGRES_USER: cnss
+      POSTGRES_PASSWORD: cnss
+      POSTGRES_DB: cnss
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      # Optional: mount init script if you have one
+      # - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      # Healthcheck must use the newly created user and database names
+      test: ["CMD-SHELL", "pg_isready -U cnss -d cnss"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # --- Redis (Ephemeral State & Buffer) ---
+  # Configured to run WITHOUT persistence (no RDB/AOF) to maximize IOPS as per architecture.
+  redis:
+    image: redis:7-alpine
+    container_name: cnss_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      # Mount custom redis config to disable persistence
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # --- pgAdmin (Database Management UI) ---
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: cnss_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  timescaledb_data:

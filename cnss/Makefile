@@ -43,22 +43,22 @@ down:
 
 ## test: Run the test suite
 test:
-	pytest tests/ -v
+	uv run pytest tests/ -v
 
 ## migrate: Apply database migrations using Alembic
 migrate:
-	alembic upgrade head
+	uv run alembic upgrade head
 
 ## lint: Run code linters (Ruff, Flake8, and Mypy)
 lint:
-	ruff check .
-	flake8 .
-	mypy .
+	uv run ruff check .
+	uv run flake8 .
+	uv run mypy .
 
 ## format: Automatically format code using Black and Ruff
 format:
-	black .
-	ruff check --fix .
+	uv run black .
+	uv run ruff check --fix .
 
 # ==============================================================================
 # Local Microservices (Run on Host)

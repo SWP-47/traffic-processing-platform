@@ -1,0 +1,64 @@
+[project]
+name = "cnss"
+version = "2.0.0"
+description = "Control and Status Server (CnSS) - Backend core of the traffic processing platform"
+readme = "README.md"
+requires-python = ">=3.11"
+
+# Core dependencies shared across all microservices (Ingestion, Reporting, WS, API)
+dependencies = [
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "redis>=5.0.0",
+    "asyncpg>=0.29.0",
+    "alembic>=1.13.0",
+    "sqlalchemy>=2.0.0",
+]
+
+[project.optional-dependencies]
+# API Service dependencies (REST Gateway, Auth, History)
+api = [
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "passlib[argon2]>=1.7.4",
+    "PyJWT>=2.8.0",
+    "python-multipart>=0.0.6",
+]
+
+# WebSocket Service dependencies (Client Gateway, Pub/Sub)
+websocket = [
+    "websockets>=12.0",
+    "PyJWT>=2.8.0",
+]
+
+# Ingestion Worker dependencies (UDP Listener & Buffer Manager)
+# Relies mostly on core dependencies (redis, asyncpg)
+ingestion = []
+
+# Reporting Worker dependencies (Background Aggregator)
+# Relies mostly on core dependencies (redis, asyncpg)
+reporting = []
+
+# Development, testing, and linting dependencies
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.23.0",
+    "httpx>=0.26.0",
+    "ruff>=0.1.0",
+    "mypy>=1.8.0",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

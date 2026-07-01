@@ -8,6 +8,7 @@
 import asyncio
 import json
 import logging
+from datetime import datetime
 from typing import List, Optional, Set, Tuple
 
 from core.config import settings
@@ -120,7 +121,7 @@ class BackgroundFlusher:
                 try:
                     record = json.loads(raw_json)
                     parsed_records.append((
-                        record["time"],
+                        datetime.fromisoformat(record["time"]),
                         record["channel_id"],
                         record["direction"],
                         record["src_ip"],

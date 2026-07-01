@@ -276,6 +276,12 @@ Communication Nodes (CN) are not cryptographically authenticated. The `channel_i
 
 ### 5.3 Logging & Transport Security
 
-- **Token Masking**: CnSS must sanitize all access logs. A custom Python logging filter replaces `?token=eyJhbG...` with `?token=[REDACTED]` to prevent credential leakage in log aggregators.
-- **Transport**: WebSocket and REST endpoints should be exposed via `wss://` and `https://` (TLS) in production to prevent Man-in-the-Middle (MITM) token interception.
+- **Token Masking**: CnSS must sanitize all access logs. A custom Python logging filter replaces `?token=eyJhbG...` with `?token=[REDACTED]` to prevent credential leakage in log aggregators. Additionally, the Edge Nginx (see Section 2.5) uses a custom `log_format` that logs `$uri` instead of `$request_uri`, ensuring tokens in query parameters are never written to the reverse proxy's access logs.
+- **Transport Security (Centralized TLS)**: All external communication is secured via `wss://` and `https://` through the **Infrastructure Layer (Edge Nginx, this is different component of project)**, which serves as the single TLS termination point for the entire platform. This architecture ensures:
+  - A single certificate covers both the MUI frontend and CnSS backend.
+  - Backend microservices never handle TLS directly, simplifying their implementation.
+  - Internal Docker-network traffic remains isolated and unencrypted, avoiding unnecessary CPU overhead.
 - **Client-Side Storage**: The MUI must store the JWT exclusively in memory (JavaScript variable). Usage of `localStorage` or `sessionStorage` is strictly prohibited to mitigate XSS token theft.
+- **Certificate Lifecycle**:
+  - **Development**: Self-signed certificates are generated via `make certs` and distributed to LAN clients via `make serve-certs`. Clients must install the certificate into their system's trust store to avoid browser security warnings.
+  - **Production**: Certificates from a trusted Certificate Authority (e.g., Let's Encrypt, internal corporate CA) must be used. Self-signed certificates are **never** acceptable in production.

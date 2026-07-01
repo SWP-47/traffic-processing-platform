@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- N/A
+- Project initialization with `pyproject.toml` (service extras), `Makefile` aliases, and environment templates. ([#214](https://github.com/SWP-47/traffic-processing-platform/issues/214))
+- Typed configuration via Pydantic Settings and structured logging with a custom `TokenMaskingFilter` for sensitive data redaction. ([#214](https://github.com/SWP-47/traffic-processing-platform/issues/214))
+- Custom exception hierarchy (`CnSSBaseError` -> `AuthError`, `ValidationError`) for standardized error handling. ([#214](https://github.com/SWP-47/traffic-processing-platform/issues/214))
+- Pydantic data contracts for UDP telemetry batches and WebSocket subscription payloads. ([#214](https://github.com/SWP-47/traffic-processing-platform/issues/214))
+- `asyncpg` pool manager and `redis.asyncio` client with auto-loading Lua scripts for atomic operations. ([#215](https://github.com/SWP-47/traffic-processing-platform/issues/215))
+- Security mechanisms including `passlib` (Argon2id) for password hashing, HS256 JWT encode/decode, and scope verification. ([#215](https://github.com/SWP-47/traffic-processing-platform/issues/215))
+- SQLAlchemy ORM models for `users`, `channels`, and `packet_flows` to support database migrations and type hints. ([#215](https://github.com/SWP-47/traffic-processing-platform/issues/215))
 
 ### Changed
 

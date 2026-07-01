@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Docker orchestration (`docker-compose.yml`, `docker-compose.dev.yml`) for 4 microservices, TimescaleDB, and Redis with `restart: always` policies. ([#216](https://github.com/SWP-47/traffic-processing-platform/issues/216))
+- Redis configured in ephemeral mode (`save ""`, `appendonly no`) to maximize IOPS and prevent disk-write bottlenecks. ([#216](https://github.com/SWP-47/traffic-processing-platform/issues/216))
+- Lightweight Dockerfiles for `ingestion`, `reporting`, `websocket`, and `api` services utilizing `uv` for fast dependency resolution. ([#216](https://github.com/SWP-47/traffic-processing-platform/issues/216))
+- Alembic setup and initial relational schema migrations for `users`, `channels`, and `user_channel_scopes` tables. ([#217](https://github.com/SWP-47/traffic-processing-platform/issues/217))
+- TimescaleDB initialization including `packet_flows` hypertables, `telemetry_1s` Continuous Aggregates, and 7-day automated retention policies via pure SQL and migrations. ([#217](https://github.com/SWP-47/traffic-processing-platform/issues/217))
 - Project initialization with `pyproject.toml` (service extras), `Makefile` aliases, and environment templates. ([#214](https://github.com/SWP-47/traffic-processing-platform/issues/214))
 - Typed configuration via Pydantic Settings and structured logging with a custom `TokenMaskingFilter` for sensitive data redaction. ([#214](https://github.com/SWP-47/traffic-processing-platform/issues/214))
 - Custom exception hierarchy (`CnSSBaseError` -> `AuthError`, `ValidationError`) for standardized error handling. ([#214](https://github.com/SWP-47/traffic-processing-platform/issues/214))

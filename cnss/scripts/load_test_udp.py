@@ -121,6 +121,7 @@ def test_high_volume(sock: socket.socket) -> None:
     for i in range(50):
         batch = create_telemetry_batch(CHANNEL_ID, 4000 + i, packets_count=10)
         send_udp_packet(sock, batch)
+        time.sleep(0.05)
     
     elapsed = time.time() - start_time
     print(f"\n✓ Sent 50 batches in {elapsed:.2f} seconds")
@@ -138,7 +139,7 @@ def test_multiple_channels(sock: socket.socket) -> None:
         for i in range(5):
             batch = create_telemetry_batch(channel, 5000 + i, packets_count=3)
             send_udp_packet(sock, batch)
-            time.sleep(0.05)
+            time.sleep(0.005)
     
     print(f"\n✓ Sent 15 batches across 3 channels")
 

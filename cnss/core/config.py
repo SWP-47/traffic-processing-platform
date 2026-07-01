@@ -58,6 +58,11 @@ class Settings(BaseSettings):
     # Pydantic V2 configuration for environment variables
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore")
 
+    # --- Data Retention ---
+    # Number of days to retain raw packet_flows data in TimescaleDB.
+    # Older data is automatically dropped by the retention policy.
+    retention_days: int = Field(default=7, alias="RETENTION_DAYS")
+
 
 # Global singleton instance of settings to be imported across the application
 settings = Settings()

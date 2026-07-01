@@ -38,3 +38,6 @@ logs/
 # Cache
 .mypy_cache/
 .pytest_cache/
+
+# Certs
+docker/nginx/certs/

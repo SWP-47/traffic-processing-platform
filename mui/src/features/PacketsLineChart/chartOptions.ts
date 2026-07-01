@@ -13,10 +13,9 @@ const chartOptions: EChartsOption = {
     // X Axis
     xAxis: {
         type: "time",
-        // TODO: dynamic interval size
         minInterval: 1000,
+        offset: 10,
 
-        offset: 20,
         animationDuration: 0,
         animationEasingUpdate: "linear",
         animationDurationUpdate: 1000,
@@ -42,6 +41,8 @@ const chartOptions: EChartsOption = {
             fontFamily: "Manrope",
             fontSize: 16,
         },
+        dataMin: 0,
+        dataMax: 1
     },
 
     // Zoom
@@ -69,7 +70,7 @@ const chartOptions: EChartsOption = {
             // Timestamp / Value / ChannelActivity / WindowSize
             const timestamp       = params[0].value[0]!;
             const channelIsActive = params[0].value[2]!;
-            const windowSize      = params[0].value[3]!;
+            const windowSize      = params[0].value[3]! as number;
 
             const time = new Date(timestamp);
             const timeLabel = time.toLocaleString();
@@ -77,7 +78,7 @@ const chartOptions: EChartsOption = {
             return `
                 <div class="${style.tooltip}">
                     <p class="${style.date}">${timeLabel}</p>
-                    <p class="${style.window}">${windowSize}s window size</p>
+                    <p class="${style.window}">${Math.ceil(windowSize / 1000)} s window size</p>
                     <div class="${style.props}">
                         <div class="${style.prop}">
                         <span class="${style.title}">Status:</span>

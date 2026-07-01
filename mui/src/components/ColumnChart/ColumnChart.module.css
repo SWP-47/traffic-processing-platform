@@ -1,18 +1,8 @@
-.chart {
-  padding: 30px; 
-  width: fit-content;
-  min-width: 300px;
-}
-
-.title {
-  font-weight: normal;
-}
-
 .columns {
-  margin-top: 30px;
-
   display: flex;
   gap: 20px;
+
+  width: 100%;
 
   align-items: center;
   justify-content: center;

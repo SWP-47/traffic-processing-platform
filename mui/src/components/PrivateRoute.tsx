@@ -1,12 +1,15 @@
 import { useAuth } from "@/hooks/useAuth";
-import type { ReactNode } from "react";
-import { Navigate } from 'react-router';
+import { Navigate, Outlet } from 'react-router';
+import Header from "./Header/Header";
 
-function PrivateRoute({ children }: { children: ReactNode }) {
+function PrivateRoute() {
   const { isAuthenticated } = useAuth();
 
   return isAuthenticated ? (
-    <>{children}</>
+    <>
+      <Header />
+      <Outlet />
+    </>
   ) : (
     <Navigate
       replace={true}

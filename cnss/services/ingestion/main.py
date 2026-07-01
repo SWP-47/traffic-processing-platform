@@ -14,6 +14,11 @@ from core.config import settings
 from core.logging import setup_logging
 from core.redis.client import init_redis_client, close_redis_client
 from core.database import init_db_pool, close_db_pool
+
+from services.ingestion.sequence_tracker import SequenceTracker
+from services.ingestion.state_manager import StateManager
+from services.ingestion.buffer_manager import BufferManager
+from services.ingestion.flusher import BackgroundFlusher
 from services.ingestion.udp_server import UDPIngestionServer
 
 # --- Module Logger ---
@@ -50,43 +55,65 @@ async def run_ingestion_worker() -> None:
     """
     # --- Infrastructure Initialization ---
     logger.info("Initializing Ingestion Worker infrastructure...")
-    
+
     # Initialize Redis client (required for Sequence Tracking and Buffering)
     await init_redis_client()
     logger.info("Redis client initialized successfully.")
-    
+
     # Initialize TimescaleDB connection pool (required for Background Flush)
     await init_db_pool()
     logger.info("TimescaleDB connection pool initialized successfully.")
 
+    # --- Component Instantiation ---
+    # Create the core processing components and wire them together.
+    sequence_tracker = SequenceTracker()
+    state_manager = StateManager(sequence_tracker=sequence_tracker)
+    buffer_manager = BufferManager()
+    background_flusher = BackgroundFlusher()
+
+    # --- Background Flusher Startup ---
+    # Start the background task that periodically flushes Redis buffers to TimescaleDB.
+    await background_flusher.start()
+    logger.info("Background Flusher started.")
+
     # --- UDP Server Startup ---
-    udp_server = UDPIngestionServer()
+    # Pass the processing components to the UDP server for batch handling.
+    udp_server = UDPIngestionServer(
+        state_manager=state_manager,
+        buffer_manager=buffer_manager,
+        flusher=background_flusher
+    )
+
     try:
         await udp_server.start()
         logger.info("Ingestion Worker is fully operational and listening for UDP traffic.")
-        
+
         # --- Main Loop / Wait for Shutdown ---
         # Block the main coroutine until the stop_event is set by a signal handler
         await stop_event.wait()
-        
+
     except Exception as e:
         logger.critical(f"Fatal error in Ingestion Worker: {e}", exc_info=True)
     finally:
         # --- Graceful Teardown Sequence ---
         logger.info("Starting graceful teardown sequence...")
-        
+
         # 1. Stop UDP Server (closes socket, stops receiving new datagrams)
         await udp_server.stop()
         logger.info("UDP server stopped.")
-        
-        # 2. Close Database Pool (terminates active TimescaleDB connections)
+
+        # 2. Stop Background Flusher (cancels the periodic flush task)
+        await background_flusher.stop()
+        logger.info("Background Flusher stopped.")
+
+        # 3. Close Database Pool (terminates active TimescaleDB connections)
         await close_db_pool()
         logger.info("TimescaleDB connection pool closed.")
-        
-        # 3. Close Redis Client (terminates Redis connections)
+
+        # 4. Close Redis Client (terminates Redis connections)
         await close_redis_client()
         logger.info("Redis client closed.")
-        
+
         logger.info("Ingestion Worker shutdown completed successfully.")
 
 
@@ -118,7 +145,7 @@ def main() -> None:
         # Fallback for environments where SIGINT handler might not trigger
         if not stop_event.is_set():
             stop_event.set()
-            loop.run_until_complete(run_ingestion_worker())
+        loop.run_until_complete(run_ingestion_worker())
     finally:
         # Clean up the event loop
         loop.close()

@@ -1,11 +1,12 @@
 # ==============================================================================
 # TimescaleDB Setup and Continuous Aggregates Migration
 # Initializes the high-performance time-series schema for packet telemetry.
-# Creates the packet_flows hypertable, continuous aggregates for real-time 
+# Creates the packet_flows hypertable, continuous aggregates for real-time
 # metrics, and automated retention policies to manage storage lifecycle.
 # ==============================================================================
 
 from typing import Sequence, Union
+
 from core.config import settings
 from alembic import op
 
@@ -40,14 +41,19 @@ def upgrade() -> None:
 
     # Convert the standard PostgreSQL table into a TimescaleDB hypertable.
     # Partitions the data automatically by the 'time' column for high-performance ingestion.
-    op.execute("SELECT create_hypertable('packet_flows', 'time');")
+    op.execute("""
+        SELECT create_hypertable('packet_flows', 'time', if_not_exists => TRUE);
+    """)
 
     # Create a composite index to optimize channel-specific time-series queries.
-    # Sorting by time DESC ensures the most recent packets are fetched instantly.
-    op.execute("CREATE INDEX idx_channel_time ON packet_flows (channel_id, time DESC);")
+    op.execute("""
+        CREATE INDEX idx_packet_flows_channel_time ON packet_flows (channel_id, time DESC);
+    """)
 
-    # Create the 1-second continuous aggregate for real-time telemetry metrics.
-    # Pre-calculates packet counts (IN/OUT) to prevent heavy GROUP BY queries on the raw table.
+    # --- Continuous Aggregate Creation (AUTOCOMMIT Mode) ---
+    # TimescaleDB continuous aggregates cannot be created inside a transaction block.
+    # Since we disabled automatic transaction wrapping in env.py, these commands
+    # will execute in AUTOCOMMIT mode by default.
     op.execute("""
         CREATE MATERIALIZED VIEW telemetry_1s
         WITH (timescaledb.continuous) AS
@@ -60,35 +66,40 @@ def upgrade() -> None:
         GROUP BY channel_id, bucket;
     """)
 
-    # Add a refresh policy to the continuous aggregate.
-    # Runs every 1 second, aggregating data between 5 seconds ago and 1 second ago.
+    # Add continuous aggregate policy for real-time refresh (every 1 second).
     op.execute("""
-        SELECT add_continuous_aggregate_policy('telemetry_1s', 
-            start_offset => INTERVAL '5 seconds', 
-            end_offset => INTERVAL '1 second', 
+        SELECT add_continuous_aggregate_policy('telemetry_1s',
+            start_offset => INTERVAL '5 seconds',
+            end_offset => INTERVAL '1 second',
             schedule_interval => INTERVAL '1 second');
     """)
 
-    # Add a retention policy to automatically drop data older than 7 days.
-    # Ensures the database does not grow indefinitely and maintains query performance.
-    op.execute(f"SELECT add_retention_policy('packet_flows', INTERVAL '{settings.retention_days} days');")
+    # Add retention policy to automatically drop data older than the configured period.
+    op.execute(f"""
+        SELECT add_retention_policy('packet_flows', INTERVAL '{settings.retention_days} days', if_not_exists => TRUE);
+    """)
 
 
 # --- Downgrade Operations ---
-# Reverts schema changes to safely roll back to the previous state.
-# Drops TimescaleDB policies and views before dropping the underlying hypertable.
+# Reverts the schema changes to transition the database to the previous revision.
 def downgrade() -> None:
-    # Remove the retention policy from the hypertable
-    op.execute("SELECT remove_retention_policy('packet_flows', if_exists => TRUE);")
+    # Drop the retention policy
+    op.execute("""
+        SELECT remove_retention_policy('packet_flows', if_exists => TRUE);
+    """)
 
-    # Remove the refresh policy from the continuous aggregate
-    op.execute("SELECT remove_continuous_aggregate_policy('telemetry_1s', if_exists => TRUE);")
+    # Drop the continuous aggregate policy
+    op.execute("""
+        SELECT remove_continuous_aggregate_policy('telemetry_1s', if_exists => TRUE);
+    """)
 
     # Drop the continuous aggregate materialized view
-    op.execute("DROP MATERIALIZED VIEW IF EXISTS telemetry_1s;")
+    op.execute("""
+        DROP MATERIALIZED VIEW IF EXISTS telemetry_1s;
+    """)
 
     # Drop the composite index
-    op.execute("DROP INDEX IF EXISTS idx_channel_time;")
+    op.execute("DROP INDEX IF EXISTS idx_packet_flows_channel_time;")
 
-    # Drop the hypertable (cascades to any remaining internal TimescaleDB chunks/indexes)
+    # Drop the hypertable (which also drops the underlying table)
     op.execute("DROP TABLE IF EXISTS packet_flows;")

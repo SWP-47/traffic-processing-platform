@@ -13,7 +13,6 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from alembic import context
-
 from core.config import settings
 from core.models.base import Base
 
@@ -22,12 +21,12 @@ from core.models.base import Base
 # Without these imports, Alembic cannot detect tables for autogenerate or migrations.
 import core.models.users  # noqa: F401
 import core.models.channels  # noqa: F401
-import core.models.packet_flows  # noqa: F401
 
-# --- Alembic Configuration Object ---
-# Provides access to the values within the .ini file in use.
+# --- Alembic Config Object ---
+# Provides access to values within the .ini file in use.
 config = context.config
 
+# --- Python Logging Configuration ---
 # Interpret the config file for Python logging if present.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -52,8 +51,6 @@ def run_migrations_offline() -> None:
     """
     # Retrieve the configured URL for script generation
     url = config.get_main_option("sqlalchemy.url")
-    
-    # Configure the context with the URL and metadata
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -71,11 +68,18 @@ def do_run_migrations(connection: Connection) -> None:
     """
     Synchronous helper to execute migrations within an active connection context.
     Called by the async wrapper to perform the actual schema modifications.
+    
+    Note: The connection is already configured with AUTOCOMMIT isolation level
+    to support TimescaleDB operations (continuous aggregates, retention policies)
+    that require execution outside of transaction blocks.
     """
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+    )
 
-    with context.begin_transaction():
-        context.run_migrations()
+    # Execute migrations without explicit transaction wrapping
+    context.run_migrations()
 
 
 async def run_async_migrations() -> None:
@@ -84,10 +88,14 @@ async def run_async_migrations() -> None:
     Creates an async engine, establishes a connection, and delegates execution.
     Required because our database driver (asyncpg) is strictly asynchronous.
     """
-    # Create an asynchronous SQLAlchemy engine using the configured URL
+    # Create an asynchronous SQLAlchemy engine using the configured URL.
+    # Set isolation_level to AUTOCOMMIT at the engine level to support TimescaleDB
+    # operations (continuous aggregates, retention policies) that require execution
+    # outside of transaction blocks.
     connectable = create_async_engine(
         config.get_main_option("sqlalchemy.url"),
         poolclass=pool.NullPool,
+        isolation_level="AUTOCOMMIT",
     )
 
     # Establish an async connection and run the synchronous migration helper
@@ -108,7 +116,7 @@ def run_migrations_online() -> None:
 
 
 # --- Execution Context Routing ---
-# Determine whether Alembic is running in offline (script generation) 
+# Determine whether Alembic is running in offline (script generation)
 # or online (direct database execution) mode and invoke the appropriate function.
 if context.is_offline_mode():
     run_migrations_offline()

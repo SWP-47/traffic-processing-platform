@@ -4,6 +4,7 @@ import "@/styles/global.css";
 import Dashboard from "@/pages/Dashboard/Dashboard";
 import Login from "@/pages/Login/Login";
 import PrivateRoute from "./components/PrivateRoute";
+import Hosts from "./pages/Hosts";
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
 
         <Route element={<PrivateRoute />}>
           <Route index element={<Dashboard />} />
+          <Route path="/hosts" element={<Hosts />} />
         </Route>
       </Routes>
     </BrowserRouter>

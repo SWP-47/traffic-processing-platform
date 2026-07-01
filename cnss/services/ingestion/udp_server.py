@@ -1,9 +1,9 @@
 # ==============================================================================
 # CnSS UDP Ingestion Server
 # Implements an asynchronous UDP server using asyncio.DatagramProtocol.
-# Receives TelemetryBatch payloads from Communication Nodes, enforces MTU 
-# constraints, validates JSON structure, and passes valid batches to the 
-# processing pipeline.
+# Receives TelemetryBatch payloads from Communication Nodes, enforces MTU
+# constraints (warn-only to prevent data loss), validates JSON structure,
+# and passes valid batches to the processing pipeline.
 # ==============================================================================
 
 import asyncio
@@ -16,11 +16,15 @@ from pydantic import ValidationError
 from core.config import settings
 from core.contracts.udp_contracts import TelemetryBatch
 from core.exceptions import ConfigurationError
+from services.ingestion.state_manager import StateManager
+from services.ingestion.buffer_manager import BufferManager
+from services.ingestion.flusher import BackgroundFlusher
 
 # --- Module Logger ---
 logger = logging.getLogger(__name__)
 
 
+# --- UDP Protocol Implementation ---
 class UDPIngestionProtocol(asyncio.DatagramProtocol):
     """
     Asyncio protocol implementation for handling incoming UDP datagrams.
@@ -30,30 +34,30 @@ class UDPIngestionProtocol(asyncio.DatagramProtocol):
     def __init__(self, on_batch_received: Callable[[TelemetryBatch, Tuple[str, int]], Awaitable[None]]):
         """
         Initializes the protocol with a callback for successfully parsed batches.
-        
+
         :param on_batch_received: Async callback to process TelemetryBatch.
         """
         self.transport: Optional[asyncio.DatagramTransport] = None
         self._on_batch_received = on_batch_received
 
     def connection_made(self, transport: asyncio.DatagramTransport) -> None:
-        """
-        Called when the UDP socket is successfully bound and ready to receive data.
-        """
+        """Called when the UDP socket is successfully bound and ready to receive data."""
         self.transport = transport
         logger.info("UDP socket is ready and listening for incoming datagrams.")
 
     def datagram_received(self, data: bytes, addr: Tuple[str, int]) -> None:
         """
         Triggered whenever a UDP datagram is received from a Communication Node.
-        Performs MTU validation, JSON decoding, and Pydantic model validation.
+        Performs MTU validation (warn-only), JSON decoding, and Pydantic model validation.
         """
-        # --- MTU Validation ---
-        # MTU constraint 
+        # --- MTU Validation (Warn-Only) ---
+        # MTU constraint is enforced as a warning to prevent data loss.
+        # Even oversized payloads are processed to ensure no telemetry is dropped.
         if len(data) > settings.cnss_udp_mtu:
             logger.warning(
                 f"Oversized UDP payload from {addr}. "
-                f"Size: {len(data)} bytes, Max allowed: {settings.cnss_udp_mtu} bytes."
+                f"Size: {len(data)} bytes, Max allowed: {settings.cnss_udp_mtu} bytes. "
+                f"Payload will still be processed."
             )
 
         # --- JSON Decoding ---
@@ -79,73 +83,93 @@ class UDPIngestionProtocol(asyncio.DatagramProtocol):
         asyncio.create_task(self._on_batch_received(batch, addr))
 
     def error_received(self, exc: Exception) -> None:
-        """
-        Called when a previous send or receive operation raises an OSError.
-        """
+        """Called when a previous send or receive operation raises an OSError."""
         logger.error(f"UDP protocol error: {exc}")
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
-        """
-        Called when the transport is closed.
-        """
+        """Called when the transport is closed."""
         if exc:
             logger.warning(f"UDP connection lost with error: {exc}")
         else:
             logger.info("UDP transport closed gracefully.")
 
 
+# --- UDP Server Wrapper ---
 class UDPIngestionServer:
     """
     High-level wrapper for the asyncio UDP server.
-    Manages the lifecycle of the DatagramProtocol and the underlying transport.
+    Manages the lifecycle of the DatagramProtocol and the underlying transport,
+    and orchestrates the processing pipeline for incoming telemetry batches.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        state_manager: StateManager,
+        buffer_manager: BufferManager,
+        flusher: BackgroundFlusher,
+    ) -> None:
+        """
+        Initializes the server with the core processing components.
+
+        :param state_manager: Handles Fast Path Redis state updates.
+        :param buffer_manager: Handles Redis Capped List buffering.
+        :param flusher: Background task for flushing buffers to TimescaleDB.
+        """
         self.transport: Optional[asyncio.DatagramTransport] = None
         self.protocol: Optional[UDPIngestionProtocol] = None
+        self._state_manager = state_manager
+        self._buffer_manager = buffer_manager
+        self._flusher = flusher
 
     async def _handle_batch(self, batch: TelemetryBatch, addr: Tuple[str, int]) -> None:
         """
         Callback invoked by the protocol when a valid TelemetryBatch is received.
-        This is the integration point for the Sequence Tracker and Buffer Manager.
-        
+        Orchestrates the sequence tracking, state updating, and buffering pipeline.
+
         :param batch: Validated telemetry data.
         :param addr: Source IP and port of the Communication Node.
         """
-        # TODO: Integrate with Sequence Tracker and Buffer Manager in subsequent steps
+        # --- Register Channel with Background Flusher ---
+        # Ensure the flusher monitors this channel's buffer for periodic DB inserts
+        await self._flusher.register_channel(batch.channel_id)
+
+        # --- Fast Path: State Update ---
+        # Update sequence tracking, activity status, and drop counters in Redis
+        await self._state_manager.process_batch(batch)
+
+        # --- Buffer Raw Packet Metadata ---
+        # Push flattened packet records to Redis Capped List for async DB insertion
+        await self._buffer_manager.push_packets(batch)
+
         logger.debug(
-            f"Received valid TelemetryBatch from {addr} | "
+            f"Processed TelemetryBatch from {addr} | "
             f"Channel: {batch.channel_id} | "
             f"Packets: {len(batch.packets)} | "
             f"Seq: {batch.sequence}"
         )
 
     async def start(self) -> None:
-        """
-        Binds the UDP socket and starts listening for incoming datagrams.
-        """
+        """Binds the UDP socket and starts listening for incoming datagrams."""
         loop = asyncio.get_running_loop()
-        
+
         # Validate port configuration
         if not (0 < settings.cnss_udp_port <= 65535):
             raise ConfigurationError(f"Invalid UDP port configured: {settings.cnss_udp_port}")
 
         logger.info(f"Binding UDP server to 0.0.0.0:{settings.cnss_udp_port}...")
-        
+
         # Create the UDP endpoint
         transport, protocol = await loop.create_datagram_endpoint(
             lambda: UDPIngestionProtocol(on_batch_received=self._handle_batch),
             local_addr=("0.0.0.0", settings.cnss_udp_port),
         )
-        
+
         self.transport = transport
         self.protocol = protocol
         logger.info(f"UDP Ingestion Server successfully bound to port {settings.cnss_udp_port}.")
 
     async def stop(self) -> None:
-        """
-        Gracefully closes the UDP transport and releases the socket.
-        """
+        """Gracefully closes the UDP transport and releases the socket."""
         if self.transport is not None:
             logger.info("Closing UDP transport...")
             self.transport.close()

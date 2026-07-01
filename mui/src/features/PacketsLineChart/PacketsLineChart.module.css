@@ -1,6 +1,8 @@
 .component {
     padding: 30px;
     width: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .header {
@@ -23,6 +25,8 @@
 .legend {
     display: flex;
     gap: 30px;
+
+    transition: filter .3s, opacity .3s;
 
     span {
         cursor: pointer;
@@ -67,6 +71,8 @@
 .filters {
     display: flex;
     gap: 25px;
+
+    transition: filter .3s, opacity .3s;
 }
 
 .filter {
@@ -91,9 +97,46 @@
 
 /* Chart */
 
-.chart {
-    height: 180px;
+.chart_wrapper {
     width: 100%;
+    flex-grow: 1;
+
+    position: relative;
+}
+
+.chart {    
+    min-height: 180px;
+    height: 100%;
+    width: 100%;
+    
+    transition: filter .5s;
+}
+
+.loading + .chart {
+    filter: blur(5px) opacity(.5);
+    pointer-events: none;
+}
+
+.loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+
+    width: 30px;
+    height: 30px;
+    animation: loading 2s linear infinite;
+
+    user-select: none;
+}
+
+@keyframes loading {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 .tooltipWrapper {
@@ -157,4 +200,13 @@
 
 [data-name="Sent"]::before {
     background-color: var(--color-accent);
+}
+
+.inactive {
+    .legend,
+    .filters {
+        filter: grayscale();
+        opacity: .7;
+        pointer-events: none;
+    }
 }

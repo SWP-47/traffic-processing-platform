@@ -5,6 +5,7 @@ export interface ConnectionData {
 };
 
 export type ConnectionStatus = 
+  | 'idle'
   | 'connecting'
   | 'connected'
   | 'disconnecting'
@@ -63,7 +64,7 @@ class WebSocketConnectionService {
     private reconnectionTimeout: number | undefined;
 
     private state: ConnectionState = {
-        connectionStatus: 'disconnected',
+        connectionStatus: 'idle',
         message: null,
         channelId: null
     }
@@ -79,7 +80,8 @@ class WebSocketConnectionService {
         // Schedule new connection after closing of the current one.
         if (this.connection) {
             this.followingConnectionData = data;
-            if (this.connection.readyState != WebSocket.CLOSING) this.disconnect();    
+            if (this.connection.readyState != WebSocket.CLOSING && this.connection.readyState != WebSocket.CLOSED)
+                this.disconnect();    
             return;
         }
         
@@ -161,9 +163,10 @@ class WebSocketConnectionService {
 
         this.connection = null;
 
+        // If the user manually disconnected, set IDLE satus, otherwise DISCONNECTED
         this.state = {
-            connectionStatus: 'disconnected',
-            message: event.reason,
+            connectionStatus: this.state.connectionStatus === 'disconnecting' ? 'idle' : 'disconnected',
+            message: event.reason || null,
             channelId: null
         };
         this.notifyAllStateListeners();

@@ -7,7 +7,7 @@ import infoIcon from '@/assets/info.svg';
 import loadingIcon from '@/assets/loading.svg';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useTelemetrySelector } from '@/hooks/useTelemetry';
-import useDelayedVisibility from '../../hooks/useDelayedVisibility';
+import useDelayedVisibility from '@/hooks/useDelayedVisibility';
 
 type Channel = { id: string; active: boolean };
 

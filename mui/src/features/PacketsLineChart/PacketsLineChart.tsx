@@ -6,6 +6,8 @@ import telemetry from '@/services/telemetry';
 import chartOptions from './chartOptions';
 import { getHistory, type HistoryPeriod } from '@/services/history';
 import { useWebSocket } from '@/hooks/useWebSocket';
+import loadingIcon from '@/assets/loading.svg';
+import useDelayedVisibility from '@/hooks/useDelayedVisibility';
 
 const timeScaleMap: { [index: number]: HistoryPeriod } = {
   [3600]: '1h',
@@ -21,6 +23,9 @@ function PacketsLineChart() {
   const [ selectedSeries, setSelectedSeries ] = useState<{ [index: string] : boolean }>({ "Received": true, "Sent": true });
   const [ timeScale, setTimeScale ] = useState<number>(3600);
   const { connectionStatus, channelId } = useWebSocket();
+  const [ isDataFetches, setIsDataFetches ] = useState<boolean>(false); 
+
+  const showLoading = useDelayedVisibility(connectionStatus === 'connecting' || isDataFetches, 200);
 
   // Init chart
   useEffect(() => {
@@ -68,6 +73,7 @@ function PacketsLineChart() {
     let bucketSizeMs = 0;
 
     const loadHistoryData = async () => {
+      setIsDataFetches(true);
       const response = await getHistory(channelId, timeScaleMap[timeScale]!);
       bucketSizeMs = response.interval_sec! * 1000;
 
@@ -86,6 +92,7 @@ function PacketsLineChart() {
       })
 
       isLoading = false;
+      setIsDataFetches(false);
       chart.setOption({
         xAxis: { minInterval: bucketSizeMs },
         dataZoom: [{ minValueSpan: bucketSizeMs * 2 }]
@@ -155,7 +162,6 @@ function PacketsLineChart() {
     }
   }, [channelId, timeScale])
 
-
   // Configure selection
   const toggleLegend = (event: MouseEvent<HTMLSpanElement>) => {
     const series = (event.target as HTMLSpanElement).getAttribute("data-series")!;
@@ -178,7 +184,6 @@ function PacketsLineChart() {
     chartRef.current.setOption({ legend: { selected: selectedSeries } });
   }, [selectedSeries])
 
-
   // Configure time scale
   const selectScale = (event: MouseEvent<HTMLButtonElement>) => {
     // Update CSS classes
@@ -189,9 +194,8 @@ function PacketsLineChart() {
     setTimeScale(newScale);
   };
   
-
   return (
-    <div className={`${styles.component} card ${connectionStatus !== 'connected' && styles.inactive}`}>
+    <div className={`${styles.component} card ${(connectionStatus !== 'connected' || showLoading) && styles.inactive}`}>
       <div className={styles.header}>
         <div className={styles.left}>
           <h1>RX/TX Rate over time</h1>
@@ -207,7 +211,10 @@ function PacketsLineChart() {
           <button onClick={selectScale} data-value={3600*24*30} className={styles.filter}>30d</button>
         </div>
       </div>
-      <div ref={chartElementRef} className={styles.chart} />
+      <div className={styles.chart_wrapper}>
+        { showLoading && (<img src={loadingIcon} className={styles.loading} alt="Loading..." />) }
+        <div ref={chartElementRef} className={styles.chart}/>
+      </div>
     </div>
   )
 }

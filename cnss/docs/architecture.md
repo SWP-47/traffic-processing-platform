@@ -285,3 +285,42 @@ Communication Nodes (CN) are not cryptographically authenticated. The `channel_i
 - **Certificate Lifecycle**:
   - **Development**: Self-signed certificates are generated via `make certs` and distributed to LAN clients via `make serve-certs`. Clients must install the certificate into their system's trust store to avoid browser security warnings.
   - **Production**: Certificates from a trusted Certificate Authority (e.g., Let's Encrypt, internal corporate CA) must be used. Self-signed certificates are **never** acceptable in production.
+
+---
+
+## 6. Error Codes and WebSocket Close Codes Summary
+
+All REST API errors follow a consistent JSON response format:
+
+```json
+{
+  "error": "<error_code>",
+  "message": "<human-readable description>"
+}
+```
+
+### 6.1. REST API HTTP Error Codes
+
+These codes are returned by the CnSS REST API endpoints (Authentication, Channels, History, Health) when a request fails.
+
+| HTTP Status | Error Code | Description |
+| :--- | :--- | :--- |
+| **400** | `bad_request` | Malformed request payload or missing required fields. |
+| **401** | `unauthorized` | The Bearer token is missing, invalid, expired, or has been revoked (found in `jwt:revoked`). |
+| **401** | `invalid_credentials` | Invalid username or password provided during the `POST /api/v1/auth/login` attempt. |
+| **403** | `forbidden` | The token is valid, but the user lacks permission for the requested resource (e.g., a `viewer` accessing a channel outside their `scope`). |
+| **404** | `not_found` | The requested channel or specific resource does not exist in the CnSS registry. |
+| **500** | `internal_error` | Unexpected server-side failure or database connectivity issue. |
+| **503** | `unhealthy` | Returned by the `/health` endpoint when the CnSS or its core components are in an error/degraded state. |
+
+### 6.2. WebSocket Connection Close Codes
+
+These codes are sent by the CnSS WebSocket Service to the MUI (Management User Interface) to terminate a connection or reject a subscription request.
+
+| Close Code | Reason | Description |
+| :--- | :--- | :--- |
+| **4001** | `invalid_token` | The JWT is missing, malformed, expired, has an invalid signature, or has been explicitly revoked. |
+| **4002** | `missing_channel` | The `channel_id` query parameter is entirely absent from the initial WebSocket connection URL. |
+| **4003** | `channel_forbidden` | The user does not have access to the requested channel (scope mismatch), OR the `channel_id` specified in a subsequent subscription control message differs from the one in the connection URL. |
+| **4004** | `channel_not_found` *(or `target_not_found`)* | The `channel_id` does not match any known/active channel in the registry, OR the `target` specified in a subscription control message is invalid/unknown. |
+| **1011** | `internal_error` | An unexpected internal server error occurred during the WebSocket session. |

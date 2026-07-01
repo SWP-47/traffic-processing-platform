@@ -145,28 +145,6 @@ services:
       - cnss-network
 
 # ==============================================================================
-# Reverse Proxy
-# ==============================================================================
-
-  # --- Nginx (TLS Termination & Routing) ---
-  # Handles external routing for HTTPS and WSS, terminating TLS before reaching microservices.
-  nginx:
-    image: nginx:alpine
-    container_name: cnss-nginx
-    restart: always
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./docker/nginx/certs:/etc/nginx/certs:ro
-    depends_on:
-      - api
-      - websocket
-    networks:
-      - cnss-network
-
-# ==============================================================================
 # Networks
 # ==============================================================================
 networks:

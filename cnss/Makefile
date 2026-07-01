@@ -113,38 +113,3 @@ stop-dev:
 ## logs: Tail all service logs
 logs:
 	@tail -f logs/*.log
-
-
-## certs: Generate self-signed TLS certificates for local HTTPS/WSS testing
-certs:
-	@mkdir -p docker/nginx/certs
-	@echo "Generating self-signed certificate for localhost and local network..."
-	@openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-		-keyout docker/nginx/certs/privkey.pem \
-		-out docker/nginx/certs/fullchain.pem \
-		-subj "/C=RU/ST=Local/L=Local/O=CnSS/CN=localhost" \
-		-addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
-	@cp docker/nginx/certs/fullchain.pem docker/nginx/certs/cnss-local.crt
-	@echo "✓ Certificates generated in docker/nginx/certs/"
-	@echo "  - privkey.pem (private key)"
-	@echo "  - fullchain.pem (certificate)"
-	@echo "  - cnss-local.crt (copy for distribution)"
-	@echo ""
-	@echo "To trust them system-wide on Arch Linux, run:"
-	@echo "  sudo cp docker/nginx/certs/cnss-local.crt /etc/ca-certificates/trust-source/anchors/"
-	@echo "  sudo trust extract-compat"
-
-## serve-certs: Start HTTP server to distribute certificates to local network clients
-serve-certs:
-	@echo "======================================================================"
-	@echo " CnSS Certificate Distribution Server"
-	@echo "======================================================================"
-	@echo ""
-	@echo " Clients can download the certificate at:"
-	@echo "   http://<YOUR-SERVER-IP>:9000/cnss-local.crt"
-	@echo ""
-	@echo " To find your server IP, run: ip addr show"
-	@echo ""
-	@echo " Press Ctrl+C to stop the server"
-	@echo "======================================================================"
-	@cd docker/nginx/certs && python -m http.server 9000 --bind 0.0.0.0

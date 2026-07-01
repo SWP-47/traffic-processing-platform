@@ -1,0 +1,21 @@
+services:
+  edge-nginx:
+    image: nginx:alpine
+    container_name: edge-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+      - ../../mui/dist:/usr/share/nginx/mui:ro
+    networks:
+      - cnss-network
+      - mui-network
+
+networks:
+  cnss-network:
+    external: true
+  mui-network:
+    external: true

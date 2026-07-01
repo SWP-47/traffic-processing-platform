@@ -19,10 +19,14 @@ class Settings(BaseSettings):
     cnss_udp_port: int = Field(default=5140, alias="CnSS_UDP_PORT")
     # Maximum Transmission Unit constraint for UDP payloads (must be < 1400 bytes)
     cnss_udp_mtu: int = Field(default=1400, alias="CnSS_UDP_MTU")
+    # Threshold for detecting abnormal backward jumps in sequence numbers (CN reboot/reset)
+    sequence_reset_threshold: int = Field(default=1_000_000, alias="SEQUENCE_RESET_THRESHOLD")
 
     # --- Redis Configuration ---
     # Connection URL for the ephemeral Redis instance (no persistence)
     redis_url: str = Field(default="redis://redis:6379/0", alias="REDIS_URL")
+    # Maximum length of the Redis capped list for UDP buffering (prevents OOM if DB flusher lags)
+    redis_udp_buffer_max_len: int = Field(default=100_000, alias="REDIS_UDP_BUFFER_MAX_LEN")
 
     # --- Database Configuration (TimescaleDB) ---
     # Async connection URL for PostgreSQL/TimescaleDB
@@ -54,6 +58,8 @@ class Settings(BaseSettings):
     activity_timeout_ms: int = Field(default=5000, alias="ACTIVITY_TIMEOUT_MS")
     # Default window for real-time telemetry aggregation in seconds
     reporting_window_sec: float = Field(default=5.0, alias="REPORTING_WINDOW_SEC")
+    # Interval in seconds for the Background Flusher to push Redis buffers to TimescaleDB
+    flush_interval_sec: float = Field(default=1.0, alias="FLUSH_INTERVAL_SEC")
 
     # Pydantic V2 configuration for environment variables
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore")

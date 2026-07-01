@@ -1,21 +1,28 @@
-# Production deployment: all microservices + infrastructure behind Nginx.
+# ==============================================================================
+# CnSS Production Docker Compose Configuration
+# Orchestrates all microservices and infrastructure components for production.
+# Includes TimescaleDB, Redis, 4 Microservices, and Nginx reverse proxy.
+# ==============================================================================
 
 services:
-  # ============================================================================
-  # Infrastructure
-  # ============================================================================
+# ==============================================================================
+# Infrastructure Services
+# ==============================================================================
 
   # --- TimescaleDB (Persistent Storage) ---
+  # Primary database for time-series telemetry and relational state.
   timescaledb:
     image: timescale/timescaledb:latest-pg15
     container_name: cnss-timescaledb
-    restart: unless-stopped
+    # Restart policy ensures immediate recovery if the container crashes
+    restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-cnss}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cnss}
       POSTGRES_DB: ${POSTGRES_DB:-cnss}
     volumes:
       - timescaledb_data:/var/lib/postgresql/data
+    # Healthcheck to ensure TimescaleDB is ready to accept connections
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cnss} -d ${POSTGRES_DB:-cnss}"]
       interval: 10s
@@ -25,11 +32,14 @@ services:
       - cnss-network
 
   # --- Redis (Ephemeral State & Buffer) ---
+  # In-memory data store for buffering, pub/sub, and ephemeral state.
+  # Configured to run without persistence (Ephemeral Mode).
   redis:
     image: redis:7-alpine
     container_name: cnss-redis
-    restart: unless-stopped
+    restart: always
     volumes:
+      # Mount custom Redis configuration to enforce ephemeral mode
       - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
     command: redis-server /usr/local/etc/redis/redis.conf
     healthcheck:
@@ -40,17 +50,18 @@ services:
     networks:
       - cnss-network
 
-  # ============================================================================
-  # Microservices
-  # ============================================================================
+# ==============================================================================
+# Microservices
+# ==============================================================================
 
   # --- REST API & Auth Service ---
+  # HTTP gateway, identity management, and historical data retrieval.
   api:
     build:
       context: .
       dockerfile: docker/api.Dockerfile
     container_name: cnss-api
-    restart: unless-stopped
+    restart: always
     env_file:
       - .env
     environment:
@@ -65,12 +76,13 @@ services:
       - cnss-network
 
   # --- WebSocket Service ---
+  # Persistent client connection management and subscription routing.
   websocket:
     build:
       context: .
       dockerfile: docker/websocket.Dockerfile
     container_name: cnss-websocket
-    restart: unless-stopped
+    restart: always
     env_file:
       - .env
     environment:
@@ -85,18 +97,20 @@ services:
       - cnss-network
 
   # --- Ingestion Worker (UDP Listener & Buffer Manager) ---
+  # High-performance telemetry ingestion, sequence tracking, and database buffering.
   ingestion:
     build:
       context: .
       dockerfile: docker/ingestion.Dockerfile
     container_name: cnss-ingestion
-    restart: unless-stopped
+    restart: always
     env_file:
       - .env
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-cnss}:${POSTGRES_PASSWORD:-cnss}@timescaledb:5432/${POSTGRES_DB:-cnss}
       - REDIS_URL=redis://redis:6379/0
     ports:
+      # Expose UDP port for receiving TelemetryBatch payloads from Communication Nodes
       - "${CnSS_UDP_PORT:-5140}:5140/udp"
     depends_on:
       timescaledb:
@@ -107,12 +121,13 @@ services:
       - cnss-network
 
   # --- Reporting Worker (Background Aggregator) ---
+  # Periodic metric aggregation, state synchronization, and real-time event publishing.
   reporting:
     build:
       context: .
       dockerfile: docker/reporting.Dockerfile
     container_name: cnss-reporting
-    restart: unless-stopped
+    restart: always
     env_file:
       - .env
     environment:
@@ -126,15 +141,16 @@ services:
     networks:
       - cnss-network
 
-  # ============================================================================
-  # Reverse Proxy
-  # ============================================================================
+# ==============================================================================
+# Reverse Proxy
+# ==============================================================================
 
   # --- Nginx (TLS Termination & Routing) ---
+  # Handles external routing for HTTPS and WSS, terminating TLS before reaching microservices.
   nginx:
     image: nginx:alpine
     container_name: cnss-nginx
-    restart: unless-stopped
+    restart: always
     ports:
       - "80:80"
       - "443:443"

@@ -24,6 +24,8 @@
     display: flex;
     gap: 30px;
 
+    transition: filter .3s, opacity .3s;
+
     span {
         cursor: pointer;
         display: flex;
@@ -67,6 +69,8 @@
 .filters {
     display: flex;
     gap: 25px;
+
+    transition: filter .3s, opacity .3s;
 }
 
 .filter {
@@ -157,4 +161,13 @@
 
 [data-name="Sent"]::before {
     background-color: var(--color-accent);
+}
+
+.inactive {
+    .legend,
+    .filters {
+        filter: grayscale();
+        opacity: .7;
+        pointer-events: none;
+    }
 }

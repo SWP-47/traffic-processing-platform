@@ -1,4 +1,4 @@
-import style from './PacketsLineChart.module.css';
+import styles from './PacketsLineChart.module.css';
 import { useEffect, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { init, type EChartsType } from 'echarts';
@@ -20,7 +20,7 @@ function PacketsLineChart() {
   const chartRef = useRef<EChartsType>(null);
   const [ selectedSeries, setSelectedSeries ] = useState<{ [index: string] : boolean }>({ "Received": true, "Sent": true });
   const [ timeScale, setTimeScale ] = useState<number>(3600);
-  const { channelId } = useWebSocket();
+  const { connectionStatus, channelId } = useWebSocket();
 
   // Init chart
   useEffect(() => {
@@ -31,6 +31,9 @@ function PacketsLineChart() {
     chartRef.current = chart;
     
     chart.setOption(chartOptions);
+    chart.setOption({
+      xAxis: { dataMin: Date.now() - timeScale * 1000, dataMax: Date.now() }
+    })
 
     const resizeObserver = new ResizeObserver(() => chart.resize());
     resizeObserver.observe(chartElementRef.current);
@@ -62,29 +65,31 @@ function PacketsLineChart() {
     // TODO: Make bucket system
 
     let isLoading = true;
-    chart.showLoading();
-    let bucketSize = 0;
+    let bucketSizeMs = 0;
 
     const loadHistoryData = async () => {
       const response = await getHistory(channelId, timeScaleMap[timeScale]!);
-      bucketSize = response.interval_sec!;
+      bucketSizeMs = response.interval_sec! * 1000;
 
       response.points?.forEach(point => {
         const date = Date.parse(point.timestamp!);
 
         data.Received!.push({
           name: point.timestamp!,
-          value: [date, point.packets_in_per_sec!, point.is_active! ? 1 : 0, bucketSize]
+          value: [date, point.packets_in_per_sec!, point.is_active! ? 1 : 0, bucketSizeMs]
         })
 
         data.Sent!.push({
           name: point.timestamp!,
-          value: [date, point.packets_out_per_sec!, point.is_active! ? 1 : 0, bucketSize]
+          value: [date, point.packets_out_per_sec!, point.is_active! ? 1 : 0, bucketSizeMs]
         })
       })
 
       isLoading = false;
-      chart.hideLoading();
+      chart.setOption({
+        xAxis: { minInterval: bucketSizeMs },
+        dataZoom: [{ minValueSpan: bucketSizeMs * 2 }]
+      })
     }
 
     loadHistoryData();
@@ -129,7 +134,7 @@ function PacketsLineChart() {
             { name: "Received", data: data.Received },
             { name: "Sent", data: data.Sent }
           ],
-          xAxis: { dataMin: Date.now() - timeScale * 1000 },
+          xAxis: { dataMin: Date.now() - timeScale * 1000, dataMax: Date.now() },
           dataZoom: { startValue: currentStart, endValue: currentEnd }
         });
       } else {
@@ -138,7 +143,7 @@ function PacketsLineChart() {
             { name: "Received", data: data.Received },
             { name: "Sent", data: data.Sent }
           ],
-          xAxis: { dataMin: Date.now() - timeScale * 1000 }
+          xAxis: { dataMin: Date.now() - timeScale * 1000, dataMax: Date.now() }
         });
       }
     })
@@ -157,7 +162,7 @@ function PacketsLineChart() {
     if (selectedSeries[series] === undefined) return;
 
     // Update CSS classes
-    (event.target as HTMLElement).classList.toggle(style.inactive!);
+    (event.target as HTMLElement).classList.toggle(styles.inactive!);
 
     // Toggle selection
     setSelectedSeries({
@@ -177,8 +182,8 @@ function PacketsLineChart() {
   // Configure time scale
   const selectScale = (event: MouseEvent<HTMLButtonElement>) => {
     // Update CSS classes
-    document.querySelectorAll(`.${style.filter}`).forEach(e => e.classList.remove(style.active!));
-    (event.target as HTMLElement).classList.add(style.active!);
+    document.querySelectorAll(`.${styles.filter}`).forEach(e => e.classList.remove(styles.active!));
+    (event.target as HTMLElement).classList.add(styles.active!);
 
     const newScale = +(event.target as HTMLSpanElement).getAttribute("data-value")!;
     setTimeScale(newScale);
@@ -186,23 +191,23 @@ function PacketsLineChart() {
   
 
   return (
-    <div className={`${style.component} card`}>
-      <div className={style.header}>
-        <div className={style.left}>
+    <div className={`${styles.component} card ${connectionStatus !== 'connected' && styles.inactive}`}>
+      <div className={styles.header}>
+        <div className={styles.left}>
           <h1>RX/TX Rate over time</h1>
-          <div className={style.legend}>
+          <div className={styles.legend}>
             <span onClick={toggleLegend} data-series="Received">Received</span>
             <span onClick={toggleLegend} data-series="Sent">Sent</span>
           </div>
         </div>
-        <div className={style.filters}>
-          <button onClick={selectScale} data-value={3600}       className={`${style.filter} ${style.active}`}>1h</button>
-          <button onClick={selectScale} data-value={3600*24}    className={style.filter}>24h</button>
-          <button onClick={selectScale} data-value={3600*24*7}  className={style.filter}>7d</button>
-          <button onClick={selectScale} data-value={3600*24*30} className={style.filter}>30d</button>
+        <div className={styles.filters}>
+          <button onClick={selectScale} data-value={3600}       className={`${styles.filter} ${styles.active}`}>1h</button>
+          <button onClick={selectScale} data-value={3600*24}    className={styles.filter}>24h</button>
+          <button onClick={selectScale} data-value={3600*24*7}  className={styles.filter}>7d</button>
+          <button onClick={selectScale} data-value={3600*24*30} className={styles.filter}>30d</button>
         </div>
       </div>
-      <div ref={chartElementRef} className={style.chart} />
+      <div ref={chartElementRef} className={styles.chart} />
     </div>
   )
 }

@@ -8,19 +8,19 @@
 import asyncio
 from logging.config import fileConfig
 
+from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from alembic import context
-from core.config import settings
-from core.models.base import Base
+import core.models.channels  # noqa: F401
 
 # --- Model Registration ---
 # Explicitly import all ORM models to ensure they are registered in Base.metadata.
 # Without these imports, Alembic cannot detect tables for autogenerate or migrations.
 import core.models.users  # noqa: F401
-import core.models.channels  # noqa: F401
+from core.config import settings
+from core.models.base import Base
 
 # --- Alembic Config Object ---
 # Provides access to values within the .ini file in use.
@@ -68,7 +68,7 @@ def do_run_migrations(connection: Connection) -> None:
     """
     Synchronous helper to execute migrations within an active connection context.
     Called by the async wrapper to perform the actual schema modifications.
-    
+
     Note: The connection is already configured with AUTOCOMMIT isolation level
     to support TimescaleDB operations (continuous aggregates, retention policies)
     that require execution outside of transaction blocks.
@@ -92,8 +92,12 @@ async def run_async_migrations() -> None:
     # Set isolation_level to AUTOCOMMIT at the engine level to support TimescaleDB
     # operations (continuous aggregates, retention policies) that require execution
     # outside of transaction blocks.
+    url = config.get_main_option("sqlalchemy.url")
+    if not url:
+        raise ValueError("Database URL is not configured in alembic.ini or env.py.")
+
     connectable = create_async_engine(
-        config.get_main_option("sqlalchemy.url"),
+        url,
         poolclass=pool.NullPool,
         isolation_level="AUTOCOMMIT",
     )

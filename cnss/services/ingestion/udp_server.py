@@ -9,16 +9,16 @@
 import asyncio
 import json
 import logging
-from typing import Optional, Tuple, Callable, Awaitable
+from typing import Any, Callable, Coroutine, Optional, Tuple
 
 from pydantic import ValidationError
 
 from core.config import settings
 from core.contracts.udp_contracts import TelemetryBatch
 from core.exceptions import ConfigurationError
-from services.ingestion.state_manager import StateManager
 from services.ingestion.buffer_manager import BufferManager
 from services.ingestion.flusher import BackgroundFlusher
+from services.ingestion.state_manager import StateManager
 
 # --- Module Logger ---
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ class UDPIngestionProtocol(asyncio.DatagramProtocol):
     Responsible for raw byte reception, MTU validation, and JSON parsing.
     """
 
-    def __init__(self, on_batch_received: Callable[[TelemetryBatch, Tuple[str, int]], Awaitable[None]]):
+    def __init__(self, on_batch_received: Callable[[TelemetryBatch, Tuple[str, int]], Coroutine[Any, Any, None]]):
         """
         Initializes the protocol with a callback for successfully parsed batches.
 
@@ -40,9 +40,9 @@ class UDPIngestionProtocol(asyncio.DatagramProtocol):
         self.transport: Optional[asyncio.DatagramTransport] = None
         self._on_batch_received = on_batch_received
 
-    def connection_made(self, transport: asyncio.DatagramTransport) -> None:
+    def connection_made(self, transport: asyncio.BaseTransport) -> None:
         """Called when the UDP socket is successfully bound and ready to receive data."""
-        self.transport = transport
+        self.transport = transport  # type: ignore[assignment]
         logger.info("UDP socket is ready and listening for incoming datagrams.")
 
     def datagram_received(self, data: bytes, addr: Tuple[str, int]) -> None:
@@ -77,9 +77,8 @@ class UDPIngestionProtocol(asyncio.DatagramProtocol):
         # --- Pass to Processing Pipeline ---
         # Schedule the async callback to hand off the validated batch
         logger.debug(
-            f"Scheduling the async callback to hand off "
-            f"the validated batch from {addr} (Seq: {batch.sequence})"
-            )
+            f"Scheduling the async callback to hand off " f"the validated batch from {addr} (Seq: {batch.sequence})"
+        )
         asyncio.create_task(self._on_batch_received(batch, addr))
 
     def error_received(self, exc: Exception) -> None:

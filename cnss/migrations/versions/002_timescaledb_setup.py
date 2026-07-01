@@ -7,14 +7,15 @@
 
 from typing import Sequence, Union
 
-from core.config import settings
 from alembic import op
+
+from core.config import settings
 
 # --- Revision Identifiers ---
 # Auto-generated identifiers used by Alembic to track migration history and order.
 # '002' denotes the TimescaleDB specific schema extensions following the initial relational setup.
-revision: str = '002'
-down_revision: Union[str, None] = '001'
+revision: str = "002"
+down_revision: Union[str, None] = "001"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -57,12 +58,12 @@ def upgrade() -> None:
     op.execute("""
         CREATE MATERIALIZED VIEW telemetry_1s
         WITH (timescaledb.continuous) AS
-        SELECT 
-            channel_id, 
+        SELECT
+            channel_id,
             time_bucket('1 second', time) AS bucket,
             COUNT(*) FILTER (WHERE direction = 0) AS packets_in,
             COUNT(*) FILTER (WHERE direction = 1) AS packets_out
-        FROM packet_flows 
+        FROM packet_flows
         GROUP BY channel_id, bucket;
     """)
 

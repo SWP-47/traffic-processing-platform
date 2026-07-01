@@ -9,12 +9,12 @@ import asyncio
 import json
 import logging
 from datetime import datetime
-from typing import List, Optional, Set, Tuple
+from typing import Any, List, Optional, Set, Tuple
 
 from core.config import settings
 from core.database import get_db_pool
 from core.exceptions import DatabaseError, RedisError
-from core.redis.client import get_lua_script, get_redis_client
+from core.redis.client import get_lua_script
 
 # --- Module Logger ---
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class BackgroundFlusher:
 
     def __init__(self) -> None:
         """Initializes the flusher state and asyncio task reference."""
-        self._task: Optional[asyncio.Task] = None
+        self._task: Optional[asyncio.Task[None]] = None
         # In-memory registry of channels that have active buffers.
         # Populated by the UDPIngestionServer upon receiving valid batches.
         self._active_channels: Set[str] = set()
@@ -44,7 +44,7 @@ class BackgroundFlusher:
         """
         Registers a channel as active so the flusher knows to check its buffer.
         Called by the UDPIngestionServer when a new batch arrives.
-        
+
         :param channel_id: The identifier of the channel to register.
         """
         async with self._lock:
@@ -54,9 +54,7 @@ class BackgroundFlusher:
         """Starts the background asyncio task for periodic flushing."""
         if self._task is None or self._task.done():
             self._task = asyncio.create_task(self._run_loop())
-            logger.info(
-                f"Background Flusher started. Flush interval: {settings.flush_interval_sec}s."
-            )
+            logger.info(f"Background Flusher started. Flush interval: {settings.flush_interval_sec}s.")
 
     async def stop(self) -> None:
         """Gracefully cancels the background flusher task."""
@@ -100,11 +98,11 @@ class BackgroundFlusher:
         """
         Atomically pops all records from the Redis buffer for a specific channel
         and executes a batch INSERT into TimescaleDB.
-        
+
         :param channel_id: The identifier of the channel to flush.
         """
         buffer_key = f"{BUFFER_KEY_PREFIX}{channel_id}"
-        
+
         try:
             # --- Atomic Redis Pop ---
             # Execute the Lua script to read and delete the list in one atomic operation
@@ -116,19 +114,21 @@ class BackgroundFlusher:
 
             # --- Data Parsing ---
             # Deserialize JSON strings and convert to tuples for asyncpg executemany
-            parsed_records: List[Tuple] = []
+            parsed_records: List[Tuple[Any, ...]] = []
             for raw_json in raw_items:
                 try:
                     record = json.loads(raw_json)
-                    parsed_records.append((
-                        datetime.fromisoformat(record["time"]),
-                        record["channel_id"],
-                        record["direction"],
-                        record["src_ip"],
-                        record["dst_ip"],
-                        record["src_port"],
-                        record["dst_port"],
-                    ))
+                    parsed_records.append(
+                        (
+                            datetime.fromisoformat(record["time"]),
+                            record["channel_id"],
+                            record["direction"],
+                            record["src_ip"],
+                            record["dst_ip"],
+                            record["src_port"],
+                            record["dst_port"],
+                        )
+                    )
                 except (json.JSONDecodeError, KeyError, TypeError) as e:
                     logger.error(f"Failed to parse buffered packet record for '{channel_id}': {e}")
                     continue
@@ -145,12 +145,11 @@ class BackgroundFlusher:
                     INSERT INTO packet_flows (time, channel_id, direction, src_ip, dst_ip, src_port, dst_port)
                     VALUES ($1, $2, $3, $4, $5, $6, $7)
                     """,
-                    parsed_records
+                    parsed_records,
                 )
-                
+
             logger.debug(
-                f"Channel '{channel_id}': Successfully flushed {len(parsed_records)} "
-                f"packets to TimescaleDB."
+                f"Channel '{channel_id}': Successfully flushed {len(parsed_records)} " f"packets to TimescaleDB."
             )
 
         except RedisError as e:

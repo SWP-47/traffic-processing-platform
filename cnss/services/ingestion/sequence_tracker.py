@@ -9,8 +9,8 @@ import logging
 from typing import Tuple
 
 from core.config import settings
-from core.redis.client import get_redis_client
 from core.exceptions import RedisError
+from core.redis.client import get_redis_client
 
 # --- Module Logger ---
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ class SequenceTracker:
     async def process_sequence(self, channel_id: str, incoming_sequence: int) -> Tuple[int, bool]:
         """
         Processes the incoming sequence number for a given channel.
-        
+
         :param channel_id: The identifier of the channel.
         :param incoming_sequence: The sequence number from the TelemetryBatch.
         :return: A tuple containing (calculated_drops, is_reset).
@@ -46,11 +46,11 @@ class SequenceTracker:
                  is_reset is True if a sequence reset was detected.
         """
         seq_key = self._get_seq_key(channel_id)
-        
+
         try:
             # Retrieve the last known sequence number from Redis
             last_sequence_str = await self._redis.get(seq_key)
-            
+
             # --- Initial State Handling ---
             # If the key does not exist, this is a new channel or post-crash state.
             # Store the incoming sequence as the baseline without calculating drops.
@@ -83,7 +83,7 @@ class SequenceTracker:
                 await self._redis.set(seq_key, incoming_sequence)
                 logger.debug(f"Channel '{channel_id}': {dropped} packets dropped.")
                 return dropped, False
-            
+
             # If incoming sequence is less than or equal to the last sequence,
             # it's an out-of-order or duplicate delivery. Ignore it gracefully.
             if incoming_sequence <= last_sequence:

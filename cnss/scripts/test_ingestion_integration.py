@@ -3,16 +3,15 @@
 # Requires Redis running (make dev). Tests the full pipeline with real Redis.
 # ==============================================================================
 import asyncio
-import json
 
-from core.redis.client import init_redis_client, get_redis_client
+from core.contracts.udp_contracts import PacketMeta, TelemetryBatch
+from core.redis.client import get_redis_client, init_redis_client
+from services.ingestion.buffer_manager import BufferManager
 from services.ingestion.sequence_tracker import SequenceTracker
 from services.ingestion.state_manager import StateManager
-from services.ingestion.buffer_manager import BufferManager
-from core.contracts.udp_contracts import TelemetryBatch, PacketMeta
 
 
-async def main():
+async def main() -> None:
     # --- Setup ---
     await init_redis_client()
     redis = get_redis_client()
@@ -31,14 +30,13 @@ async def main():
         timestamp=1700000000,
         sequence=100,
         window_ms=1000,
-        packets=[
-            PacketMeta(direction=0, src_ip="10.0.0.1", dst_ip="10.0.0.2", src_port=1234, dst_port=80)
-        ],
+        packets=[PacketMeta(direction=0, src_ip="10.0.0.1", dst_ip="10.0.0.2", src_port=1234, dst_port=80)],
     )
     await state_manager.process_batch(batch1)
     await buffer_manager.push_packets(batch1)
 
     seq_value = await redis.get("channel:seq:test-ch")
+    assert isinstance(seq_value, str), f"Expected str, got {type(seq_value)}"
     assert seq_value == "100", f"Expected seq=100, got {seq_value}"
     print(f"  ✓ Sequence baseline set: {seq_value}")
 
@@ -79,7 +77,7 @@ async def main():
     await state_manager.process_batch(batch3)
     state = await redis.hgetall("channel:state:test-ch")
     assert state["last_activity_at"] == old_activity, "Activity should not change for empty batch"
-    print(f"  ✓ Empty batch did not reset activity timeout")
+    print("  ✓ Empty batch did not reset activity timeout")
 
     # --- Test 3: Buffer Capped List ---
     print("\n[Test 3] Buffer capped list...")

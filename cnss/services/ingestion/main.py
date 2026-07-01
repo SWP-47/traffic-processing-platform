@@ -11,14 +11,13 @@ import signal
 import sys
 
 from core.config import settings
+from core.database import close_db_pool, init_db_pool
 from core.logging import setup_logging
-from core.redis.client import init_redis_client, close_redis_client
-from core.database import init_db_pool, close_db_pool
-
-from services.ingestion.sequence_tracker import SequenceTracker
-from services.ingestion.state_manager import StateManager
+from core.redis.client import close_redis_client, init_redis_client
 from services.ingestion.buffer_manager import BufferManager
 from services.ingestion.flusher import BackgroundFlusher
+from services.ingestion.sequence_tracker import SequenceTracker
+from services.ingestion.state_manager import StateManager
 from services.ingestion.udp_server import UDPIngestionServer
 
 # --- Module Logger ---
@@ -79,9 +78,7 @@ async def run_ingestion_worker() -> None:
     # --- UDP Server Startup ---
     # Pass the processing components to the UDP server for batch handling.
     udp_server = UDPIngestionServer(
-        state_manager=state_manager,
-        buffer_manager=buffer_manager,
-        flusher=background_flusher
+        state_manager=state_manager, buffer_manager=buffer_manager, flusher=background_flusher
     )
 
     try:

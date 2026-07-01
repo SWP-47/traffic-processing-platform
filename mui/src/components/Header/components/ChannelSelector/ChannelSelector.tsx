@@ -11,7 +11,7 @@ import useDelayedVisibility from '@/hooks/useDelayedVisibility';
 
 type Channel = { id: string; active: boolean };
 
-const LOADING_DELAY_MS = 300;
+const LOADING_DELAY_MS = 200;
 
 // ---------- Tooltip ----------
 interface StatusTooltipProps {
@@ -31,7 +31,6 @@ function StatusTooltip({
 }: StatusTooltipProps) {
   const isConnected = connectionStatus === 'connected';
   const isConnecting = connectionStatus === 'connecting';
-  console.log(message)
 
   const fields = [
     { key: 'Channel ID', value: selectedChannelId },
@@ -195,7 +194,7 @@ function ChannelSelector() {
           <p className={styles.message}>Error: could not connect to CnSS</p>
         ) : showLoadingIndicator ? (
           <img src={loadingIcon} className={styles.loading} alt="Loading..." />
-        ) : (
+        ) : !isLoading && (
           channels.map((channel) => (
             <p
               key={channel.id}

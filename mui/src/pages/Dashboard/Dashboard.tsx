@@ -1,5 +1,5 @@
 import styles from './Dashboard.module.css';
-import PacketsColumnChart from "@/features/PacketsColumnChart";
+import PacketsColumnChart from "@/features/PacketsColumnChart/PacketsColumnChart";
 import PacketsLineChart from "@/features/PacketsLineChart";
 
 function Dashboard() {

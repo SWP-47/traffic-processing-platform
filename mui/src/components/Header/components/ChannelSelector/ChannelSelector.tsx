@@ -137,8 +137,12 @@ function ChannelSelector() {
   let badgeLabel: string;
 
   if (isConnected) {
-    badgeClass = channelIsActive ? styles.active_badge! : styles.inactive_badge!;
-    badgeLabel = channelIsActive ? 'active' : 'inactive';
+    let status = channelIsActive;
+    if (status === undefined) {
+      status = channels.filter(ch => ch.id == selectedChannelId)[0]?.active;
+    }
+    badgeClass = status ? styles.active_badge! : styles.inactive_badge!;
+    badgeLabel = status ? 'active' : 'inactive';
   } else {
     badgeClass = styles.error_badge!;
     badgeLabel = 'error';

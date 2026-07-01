@@ -1,7 +1,7 @@
 # Traffic Processor
 
 This module contains:
-- hardware part (`hardware_part` folder) - FPGA source code for transparent packet processing (top mudule is `frame_receiver_sender.sv`).
+- hardware part (`hardware_part` folder) - FPGA source code for transparent packet processing (top mudule is `top.sv`).
 - software part (`software_part` folder) - containerised Python scripts for collecting telemetry and sending data to the Communication Node.
 
 ## Local setup instructions 
@@ -15,12 +15,14 @@ note: The whole TP code was containerised using Docker. The `docket-compose.yml`
 
 
 ### Hardware part:
-note: Ensure you have AMD Vivado Design Suite installed on your system. The folder contains `frame_receiver_sender.sv` and `frame_receiver_sender.xdc` files which are expected to be used to program ARTIX-7 FPGA Development Board AX7201.
+note: Ensure you have AMD Vivado Design Suite installed on your system. The folder contains `*.sv` and `*.xdc` files which are expected to be used to program ARTIX-7 FPGA Development Board AX7201.
 
-1. Run Vivado IDE and add open `ax7201-ethernet-loopback.xpr` project.
-2. Run synthesis and Implementation process. Than generate bitstream. 
-3. Connect FPGA board to your computer using JTAG programmer.
-4. Open "Hardware manager" and program connected device using the corresponding button
+1. Run Vivado IDE and create new project for board ARTIX-7 FPGA Development Board AX7201.
+2. Add all `*.sv` files from the `./hardware-part/` folder to project as source code files.
+3. Add `top.xdc` file from the `./hardware-part/` folder to project as constraint file.
+4. Run synthesis and Implementation process. Than generate bitstream. 
+5. Connect FPGA board to your computer using JTAG programmer.
+6. Open "Hardware manager" and program connected device using the corresponding button
 
 ## Traffic Processor (TP) Smoke Check
 Step 1: Preparation and Execution.

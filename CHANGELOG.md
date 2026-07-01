@@ -30,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - N/A
 
+### Removed
+
+- N/A
+
 ### Fixed
 
 - N/A

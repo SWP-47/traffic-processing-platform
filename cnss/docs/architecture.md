@@ -16,7 +16,7 @@ The CnSS is deployed as a set of Docker containers. If any container crashes, Do
 
 **Responsibilities**:
 
-1. **UDP Reception**: Listens on `{{cnss_udp_port}}` for `TelemetryBatch` JSON payloads from Communication Nodes (CN). Enforces MTU constraints (< 1400 bytes).
+1. **UDP Reception**: Listens on `{{cnss_udp_port}}` for `TelemetryBatch` JSON payloads from Communication Nodes (CN). Soft Limit MTU constraints (warn-only) (< 1400 bytes).
 2. **Sequence Tracking**: Maintains the `last_sequence` per `channel_id` **in Redis** (`channel:seq:{channel_id}`) to survive container restarts.
    - **Initial State**: If the key does not exist (new channel or post-crash), the first received `sequence` is stored as the baseline without calculating drops.
    - If `incoming_sequence > last_sequence + 1`: Calculates `dropped = incoming_sequence - (last_sequence + 1)`.

@@ -69,6 +69,15 @@ class WebSocketConnectionService {
         channelId: null
     }
 
+    send(payload: string) {
+        if (!this.connection) {
+            console.error("[WebSocketService] Failed to sent payload through WS connection! Connection is not established.");
+            return;
+        }
+        this.connection?.send(payload);
+        console.debug("[WebSocketService] Sent payload through WS connection. Payload: " + payload);
+    }
+
     /**
      * Connect to WebSocket
      * This service handles only one connection in a time.

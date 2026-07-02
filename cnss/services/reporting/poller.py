@@ -19,6 +19,7 @@ from core.contracts.subscriptions import SubscribeRequest
 from core.database import get_db_pool
 from core.redis.client import get_redis_client
 from services.reporting.handlers.base import BaseSubscriptionHandler
+from core.config import settings
 
 # --- Module Logger ---
 logger = logging.getLogger(__name__)
@@ -76,7 +77,7 @@ class Poller:
         if self._task is None or self._task.done():
             self._task = asyncio.create_task(self._polling_loop())
             logger.debug("Poller background task created.")
-            logger.info("Poller started. Polling interval: 1.0s.")
+            logger.info(f"Poller started. Polling interval: {settings.reporting_poller_interval_sec}s.")
 
     async def stop(self) -> None:
         """Gracefully cancels the polling task."""
@@ -100,8 +101,8 @@ class Poller:
             try:
                 logger.debug("Starting polling tick...")
                 await self._tick()
-                logger.debug("Polling tick completed. Sleeping for 1.0s...")
-                await asyncio.sleep(1.0)
+                logger.debug("Polling tick completed. Sleeping for {settings.reporting_poller_interval_sec}s...")
+                await asyncio.sleep(settings.reporting_poller_interval_sec)
             except asyncio.CancelledError:
                 logger.debug("Polling loop received cancellation signal.")
                 raise
@@ -109,7 +110,7 @@ class Poller:
                 # Catch-all to prevent the background task from dying silently
                 logger.error(f"Unexpected error in Poller loop: {e}", exc_info=True)
                 # Brief sleep to prevent tight error loops
-                await asyncio.sleep(1.0)
+                await asyncio.sleep(settings.reporting_poller_interval_sec)
 
     async def _tick(self) -> None:
         """

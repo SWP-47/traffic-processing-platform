@@ -2,7 +2,7 @@
 # CnSS Reporting Worker Entry Point
 # Orchestrates the lifecycle of the background aggregator service.
 # Handles initialization of infrastructure, starts periodic polling,
-# ghost cleanup, drop flushing, and timeout enforcement tasks,
+# ghost cleanup, and unified channel state synchronization,
 # and manages graceful shutdown upon OS signals.
 # ==============================================================================
 
@@ -14,12 +14,10 @@ import sys
 from core.database import close_db_pool, init_db_pool
 from core.logging import setup_logging
 from core.redis.client import close_redis_client, init_redis_client
-from services.reporting.drop_flusher import DropFlusher
+from services.reporting.channel_state_syncer import ChannelStateSyncer
 from services.reporting.ghost_cleaner import GhostCleaner
-from services.reporting.poller import Poller
-from services.reporting.timeout_enforcer import TimeoutEnforcer
 from services.reporting.handlers import HANDLER_REGISTRY
-
+from services.reporting.poller import Poller
 
 # --- Module Logger ---
 logger = logging.getLogger(__name__)
@@ -29,6 +27,7 @@ logger = logging.getLogger(__name__)
 # When set, the worker will stop all background tasks and teardown resources.
 stop_event = asyncio.Event()
 
+
 # --- Signal Handling ---
 def _handle_sigint() -> None:
     """
@@ -37,12 +36,14 @@ def _handle_sigint() -> None:
     logger.warning("Received SIGINT. Initiating graceful shutdown...")
     stop_event.set()
 
+
 def _handle_sigterm() -> None:
     """
     Callback for SIGTERM (Docker stop / Kubernetes). Triggers graceful shutdown.
     """
     logger.warning("Received SIGTERM. Initiating graceful shutdown...")
     stop_event.set()
+
 
 # --- Main Worker Lifecycle ---
 async def run_reporting_worker() -> None:
@@ -52,11 +53,11 @@ async def run_reporting_worker() -> None:
     """
     # --- Infrastructure Initialization ---
     logger.info("Initializing Reporting Worker infrastructure...")
-    
+
     # Initialize Redis client (required for polling, pub/sub, and state sync)
     await init_redis_client()
     logger.info("Redis client initialized successfully.")
-    
+
     # Initialize TimescaleDB connection pool (required for SQL execution and updates)
     await init_db_pool()
     logger.info("TimescaleDB connection pool initialized successfully.")
@@ -64,12 +65,13 @@ async def run_reporting_worker() -> None:
     # --- Component Instantiation ---
     # Create the core background processing components.
     ghost_cleaner = GhostCleaner()
-    drop_flusher = DropFlusher()
-    timeout_enforcer = TimeoutEnforcer()
-    
-    # The Poller coordinates the 1Hz subscription loop and delegates 
-    # ghost cleaning and drop flushing logic to the respective components.
+    channel_state_syncer = ChannelStateSyncer()
+
+    # The Poller coordinates the 1Hz subscription loop and delegates
+    # SQL execution to registered handlers.
     poller = Poller()
+
+    # Register subscription handlers from the central registry.
     for target, handler in HANDLER_REGISTRY.items():
         poller.register_handler(target, handler)
 
@@ -78,15 +80,12 @@ async def run_reporting_worker() -> None:
         # Start the main polling loop and auxiliary maintenance tasks.
         await poller.start()
         logger.info("Poller started. Reading 'sub:active_hashes' every 1 second.")
-        
+
         await ghost_cleaner.start()
         logger.info("Ghost Cleaner started.")
-        
-        await drop_flusher.start()
-        logger.info("Drop Flusher started.")
-        
-        await timeout_enforcer.start()
-        logger.info("Timeout Enforcer started.")
+
+        await channel_state_syncer.start()
+        logger.info("Channel State Syncer started.")
 
         logger.info("Reporting Worker is fully operational.")
 
@@ -99,12 +98,11 @@ async def run_reporting_worker() -> None:
     finally:
         # --- Graceful Teardown Sequence ---
         logger.info("Starting graceful teardown sequence...")
-        
+
         # 1. Stop Background Tasks
         await poller.stop()
         await ghost_cleaner.stop()
-        await drop_flusher.stop()
-        await timeout_enforcer.stop()
+        await channel_state_syncer.stop()
         logger.info("All background tasks stopped.")
 
         # 2. Close Database Pool
@@ -116,6 +114,7 @@ async def run_reporting_worker() -> None:
         logger.info("Redis client closed.")
 
         logger.info("Reporting Worker shutdown completed successfully.")
+
 
 # --- Script Entry Point ---
 def main() -> None:
@@ -149,6 +148,7 @@ def main() -> None:
         # Clean up the event loop
         loop.close()
         logger.info("Event loop closed. Exiting process.")
+
 
 if __name__ == "__main__":
     main()

@@ -14,6 +14,12 @@
 # For window_sec <= 5s, we read only closed buckets but accept that values may be refined.
 # For long-term statistics, the sum will converge as all buckets stabilize.
 #
+# IMPORTANT: Accurate Rate Calculation
+# Since telemetry_1s contains discrete 1-second buckets, the actual time window
+# may differ from the requested window_sec. We use the actual bucket count from
+# the database to calculate packets_per_sec, ensuring accurate statistics even
+# when window_sec is not a whole number (e.g., 1.5s reads 2 buckets = 2s actual).
+#
 # Architecture Reference: §2.2.2 (Dynamic SQL Execution), §3.1 (Continuous Aggregates)
 # ==============================================================================
 
@@ -79,9 +85,10 @@ class TelemetryHandler(BaseSubscriptionHandler):
         - LEFT JOIN 'channels' with 'telemetry_1s' to include inactive channels.
         - Time window logic:
           * Upper bound: NOW() - end_offset (1s) to read only CLOSED buckets.
-          * Lower bound: NOW() - window_sec - end_offset to ensure exactly window_sec duration.
+          * Lower bound: NOW() - window_sec - end_offset to ensure approximately window_sec duration.
         - Buckets within [NOW-5s, NOW-1s] are "preliminary" and may be recalculated.
-        - Calculate packets_per_sec based on the exact window size.
+        - Calculate packets_per_sec based on ACTUAL bucket count from database,
+          not the requested window_sec, to ensure accurate statistics.
 
         :param db_pool: The asyncpg connection pool.
         :param request: The validated subscription request.
@@ -113,24 +120,18 @@ class TelemetryHandler(BaseSubscriptionHandler):
         # The query uses $1 for window_sec and $2 for channel_id.
         # Time window logic:
         # Upper bound: NOW() - end_offset (1s) → reads only CLOSED buckets
-        # Lower bound: NOW() - window_sec - end_offset → ensures exactly window_sec duration
+        # Lower bound: NOW() - window_sec - end_offset → ensures approximately window_sec duration
         #
-        # Example with window_sec=1.0 and NOW()=10.5s:
-        #   bucket > 10.5 - 1.0 - 1.0 = 8.5s
-        #   bucket <= 10.5 - 1.0 = 9.5s
-        #   Result: 1 bucket (9s)
-        #
-        # Example with window_sec=5.0 and NOW()=10.5s:
-        #   bucket > 10.5 - 5.0 - 1.0 = 4.5s
-        #   bucket <= 10.5 - 1.0 = 9.5s
-        #   Result: 5 buckets (5s, 6s, 7s, 8s, 9s)
-        #   Note: Buckets 5s-9s are in "preliminary" zone (may be recalculated)
+        # IMPORTANT: We also COUNT(*) to get the actual number of buckets read.
+        # This is critical for accurate rate calculation when window_sec is not a whole number.
+        # Example: window_sec=1.5 reads 2 buckets (2s actual), so we divide by 2, not 1.5.
         query = """
             SELECT 
                 c.is_active,
                 c.dropped,
                 COALESCE(SUM(t.packets_in), 0) AS total_in,
                 COALESCE(SUM(t.packets_out), 0) AS total_out,
+                COUNT(t.bucket) AS bucket_count,
                 MAX(t.bucket) AS latest_bucket
             FROM channels c
             LEFT JOIN telemetry_1s t 
@@ -153,11 +154,30 @@ class TelemetryHandler(BaseSubscriptionHandler):
             # --- Metric Calculation ---
             total_in = int(row["total_in"])
             total_out = int(row["total_out"])
+            bucket_count = int(row["bucket_count"])
             
-            # Calculate rates (packets per second)
-            # Note: For window_sec < 1.0, this may return 0 if no buckets are available.
-            pps_in = int(total_in / window_sec)
-            pps_out = int(total_out / window_sec)
+            # --- Accurate Rate Calculation ---
+            # Use actual bucket count as the real time window.
+            # Each bucket in telemetry_1s represents exactly 1 second.
+            # This ensures accurate statistics even when window_sec is not a whole number.
+            if bucket_count == 0:
+                # No buckets available (e.g., window_sec too small or no data)
+                pps_in = 0
+                pps_out = 0
+                actual_window_sec = 0.0
+                logger.debug(
+                    f"[telemetry] No buckets found for channel '{channel_id}'. "
+                    f"Requested window: {window_sec}s."
+                )
+            else:
+                # Each bucket = 1 second, so bucket_count = actual time window in seconds
+                actual_window_sec = float(bucket_count)
+                pps_in = int(total_in / actual_window_sec)
+                pps_out = int(total_out / actual_window_sec)
+                logger.debug(
+                    f"[telemetry] Calculated rates using {bucket_count} bucket(s) "
+                    f"(actual window: {actual_window_sec}s, requested: {window_sec}s)."
+                )
 
             # Timestamps for the payload
             now = datetime.now(timezone.utc)
@@ -168,7 +188,7 @@ class TelemetryHandler(BaseSubscriptionHandler):
                 "type": "telemetry_update",
                 "channel_id": channel_id,
                 "is_active": row["is_active"],
-                "window_ms": int(window_sec * 1000),
+                "window_ms": int(actual_window_sec * 1000),  # Actual window
                 "dropped_batches": int(row["dropped"]),
                 "metrics": {
                     "direction_out": {
@@ -186,7 +206,8 @@ class TelemetryHandler(BaseSubscriptionHandler):
 
             logger.debug(
                 f"[telemetry] Success for '{channel_id}': "
-                f"in={total_in} ({pps_in} pps), out={total_out} ({pps_out} pps)."
+                f"in={total_in} ({pps_in} pps), out={total_out} ({pps_out} pps) "
+                f"over {actual_window_sec}s."
             )
             return result
 

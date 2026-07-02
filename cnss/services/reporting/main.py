@@ -18,6 +18,8 @@ from services.reporting.drop_flusher import DropFlusher
 from services.reporting.ghost_cleaner import GhostCleaner
 from services.reporting.poller import Poller
 from services.reporting.timeout_enforcer import TimeoutEnforcer
+from services.reporting.handlers import HANDLER_REGISTRY
+
 
 # --- Module Logger ---
 logger = logging.getLogger(__name__)
@@ -67,10 +69,9 @@ async def run_reporting_worker() -> None:
     
     # The Poller coordinates the 1Hz subscription loop and delegates 
     # ghost cleaning and drop flushing logic to the respective components.
-    poller = Poller(
-        ghost_cleaner=ghost_cleaner,
-        drop_flusher=drop_flusher,
-    )
+    poller = Poller()
+    for target, handler in HANDLER_REGISTRY.items():
+        poller.register_handler(target, handler)
 
     try:
         # --- Background Tasks Startup ---

@@ -19,8 +19,7 @@ from services.reporting.handlers.telemetry_handler import TelemetryHandler
 # This dictionary is the single source of truth for target routing in the Poller.
 # Adding a new target requires only appending a new entry here.
 HANDLER_REGISTRY: dict[str, BaseSubscriptionHandler] = {
-    "telemetry": TelemetryHandler(),
-    "lan_hosts": LanHostsHandler(),
+    "telemetry": TelemetryHandler()
 }
 
 # --- Public API ---
@@ -28,6 +27,5 @@ HANDLER_REGISTRY: dict[str, BaseSubscriptionHandler] = {
 __all__ = [
     "BaseSubscriptionHandler",
     "HANDLER_REGISTRY",
-    "TelemetryHandler",
-    "LanHostsHandler",
+    "TelemetryHandler"
 ]

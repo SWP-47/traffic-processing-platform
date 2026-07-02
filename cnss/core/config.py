@@ -60,6 +60,12 @@ class Settings(BaseSettings):
     reporting_window_sec: float = Field(default=5.0, alias="REPORTING_WINDOW_SEC")
     # Interval in seconds for the Background Flusher to push Redis buffers to TimescaleDB
     flush_interval_sec: float = Field(default=1.0, alias="FLUSH_INTERVAL_SEC")
+    # Interval in seconds for the Ghost Cleaner to scan and remove stale subscription listeners
+    ghost_cleanup_interval_sec: float = Field(default=5.0, alias="GHOST_CLEANUP_INTERVAL_SEC")
+    # Interval in seconds for the Reporting Worker's Drop Flusher to sync drops and state to TimescaleDB
+    reporting_flush_interval_sec: float = Field(default=1.0, alias="REPORTING_FLUSH_INTERVAL_SEC")
+    # Interval in seconds for the Reporting Worker's Timeout Enforcer to mark inactive channels
+    reporting_enforcement_interval_sec: float = Field(default=1.0, alias="REPORTING_ENFORCEMENT_INTERVAL_SEC")
 
     # Pydantic V2 configuration for environment variables
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore")

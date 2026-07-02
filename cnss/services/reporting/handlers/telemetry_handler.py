@@ -1,0 +1,208 @@
+# ==============================================================================
+# CnSS Telemetry Subscription Handler
+# Handles SQL execution for the 'telemetry' subscription target.
+# Queries the TimescaleDB continuous aggregate 'telemetry_1s' to provide
+# real-time packet rate metrics (packets_in, packets_out) for a channel.
+#
+# IMPORTANT: Continuous Aggregate Stability
+# The 'telemetry_1s' view has a refresh policy with:
+#   - start_offset => 5 seconds (buckets within last 5s are "live" and may be recalculated)
+#   - end_offset => 1 second (the current incomplete bucket is excluded)
+# This means:
+#   - Buckets in [NOW-5s, NOW-1s] are "preliminary" and may increase if late packets arrive.
+#   - Buckets older than NOW-5s are "stable" and will not change.
+# For window_sec <= 5s, we read only closed buckets but accept that values may be refined.
+# For long-term statistics, the sum will converge as all buckets stabilize.
+#
+# Architecture Reference: §2.2.2 (Dynamic SQL Execution), §3.1 (Continuous Aggregates)
+# ==============================================================================
+
+import logging
+from datetime import datetime, timezone
+from typing import Any, Dict, Optional
+
+import asyncpg
+
+from core.contracts.subscriptions import SubscribeRequest
+from core.exceptions import DatabaseError
+from services.reporting.handlers.base import BaseSubscriptionHandler
+
+# --- Module Logger ---
+logger = logging.getLogger(__name__)
+
+# --- Continuous Aggregate Policy Constants ---
+# These values MUST match the TimescaleDB continuous aggregate policy defined in migrations.
+# They determine the "stability window" for telemetry data.
+
+# end_offset: The most recent bucket is excluded because it's still being filled.
+# We always read buckets up to NOW() - 1 second to ensure we only see closed buckets.
+CONTINUOUS_AGG_END_OFFSET_SEC = 1.0
+
+# start_offset: Buckets within the last 5 seconds may be recalculated if late packets arrive.
+# For window_sec <= 5s, we accept that values are "preliminary" and may be refined.
+# For window_sec > 5s, part of the window will be in the "stable" zone.
+CONTINUOUS_AGG_START_OFFSET_SEC = 5.0
+
+# --- Default Telemetry Settings ---
+# Default aggregation window if not specified in the subscription request.
+# Set to 1.0 second for real-time speed metrics.
+DEFAULT_WINDOW_SEC = 1.0
+
+# Minimum allowed window size.
+# Windows smaller than 1 second may return 0 packets (no buckets available).
+MIN_WINDOW_SEC = 0.1
+
+
+# --- Telemetry Handler ---
+class TelemetryHandler(BaseSubscriptionHandler):
+    """
+    Executes SQL queries for the 'telemetry' subscription target.
+
+    Combines the persistent 'channels' registry with the real-time
+    'telemetry_1s' continuous aggregate to produce a unified telemetry update.
+    Strictly avoids sorting or heavy grouping, focusing purely on fast
+    window-based aggregation for real-time speed metrics.
+    """
+
+    @property
+    def target_name(self) -> str:
+        """Identifier for this handler, matching SubscribeRequest.target."""
+        return "telemetry"
+
+    async def execute(
+        self, db_pool: asyncpg.Pool, request: SubscribeRequest
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Executes the telemetry aggregation query and returns the formatted JSON result.
+
+        Query Strategy:
+        - LEFT JOIN 'channels' with 'telemetry_1s' to include inactive channels.
+        - Time window logic:
+          * Upper bound: NOW() - end_offset (1s) to read only CLOSED buckets.
+          * Lower bound: NOW() - window_sec - end_offset to ensure exactly window_sec duration.
+        - Buckets within [NOW-5s, NOW-1s] are "preliminary" and may be recalculated.
+        - Calculate packets_per_sec based on the exact window size.
+
+        :param db_pool: The asyncpg connection pool.
+        :param request: The validated subscription request.
+        :return: Dictionary with telemetry_update payload, or None if channel missing.
+        """
+        # --- Common Validation ---
+        self._validate_request(request)
+
+        # --- Parameter Extraction ---
+        params = request.params
+        window_sec = params.window_sec if params.window_sec is not None else DEFAULT_WINDOW_SEC
+        
+        # Validate window_sec to prevent division by zero or negative values
+        if window_sec < MIN_WINDOW_SEC:
+            logger.warning(
+                f"[telemetry] window_sec={window_sec} is below minimum {MIN_WINDOW_SEC}. "
+                f"Using default {DEFAULT_WINDOW_SEC}s."
+            )
+            window_sec = DEFAULT_WINDOW_SEC
+        
+        channel_id = request.channel_id
+
+        logger.debug(
+            f"[telemetry] Executing query for channel '{channel_id}' "
+            f"(window: {window_sec}s, end_offset: {CONTINUOUS_AGG_END_OFFSET_SEC}s)."
+        )
+
+        # --- Query Assembly ---
+        # The query uses $1 for window_sec and $2 for channel_id.
+        # Time window logic:
+        # Upper bound: NOW() - end_offset (1s) → reads only CLOSED buckets
+        # Lower bound: NOW() - window_sec - end_offset → ensures exactly window_sec duration
+        #
+        # Example with window_sec=1.0 and NOW()=10.5s:
+        #   bucket > 10.5 - 1.0 - 1.0 = 8.5s
+        #   bucket <= 10.5 - 1.0 = 9.5s
+        #   Result: 1 bucket (9s)
+        #
+        # Example with window_sec=5.0 and NOW()=10.5s:
+        #   bucket > 10.5 - 5.0 - 1.0 = 4.5s
+        #   bucket <= 10.5 - 1.0 = 9.5s
+        #   Result: 5 buckets (5s, 6s, 7s, 8s, 9s)
+        #   Note: Buckets 5s-9s are in "preliminary" zone (may be recalculated)
+        query = """
+            SELECT 
+                c.is_active,
+                c.dropped,
+                COALESCE(SUM(t.packets_in), 0) AS total_in,
+                COALESCE(SUM(t.packets_out), 0) AS total_out,
+                MAX(t.bucket) AS latest_bucket
+            FROM channels c
+            LEFT JOIN telemetry_1s t 
+                ON c.channel_id = t.channel_id 
+                AND t.bucket > NOW() - ($1 * INTERVAL '1 second') - INTERVAL '1 second'
+                AND t.bucket <= NOW() - INTERVAL '1 second'
+            WHERE c.channel_id = $2
+            GROUP BY c.channel_id, c.is_active, c.dropped;
+        """
+
+        # --- Execution ---
+        try:
+            async with db_pool.acquire() as conn:
+                row = await conn.fetchrow(query, window_sec, channel_id)
+
+            if row is None:
+                logger.debug(f"[telemetry] Channel '{channel_id}' not found in registry.")
+                return None
+
+            # --- Metric Calculation ---
+            total_in = int(row["total_in"])
+            total_out = int(row["total_out"])
+            
+            # Calculate rates (packets per second)
+            # Note: For window_sec < 1.0, this may return 0 if no buckets are available.
+            pps_in = int(total_in / window_sec)
+            pps_out = int(total_out / window_sec)
+
+            # Timestamps for the payload
+            now = datetime.now(timezone.utc)
+            latest_bucket = row["latest_bucket"]
+
+            # --- Response Formatting ---
+            result = {
+                "type": "telemetry_update",
+                "channel_id": channel_id,
+                "is_active": row["is_active"],
+                "window_ms": int(window_sec * 1000),
+                "dropped_batches": int(row["dropped"]),
+                "metrics": {
+                    "direction_out": {
+                        "packets_per_sec": pps_out,
+                        "packets": total_out,
+                    },
+                    "direction_in": {
+                        "packets_per_sec": pps_in,
+                        "packets": total_in,
+                    },
+                },
+                "timestamp": latest_bucket.isoformat() if latest_bucket else now.isoformat(),
+                "received_at": now.isoformat(),
+            }
+
+            logger.debug(
+                f"[telemetry] Success for '{channel_id}': "
+                f"in={total_in} ({pps_in} pps), out={total_out} ({pps_out} pps)."
+            )
+            return result
+
+        except asyncpg.PostgresError as e:
+            logger.error(
+                f"[telemetry] Database error for channel '{channel_id}': {e}",
+                exc_info=True,
+            )
+            raise DatabaseError(
+                message=f"Telemetry query failed for channel '{channel_id}'."
+            ) from e
+        except Exception as e:
+            logger.error(
+                f"[telemetry] Unexpected error for channel '{channel_id}': {e}",
+                exc_info=True,
+            )
+            raise DatabaseError(
+                message=f"Unexpected telemetry query failure for channel '{channel_id}'."
+            ) from e

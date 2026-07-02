@@ -3,7 +3,13 @@
     align-items: center;
     justify-content: space-between;
 
-    margin: 32px 50px;
+    padding: 32px 50px;
+
+    position: sticky;
+    top: 0;
+    z-index: 100;
+
+    background: linear-gradient(#262626ff 60%, #26262600);
 }
 
 .left {

@@ -67,7 +67,7 @@ class WebSocketServer:
         Uses the 'websockets' library to handle the HTTP upgrade and protocol.
         """
         logger.info(
-            f"Starting WebSocket server on {settings.cnss_host}:{settings.cnss_http_port}..."
+            f"Starting WebSocket server on {settings.cnss_host}:{settings.cnss_ws_port}..."
         )
 
         # websockets.serve handles the HTTP handshake and upgrades to WS.
@@ -75,7 +75,7 @@ class WebSocketServer:
         self._server = await websockets.serve(
             self._handler,
             settings.cnss_host,
-            settings.cnss_http_port,
+            settings.cnss_ws_port,
             # Enable library-level pings to detect dead connections at the transport layer.
             # Session-level TTL is handled separately in Redis.
             ping_interval=20,

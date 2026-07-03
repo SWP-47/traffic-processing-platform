@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     # FastAPI natively handles both HTTP and WS on the same port (matching legacy design).
     # External routing (wss:// and https://) is handled by the Nginx reverse proxy.
     cnss_http_port: int = Field(default=8000, alias="CnSS_HTTP_PORT")
+    # Port for the WebSocket service (real-time telemetry and subscription routing).
+    # In production, external routing (wss://) is handled by the Edge Nginx reverse proxy.
+    # Note: This setting affects only local dev builds (make run-websocket).
+    cnss_ws_port: int = Field(default=8001, alias="CnSS_WS_PORT")
+
 
     # --- Timeouts & Intervals ---
     # Channel inactivity timeout in milliseconds (used for REST/WS fallback status)

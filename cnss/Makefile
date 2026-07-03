@@ -66,7 +66,7 @@ format:
 
 ## run-api: Run REST API service locally (http://localhost:8000)
 run-api:
-	uv run uvicorn services.api.main:app --reload --host 0.0.0.0 --port 8000 --log-level info
+	uv run uvicorn services.api.main:app --reload --no-access-log --host 0.0.0.0 --port 8000 --log-level info
 
 ## run-ingestion: Run Ingestion worker locally (UDP listener)
 run-ingestion:
@@ -85,7 +85,7 @@ dev-all:
 	@echo "Starting all microservices in background..."
 	@mkdir -p logs
 	@echo "Starting API service..."
-	@uv run uvicorn services.api.main:app --reload --host 0.0.0.0 --port 8000 --log-level info > logs/api.log 2>&1 & echo $$! > logs/api.pid
+	@	uv run uvicorn services.api.main:app --reload --no-access-log --host 0.0.0.0 --port 8000 --log-level info > logs/api.log 2>&1 & echo $$! > logs/api.pid
 	@echo "Starting Ingestion worker..."
 	@uv run python -m services.ingestion.main > logs/ingestion.log 2>&1 & echo $$! > logs/ingestion.pid
 	@echo "Starting Reporting worker..."

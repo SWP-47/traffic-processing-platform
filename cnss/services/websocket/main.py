@@ -114,7 +114,7 @@ async def run_websocket_service() -> None:
         await ws_server.start()
         logger.info(
             f"WebSocket Service is fully operational and listening on "
-            f"{settings.cnss_host}:{settings.cnss_http_port}."
+            f"{settings.cnss_host}:{settings.cnss_ws_port}."
         )
 
         # --- Pub/Sub Consumer Startup ---
@@ -163,7 +163,7 @@ def main() -> None:
     setup_logging()
 
     logger.info(
-        f"Starting CnSS WebSocket Service (HTTP/WS Port: {settings.cnss_http_port})..."
+        f"Starting CnSS WebSocket Service (HTTP/WS Port: {settings.cnss_ws_port})..."
     )
 
     # Create the main asyncio event loop

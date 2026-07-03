@@ -21,6 +21,7 @@ from services.api.schemas import (
     HostHistoryPoint,
     HostHistoryResponse,
 )
+from core.config import settings
 
 # --- Router Configuration ---
 # Grouped under /api/v1 prefix. Tags provide OpenAPI documentation grouping.
@@ -28,7 +29,7 @@ router = APIRouter(prefix="/api/v1", tags=["History"])
 
 # --- Constants & Mappings ---
 # Data retention period in days (strictly matches TimescaleDB retention policy).
-RETENTION_DAYS = 7
+RETENTION_DAYS = settings.retention_days
 
 # Dynamically calculate optimal time_bucket interval based on period (seconds).
 # Maps human-readable period strings to the bucket size in seconds.
@@ -125,32 +126,32 @@ async def get_channel_history(
         raise ResourceNotFoundError(message=f"Channel '{channel_id}' not found.")
 
     # --- SQL Query Execution ---
-    # Uses generate_series to create a continuous timeline, ensuring empty buckets
-    # are returned with zero values instead of being omitted from the result set.
-    # Queries the pre-aggregated 'telemetry_1s' continuous aggregate for performance.
+    # Uses generate_series to create a continuous timeline with buckets aligned to start_time.
+    # For each bucket, we manually compute the range [bucket_start, bucket_end) and aggregate
+    # telemetry_1s data within that range. This avoids time_bucket misalignment issues.
     query = """
     WITH time_buckets AS (
-        SELECT generate_series($1::timestamptz, $2::timestamptz, ($3 || ' seconds')::interval) AS bucket
+        SELECT generate_series($1::timestamptz, $2::timestamptz, ($3::int || ' seconds')::interval) AS bucket_start
     ),
     aggregated AS (
-        SELECT 
-            time_bucket($3 || ' seconds', time) AS bucket,
-            SUM(packets_in) AS packets_in,
-            SUM(packets_out) AS packets_out
-        FROM telemetry_1s
-        WHERE channel_id = $4 
-          AND time >= $1::timestamptz 
-          AND time < $2::timestamptz
-        GROUP BY bucket
+        SELECT
+            tb.bucket_start,
+            SUM(t.packets_in) AS packets_in,
+            SUM(t.packets_out) AS packets_out
+        FROM time_buckets tb
+        LEFT JOIN telemetry_1s t
+            ON t.channel_id = $4
+            AND t.bucket >= tb.bucket_start
+            AND t.bucket < tb.bucket_start + ($3::int || ' seconds')::interval
+        GROUP BY tb.bucket_start
     )
-    SELECT 
-        tb.bucket AS timestamp,
+    SELECT
+        a.bucket_start AS timestamp,
         COALESCE(a.packets_in, 0) / $3::float AS packets_in_per_sec,
         COALESCE(a.packets_out, 0) / $3::float AS packets_out_per_sec,
         (COALESCE(a.packets_in, 0) + COALESCE(a.packets_out, 0)) > 0 AS is_active
-    FROM time_buckets tb
-    LEFT JOIN aggregated a ON tb.bucket = a.bucket
-    ORDER BY tb.bucket;
+    FROM aggregated a
+    ORDER BY a.bucket_start;
     """
     
     async with db_pool.acquire() as conn:
@@ -225,31 +226,38 @@ async def get_host_history(
 
     # --- SQL Query Execution ---
     # Queries raw packet_flows to extract per-host metrics.
-    # Uses generate_series to ensure continuous timeline output.
+    # Uses generate_series to create a continuous timeline with buckets aligned to start_time.
+    # For each bucket, we manually compute the range [bucket_start, bucket_end) and aggregate
+    # packet_flows data within that range. This avoids time_bucket misalignment issues.
     # Rx/Tx logic: dst_ip = host means IN (receiving), src_ip = host means OUT (sending).
+    # 
+    # IMPORTANT TYPE INFERENCE FIX:
+    # We must explicitly cast $3 to ::int BEFORE concatenation (i.e., $3::int || ' seconds').
+    # Without this, asyncpg's query parser sees "$3 || ' seconds'" and incorrectly infers 
+    # that $3 is of type 'text', causing a TypeError when we pass an integer from Python.
     query = """
     WITH time_buckets AS (
-        SELECT generate_series($1::timestamptz, $2::timestamptz, ($3 || ' seconds')::interval) AS bucket
+        SELECT generate_series($1::timestamptz, $2::timestamptz, ($3::int || ' seconds')::interval) AS bucket_start
     ),
     aggregated AS (
-        SELECT 
-            time_bucket($3 || ' seconds', time) AS bucket,
-            COUNT(*) FILTER (WHERE dst_ip = $4::inet) AS packets_in,
-            COUNT(*) FILTER (WHERE src_ip = $4::inet) AS packets_out
-        FROM packet_flows
-        WHERE channel_id = $5 
-          AND time >= $1::timestamptz 
-          AND time < $2::timestamptz
-          AND (src_ip = $4::inet OR dst_ip = $4::inet)
-        GROUP BY bucket
+        SELECT
+            tb.bucket_start,
+            COUNT(*) FILTER (WHERE pf.dst_ip = $4::inet) AS packets_in,
+            COUNT(*) FILTER (WHERE pf.src_ip = $4::inet) AS packets_out
+        FROM time_buckets tb
+        LEFT JOIN packet_flows pf
+            ON pf.channel_id = $5
+            AND pf.time >= tb.bucket_start
+            AND pf.time < tb.bucket_start + ($3::int || ' seconds')::interval
+            AND (pf.src_ip = $4::inet OR pf.dst_ip = $4::inet)
+        GROUP BY tb.bucket_start
     )
-    SELECT 
-        tb.bucket AS timestamp,
+    SELECT
+        a.bucket_start AS timestamp,
         COALESCE(a.packets_in, 0) / $3::float AS packets_in_per_sec,
         COALESCE(a.packets_out, 0) / $3::float AS packets_out_per_sec
-    FROM time_buckets tb
-    LEFT JOIN aggregated a ON tb.bucket = a.bucket
-    ORDER BY tb.bucket;
+    FROM aggregated a
+    ORDER BY a.bucket_start;
     """
     
     async with db_pool.acquire() as conn:

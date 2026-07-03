@@ -57,7 +57,7 @@ def _install_logging_patch() -> None:
             return original_get_message(self)
 
     # Apply the patch to the instance method
-    logging.LogRecord.getMessage = _patched_get_message  # type: ignore[method-assign]
+    setattr(logging.LogRecord, "getMessage", _patched_get_message)
 
 
 # Auto-install on import

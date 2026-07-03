@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Testing infrastructure setup using `conftest.py` with `fake_redis` and `fake_db` fixtures, an asynchronous UDP mock, and comprehensive unit tests for `sequence_tracker` (reset detection), `sql_builder` (SQL injection prevention), `query_hash` (determinism), and `scopes` (access matrix). ([#226](https://github.com/SWP-47/traffic-processing-platform/issues/226))
 - Integration tests for the ingestion pipeline, WebSocket subscription flow, ghost cleanup, and authentication flow using `testcontainers` to spin up real Redis and PostgreSQL instances, alongside an E2E test verifying the full pipeline from UDP packet reception to WebSocket client delivery. ([#227](https://github.com/SWP-47/traffic-processing-platform/issues/227))
 - Comprehensive documentation including `architecture.md`, `api.md`, `websocket_protocol.md`, and `deployment.md`, OpenAPI descriptions for all REST endpoints, and PlantUML diagrams (`data_flow.puml`, `subscription_lifecycle.puml`) visualizing system architecture and protocols. ([#228](https://github.com/SWP-47/traffic-processing-platform/issues/228))
+- Top Tables component on the dashboard page of MUI. ([#205](https://github.com/SWP-47/traffic-processing-platform/issues/205))
 
 ### Changed
 
@@ -103,6 +104,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added Docker configuration for Traffic Processor (TP) to simplify deployment and ensure environment consistency. ([#90](https://github.com/SWP-47/traffic-processing-platform/issues/90))
 - Added Docker configuration for Communication Node (CN) to simplify deployment and ensure environment consistency. ([#88](https://github.com/SWP-47/traffic-processing-platform/issues/88))
 - Added JSON format validation using library jsonschema ([#152](https://github.com/SWP-47/traffic-processing-platform/issues/152))
+- Architecture of hardware (FPGA) part of TP was updated to make it more stroung and useful for future development ([#209](https://github.com/SWP-47/traffic-processing-platform/issues/209))
 
 
 ### Deprecated

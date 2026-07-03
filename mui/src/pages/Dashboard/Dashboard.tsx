@@ -1,18 +1,19 @@
-import StatusIndicator from "@/features/StatusIndicator";
 import styles from './Dashboard.module.css';
-import PacketsColumnChart from "@/features/PacketsColumnChart";
-import Header from "@/components/Header/Header";
+import PacketsColumnChart from "@/features/PacketsColumnChart/PacketsColumnChart";
 import PacketsLineChart from "@/features/PacketsLineChart";
+import TopHostsTable from '@/features/TopHostsTable';
 
 function Dashboard() {
   return (
     <>
-      <Header />
       <div className={styles.page}>
-        <StatusIndicator />
         <div className={styles.row}>
           <PacketsColumnChart />
           <PacketsLineChart />
+        </div>
+        <div className={styles.row}>
+          <TopHostsTable mode='lan' />
+          <TopHostsTable mode='wan' />
         </div>
       </div>
     </>

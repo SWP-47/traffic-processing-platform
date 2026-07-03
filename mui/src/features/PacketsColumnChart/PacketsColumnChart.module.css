@@ -1,0 +1,90 @@
+.chart {
+    padding: 30px;
+    width: 275px;
+    flex-shrink: 0;
+
+    .header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+
+        .title {
+            font-weight: 400;
+        }
+
+        .mode_selector {
+            background: var(--color-surface-hover);
+            outline: none;
+            border: none;
+            border-radius: 10px;
+
+            padding: 8px;
+            width: fit-content;
+            height: fit-content;
+
+            cursor: pointer;
+        }
+
+        .mode_selector img {
+            display: block;
+            width: 16px;
+            height: 16px;
+            object-fit: contain;
+        }
+    }
+}
+
+.numerical {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+
+    height: 100%;
+
+    .value {
+        font-size: 2.3rem;
+        font-weight: bold;
+        text-align: center;
+
+        margin-bottom: 13px;
+    }
+    
+    .label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        user-select: none;
+
+        .arrow {
+            height: 100%;
+        }
+        
+        .text {
+            font-weight: 1rem;
+            color: var(--color-text);
+        }
+    
+        .name {
+            color: var(--color-text-muted);
+        }
+    }
+}
+
+.content_wrapper {
+  display: grid;
+}
+
+.view {
+  grid-area: 1 / 1; /* Магия CSS Grid: кладем оба элемента в одну ячейку */
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+  pointer-events: none; /* Чтобы скрытый элемент не перехватывал клики */
+  visibility: hidden;   /* Скрываем от скринридеров и полностью убираем из потока */
+}
+
+/* Активный режим */
+.view_active {
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+}

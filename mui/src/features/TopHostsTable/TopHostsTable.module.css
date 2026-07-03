@@ -1,0 +1,27 @@
+.table {
+    padding: 30px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+
+    margin-bottom: 20px;
+
+    .title {
+        font-weight: normal;
+    }
+
+    .stats {
+        font-size: 1rem;
+        font-weight: bold;
+
+        color: var(--color-text-muted);
+
+        .stats_number {
+            color: var(--color-text);
+        }
+    }
+}

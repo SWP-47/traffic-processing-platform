@@ -12,3 +12,7 @@
   display: flex;
   gap: 20px;
 }
+
+.row > * {
+  flex-grow: 1;
+}

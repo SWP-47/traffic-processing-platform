@@ -57,12 +57,12 @@ class PubSubConsumer:
                 await self._task
             except asyncio.CancelledError:
                 pass
-        
+
         if self._pubsub:
             await self._pubsub.unsubscribe()
             await self._pubsub.close()
             self._pubsub = None
-            
+
         logger.info("Pub/Sub Consumer stopped.")
 
     async def _listen_loop(self) -> None:
@@ -72,17 +72,17 @@ class PubSubConsumer:
         """
         redis_client = get_redis_client()
         self._pubsub = redis_client.pubsub()
-        
+
         try:
             # Subscribe to all channels matching the push pattern
             await self._pubsub.psubscribe(PUSH_CHANNEL_PATTERN)
             logger.debug(f"Subscribed to Pub/Sub pattern: {PUSH_CHANNEL_PATTERN}")
-            
+
             # Listen for messages indefinitely
             async for message in self._pubsub.listen():
                 if message["type"] == "pmessage":
                     await self._handle_message(message)
-                    
+
         except asyncio.CancelledError:
             raise
         except Exception as e:
@@ -98,10 +98,10 @@ class PubSubConsumer:
         channel_name = message["channel"]
         if isinstance(channel_name, bytes):
             channel_name = channel_name.decode("utf-8")
-            
+
         query_hash = channel_name[PUSH_CHANNEL_PREFIX_LEN:]
         raw_data = message["data"]
-        
+
         # Parse the JSON payload from the Reporting Worker
         try:
             if isinstance(raw_data, bytes):
@@ -114,7 +114,7 @@ class PubSubConsumer:
         # Retrieve the list of client IDs listening to this specific query_hash
         redis_client = get_redis_client()
         listeners_key = f"sub:listeners:{query_hash}"
-        
+
         try:
             client_ids = await redis_client.smembers(listeners_key)
         except Exception as e:
@@ -131,7 +131,7 @@ class PubSubConsumer:
         for client_id in client_ids:
             if isinstance(client_id, bytes):
                 client_id = client_id.decode("utf-8")
-                
+
             websocket = self._get_websocket(client_id)
             if websocket is None:
                 # Client disconnected but hasn't been cleaned up from the listener set yet.

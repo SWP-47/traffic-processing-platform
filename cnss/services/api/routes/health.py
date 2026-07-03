@@ -31,11 +31,11 @@ async def health_check(
     """
     Verifies internal component and database connectivity.
     Returns a detailed status of TimescaleDB, Redis, and channel statistics.
-    
+
     Raises UnhealthyError (503) if any core component is unreachable or in an error state.
     """
     components: dict[str, str] = {}
-    
+
     # --- Database Connectivity Check ---
     # Executes a lightweight query to verify the asyncpg connection pool is healthy
     # and TimescaleDB is responsive.
@@ -64,14 +64,12 @@ async def health_check(
     try:
         db_pool = get_db_pool()
         async with db_pool.acquire() as conn:
-            row = await conn.fetchrow(
-                """
-                SELECT 
-                    COUNT(*) AS total, 
-                    COUNT(*) FILTER (WHERE is_active = TRUE) AS active 
+            row = await conn.fetchrow("""
+                SELECT
+                    COUNT(*) AS total,
+                    COUNT(*) FILTER (WHERE is_active = TRUE) AS active
                 FROM channels;
-                """
-            )
+                """)
             channels_total = row["total"]
             channels_active = row["active"]
         components["channels"] = "active"
@@ -82,9 +80,7 @@ async def health_check(
     # If any critical component is in an error state, the entire service is
     # considered unhealthy, and a 503 response is returned.
     if any(status == "error" for status in components.values()):
-        raise UnhealthyError(
-            message="One or more core components are in an error state."
-        )
+        raise UnhealthyError(message="One or more core components are in an error state.")
 
     # --- Response Formatting ---
     # Construct the final health payload with UTC timestamps for consistency.

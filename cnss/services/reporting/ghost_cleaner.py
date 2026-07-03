@@ -12,7 +12,7 @@
 
 import asyncio
 import logging
-from typing import Optional, Set
+from typing import Optional, Set, cast
 
 from core.config import settings
 from core.redis.client import get_redis_client
@@ -55,9 +55,7 @@ class GhostCleaner:
         """Starts the background asyncio task for periodic ghost cleanup."""
         if self._task is None or self._task.done():
             self._task = asyncio.create_task(self._cleanup_loop())
-            logger.info(
-                f"Ghost Cleaner started. Cleanup interval: {settings.ghost_cleanup_interval_sec}s."
-            )
+            logger.info(f"Ghost Cleaner started. Cleanup interval: {settings.ghost_cleanup_interval_sec}s.")
 
     async def stop(self) -> None:
         """Gracefully cancels the ghost cleanup background task."""
@@ -94,7 +92,7 @@ class GhostCleaner:
         """
         # --- Retrieve Active Hashes ---
         try:
-            active_hashes: Set[str] = await self._redis.smembers(ACTIVE_HASHES_KEY)
+            active_hashes: Set[str] = cast(Set[str], await self._redis.smembers(ACTIVE_HASHES_KEY))
         except Exception as e:
             logger.error(f"Failed to retrieve active hashes from Redis: {e}")
             return
@@ -123,11 +121,9 @@ class GhostCleaner:
 
         # --- Retrieve Current Listeners ---
         try:
-            listeners: Set[str] = await self._redis.smembers(listeners_key)
+            listeners: Set[str] = cast(Set[str], await self._redis.smembers(listeners_key))
         except Exception as e:
-            logger.error(
-                f"[{query_hash}] Failed to retrieve listeners from '{listeners_key}': {e}"
-            )
+            logger.error(f"[{query_hash}] Failed to retrieve listeners from '{listeners_key}': {e}")
             return
 
         if not listeners:
@@ -148,9 +144,7 @@ class GhostCleaner:
                 # This is an O(1) operation in Redis.
                 exists = await self._redis.exists(session_key)
             except Exception as e:
-                logger.error(
-                    f"[{query_hash}] Failed to check session '{session_key}': {e}"
-                )
+                logger.error(f"[{query_hash}] Failed to check session '{session_key}': {e}")
                 # Do not remove on error; assume the session is alive to avoid
                 # false positives during transient Redis issues.
                 continue
@@ -160,8 +154,7 @@ class GhostCleaner:
                 # or the WS Service container crashed and the TTL expired.
                 stale_client_ids.add(client_id)
                 logger.debug(
-                    f"[{query_hash}] Ghost detected: client '{client_id}' "
-                    f"has no active session at '{session_key}'."
+                    f"[{query_hash}] Ghost detected: client '{client_id}' " f"has no active session at '{session_key}'."
                 )
 
         # --- Remove Stale Listeners ---
@@ -170,23 +163,16 @@ class GhostCleaner:
                 # SREM removes one or more members from a set.
                 # Returns the number of members that were removed.
                 removed_count = await self._redis.srem(listeners_key, *stale_client_ids)
-                logger.info(
-                    f"[{query_hash}] Removed {removed_count} ghost listener(s): "
-                    f"{stale_client_ids}"
-                )
+                logger.info(f"[{query_hash}] Removed {removed_count} ghost listener(s): " f"{stale_client_ids}")
             except Exception as e:
-                logger.error(
-                    f"[{query_hash}] Failed to remove stale listeners from '{listeners_key}': {e}"
-                )
+                logger.error(f"[{query_hash}] Failed to remove stale listeners from '{listeners_key}': {e}")
                 return
 
         # --- Check if Listener Set is Now Empty ---
         try:
             remaining_count = await self._redis.scard(listeners_key)
         except Exception as e:
-            logger.error(
-                f"[{query_hash}] Failed to check listener count for '{listeners_key}': {e}"
-            )
+            logger.error(f"[{query_hash}] Failed to check listener count for '{listeners_key}': {e}")
             return
 
         if remaining_count == 0:
@@ -194,10 +180,7 @@ class GhostCleaner:
             # to stop the Reporting Worker from polling the database.
             await self._cleanup_empty_subscription(query_hash)
         else:
-            logger.debug(
-                f"[{query_hash}] Ghost cleanup complete. "
-                f"Remaining valid listeners: {remaining_count}."
-            )
+            logger.debug(f"[{query_hash}] Ghost cleanup complete. " f"Remaining valid listeners: {remaining_count}.")
 
     async def _cleanup_empty_subscription(self, query_hash: str) -> None:
         """
@@ -225,6 +208,4 @@ class GhostCleaner:
                 f"Removed registry, listeners, and active hash index."
             )
         except Exception as e:
-            logger.error(
-                f"[{query_hash}] Failed to clean up empty subscription: {e}"
-            )
+            logger.error(f"[{query_hash}] Failed to clean up empty subscription: {e}")

@@ -34,6 +34,7 @@ class TokenPayload(BaseModel):
     # Channel scopes (ignored for admin, enforced for viewer)
     scope: List[str] = Field(default_factory=list, description="Allowed channel IDs.")
 
+
 # --- Refresh Token Payload Model ---
 # Represents the decoded structure of a long-lived Refresh JWT.
 # Includes a 'type' claim to strictly prevent misuse as an access token.
@@ -41,6 +42,7 @@ class RefreshTokenPayload(BaseModel):
     """
     Decoded Refresh JWT payload structure.
     """
+
     # User identifier (UUID as string)
     sub: str = Field(..., description="User ID (subject).")
     # Unique JWT ID for revocation tracking

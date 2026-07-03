@@ -25,7 +25,6 @@ from services.reporting.handlers.host_top_ports_handler import HostTopPortsHandl
 from services.reporting.handlers.hosts_table_handler import HostsTableHandler
 from services.reporting.handlers.telemetry_handler import TelemetryHandler
 
-
 # --- Handler Registry ---
 # Maps target names (from SubscribeRequest.target) to their handler instances.
 # This dictionary is the single source of truth for target routing in the Poller.

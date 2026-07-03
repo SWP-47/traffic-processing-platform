@@ -7,8 +7,6 @@
 
 # CRITICAL: Apply logging patch BEFORE any other imports
 # to fix compatibility issues with passlib and uvicorn.
-import core.logging_patch  # noqa: F401
-
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
@@ -18,6 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+import core.logging_patch  # noqa: F401
 from core.database import close_db_pool, init_db_pool
 from core.exceptions import ClientResponseError, ServerInternalError
 from core.logging import setup_logging
@@ -26,6 +25,7 @@ from services.api.routes import auth, channels, health, history
 
 # --- Module Logger ---
 logger = logging.getLogger(__name__)
+
 
 # --- Application Lifespan Manager ---
 # Handles initialization and teardown of shared infrastructure components.
@@ -38,42 +38,44 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     # --- Startup Phase ---
     logger.info("Starting CnSS REST API service...")
-    
+
     # Initialize logging configuration
     setup_logging()
     logger.info("Logging configured successfully.")
-    
+
     # Initialize Redis client (required for token revocation checks and state caching)
     await init_redis_client()
     logger.info("Redis client initialized successfully.")
-    
+
     # Initialize TimescaleDB connection pool (required for all database queries)
     await init_db_pool()
     logger.info("TimescaleDB connection pool initialized successfully.")
-    
+
     logger.info("CnSS REST API service is fully operational.")
-    
+
     # Yield control to the application (handles incoming requests)
     yield
-    
+
     # --- Shutdown Phase ---
     logger.info("Shutting down CnSS REST API service...")
-    
+
     # Close database pool gracefully
     await close_db_pool()
     logger.info("TimescaleDB connection pool closed.")
-    
+
     # Close Redis client gracefully
     await close_redis_client()
     logger.info("Redis client closed.")
-    
+
     logger.info("CnSS REST API service shutdown completed successfully.")
+
 
 # --- FastAPI Application Instance ---
 # Create the main application with lifespan manager and API metadata
 app = FastAPI(
     title="CnSS REST API",
-    description="Control and Status Server - HTTP gateway for authentication, channel discovery, and historical data retrieval",
+    description="Control and Status Server - HTTP gateway for authentication,"
+    " channel discovery, and historical data retrieval",
     version="2.0.0",
     lifespan=lifespan,
     docs_url="/api/docs",  # Swagger UI
@@ -92,18 +94,14 @@ app.include_router(history.router)
 # These handlers ensure all errors follow the consistent JSON response format
 # defined in the API specification (api.md §6).
 
+
 @app.exception_handler(ClientResponseError)
-async def client_response_error_handler(
-    request: Request, exc: ClientResponseError
-) -> JSONResponse:
+async def client_response_error_handler(request: Request, exc: ClientResponseError) -> JSONResponse:
     """
     Handles all client-facing errors (400, 401, 403, 404, 503).
     Returns a standardized JSON response with error code and message.
     """
-    logger.warning(
-        f"Client error: {exc.error_code} - {exc.message} "
-        f"(Path: {request.url.path})"
-    )
+    logger.warning(f"Client error: {exc.error_code} - {exc.message} " f"(Path: {request.url.path})")
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -112,18 +110,16 @@ async def client_response_error_handler(
         },
     )
 
+
 @app.exception_handler(ServerInternalError)
-async def server_internal_error_handler(
-    request: Request, exc: ServerInternalError
-) -> JSONResponse:
+async def server_internal_error_handler(request: Request, exc: ServerInternalError) -> JSONResponse:
     """
     Handles all server-side internal errors (500).
     Logs the full error details but returns a generic message to the client
     to prevent exposure of sensitive internal information.
     """
     logger.error(
-        f"Internal server error: {exc.message} - {exc.details} "
-        f"(Path: {request.url.path})",
+        f"Internal server error: {exc.message} - {exc.details} " f"(Path: {request.url.path})",
         exc_info=True,
     )
     return JSONResponse(
@@ -134,17 +130,14 @@ async def server_internal_error_handler(
         },
     )
 
+
 @app.exception_handler(RequestValidationError)
-async def validation_error_handler(
-    request: Request, exc: RequestValidationError
-) -> JSONResponse:
+async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """
     Handles Pydantic validation errors (422 Unprocessable Entity).
     Formats the error details into our standard response schema.
     """
-    logger.warning(
-        f"Validation error: {exc.errors()} (Path: {request.url.path})"
-    )
+    logger.warning(f"Validation error: {exc.errors()} (Path: {request.url.path})")
     return JSONResponse(
         status_code=422,
         content={
@@ -154,28 +147,24 @@ async def validation_error_handler(
         },
     )
 
+
 @app.exception_handler(StarletteHTTPException)
-async def http_exception_handler(
-    request: Request, exc: StarletteHTTPException
-) -> JSONResponse:
+async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
     """
     Handles standard HTTP exceptions (e.g., 404 Not Found from FastAPI routing).
     Converts them to our standardized error response format.
     """
-    logger.warning(
-        f"HTTP exception: {exc.status_code} - {exc.detail} "
-        f"(Path: {request.url.path})"
-    )
-    
+    logger.warning(f"HTTP exception: {exc.status_code} - {exc.detail} " f"(Path: {request.url.path})")
+
     # Map common HTTP exceptions to our error codes
     error_code_map = {
         404: "not_found",
         405: "method_not_allowed",
         500: "internal_error",
     }
-    
+
     error_code = error_code_map.get(exc.status_code, "http_error")
-    
+
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -184,17 +173,15 @@ async def http_exception_handler(
         },
     )
 
+
 @app.exception_handler(Exception)
-async def generic_exception_handler(
-    request: Request, exc: Exception
-) -> JSONResponse:
+async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """
     Catch-all handler for any unhandled exceptions.
     Ensures the API never returns raw HTML error pages or stack traces.
     """
     logger.critical(
-        f"Unhandled exception: {type(exc).__name__} - {str(exc)} "
-        f"(Path: {request.url.path})",
+        f"Unhandled exception: {type(exc).__name__} - {str(exc)} " f"(Path: {request.url.path})",
         exc_info=True,
     )
     return JSONResponse(
@@ -204,6 +191,7 @@ async def generic_exception_handler(
             "message": "An unexpected server error occurred.",
         },
     )
+
 
 # --- Health Check Endpoint (Root) ---
 # Simple endpoint to verify the API service is running (useful for Docker healthchecks)
@@ -218,12 +206,14 @@ async def root() -> dict[str, str]:
         "version": "2.0.0",
     }
 
+
 # --- Application Entry Point (for local development) ---
 # Allows running the API directly with: python -m services.api.main
 if __name__ == "__main__":
     import uvicorn
+
     from core.config import settings
-    
+
     uvicorn.run(
         "services.api.main:app",
         host=settings.cnss_host,

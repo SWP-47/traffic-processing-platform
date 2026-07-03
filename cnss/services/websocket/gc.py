@@ -9,7 +9,6 @@
 import logging
 from typing import List
 
-from core.exceptions import RedisError
 from core.redis.client import get_redis_client
 
 # --- Module Logger ---
@@ -75,15 +74,13 @@ class GarbageCollector:
 
             members = await self._redis.smembers(session_subs_key)
             if members:
-                query_hashes = list(members)
+                query_hashes = [m.decode("utf-8") if isinstance(m, bytes) else m for m in members]
 
             if not query_hashes:
                 logger.debug(f"No active subscriptions to clean up for client '{client_id}'.")
                 return
 
-            logger.info(
-                f"Garbage collecting {len(query_hashes)} subscription(s) for client '{client_id}'."
-            )
+            logger.info(f"Garbage collecting {len(query_hashes)} subscription(s) for client '{client_id}'.")
 
             # --- Process Each Subscription ---
             # Iterate over all subscriptions and remove the client from each listener set.
@@ -114,9 +111,7 @@ class GarbageCollector:
             # This handles the case where the client already unsubscribed gracefully.
             removed = await self._redis.srem(listeners_key, client_id)
             if not removed:
-                logger.debug(
-                    f"Client '{client_id}' was not in listener set for '{query_hash}'."
-                )
+                logger.debug(f"Client '{client_id}' was not in listener set for '{query_hash}'.")
                 return
 
             # --- Check if Listener Set is Empty ---
@@ -141,14 +136,11 @@ class GarbageCollector:
                 )
             else:
                 logger.debug(
-                    f"Client '{client_id}' removed from '{query_hash}'. "
-                    f"Remaining listeners: {listener_count}."
+                    f"Client '{client_id}' removed from '{query_hash}'. " f"Remaining listeners: {listener_count}."
                 )
 
         except Exception as e:
             # Do not re-raise; partial GC is better than no GC.
             # The Reporting Worker's Ghost Subscription Prevention will handle
             # stale entries by checking if ws:session:{client_id} exists.
-            logger.error(
-                f"Failed to clean up subscription '{query_hash}' for client '{client_id}': {e}"
-            )
+            logger.error(f"Failed to clean up subscription '{query_hash}' for client '{client_id}': {e}")

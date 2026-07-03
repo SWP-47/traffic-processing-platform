@@ -40,14 +40,14 @@ class MissingChannelError(ClientResponseError):
 
 
 # --- Query Parameter Extraction ---
-def _parse_query_params(websocket) -> dict[str, str]:
+def _parse_query_params(websocket: WebSocketServerProtocol) -> dict[str, str]:
     """
     Extracts and parses the query parameters from the WebSocket upgrade request URL.
     """
     # In websockets >= 13.0, the new API groups HTTP request details under `.request`.
     # We use hasattr for backward compatibility with the legacy API if needed.
     path = websocket.request.path if hasattr(websocket, "request") else websocket.path
-    
+
     # e.g., "/ws?token=eyJ...&channel_id=bridge-01"
     parsed = urllib.parse.urlparse(path)
     query_params = urllib.parse.parse_qs(parsed.query)
@@ -92,9 +92,7 @@ async def authenticate_connection(
     # Absence results in close code 4001 (invalid_token).
     token = params.get("token")
     if not token:
-        logger.warning(
-            f"WebSocket connection rejected for channel '{channel_id}': missing 'token' parameter."
-        )
+        logger.warning(f"WebSocket connection rejected for channel '{channel_id}': missing 'token' parameter.")
         raise AuthError(message="Missing 'token' in connection URL.")
 
     # --- Step 4: Decode and Verify JWT ---
@@ -103,9 +101,7 @@ async def authenticate_connection(
     try:
         payload = decode_access_token(token)
     except AuthError:
-        logger.warning(
-            f"WebSocket connection rejected for channel '{channel_id}': invalid or expired token."
-        )
+        logger.warning(f"WebSocket connection rejected for channel '{channel_id}': invalid or expired token.")
         raise
 
     # --- Step 5: Check Token Revocation ---
@@ -115,8 +111,7 @@ async def authenticate_connection(
         await check_token_revocation(payload.jti)
     except AuthError:
         logger.warning(
-            f"WebSocket connection rejected for channel '{channel_id}': "
-            f"token jti='{payload.jti}' has been revoked."
+            f"WebSocket connection rejected for channel '{channel_id}': " f"token jti='{payload.jti}' has been revoked."
         )
         raise
 
@@ -135,7 +130,6 @@ async def authenticate_connection(
 
     # --- Authentication Successful ---
     logger.info(
-        f"WebSocket connection authenticated: user='{payload.sub}', "
-        f"role={payload.role}, channel='{channel_id}'."
+        f"WebSocket connection authenticated: user='{payload.sub}', " f"role={payload.role}, channel='{channel_id}'."
     )
     return payload, channel_id

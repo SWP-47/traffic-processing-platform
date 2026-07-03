@@ -40,9 +40,7 @@ class BaseSubscriptionHandler(ABC):
         pass
 
     @abstractmethod
-    async def execute(
-        self, db_pool: asyncpg.Pool, request: SubscribeRequest
-    ) -> Optional[Dict[str, Any]]:
+    async def execute(self, db_pool: asyncpg.Pool, request: SubscribeRequest) -> Optional[Dict[str, Any]]:
         """
         Executes the target-specific SQL query and returns the formatted result.
 
@@ -69,20 +67,13 @@ class BaseSubscriptionHandler(ABC):
         # Ensure the request targets this handler's domain
         if request.target != self.target_name:
             logger.warning(
-                f"Handler '{self.target_name}' received request for "
-                f"mismatched target '{request.target}'."
+                f"Handler '{self.target_name}' received request for " f"mismatched target '{request.target}'."
             )
-            raise ValueError(
-                f"Target mismatch: expected '{self.target_name}', "
-                f"got '{request.target}'."
-            )
+            raise ValueError(f"Target mismatch: expected '{self.target_name}', " f"got '{request.target}'.")
 
         # Ensure channel_id is present (required for all subscriptions)
         if not request.channel_id:
             logger.warning(f"Empty channel_id in request for target '{self.target_name}'.")
             raise ValueError("channel_id is required for subscription.")
 
-        logger.debug(
-            f"Request validation passed for target '{self.target_name}' "
-            f"(channel: {request.channel_id})."
-        )
+        logger.debug(f"Request validation passed for target '{self.target_name}' " f"(channel: {request.channel_id}).")

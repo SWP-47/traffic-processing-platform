@@ -4,7 +4,7 @@
 # and infrastructure access (Database, Redis).
 # ==============================================================================
 
-from typing import Callable
+from typing import Awaitable, Callable
 
 import asyncpg
 import redis.asyncio as aioredis
@@ -24,6 +24,7 @@ security_scheme = HTTPBearer()
 
 # --- Infrastructure Dependencies ---
 
+
 async def get_db() -> asyncpg.Pool:
     """
     Provides the global asyncpg connection pool.
@@ -37,7 +38,9 @@ async def get_redis() -> aioredis.Redis:
     """
     return get_redis_client()
 
+
 # --- Authentication Dependencies ---
+
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
@@ -45,11 +48,11 @@ async def get_current_user(
     """
     Extracts, decodes, and validates the JWT from the Authorization header.
     Checks for token revocation in Redis.
-    
+
     Raises AuthError (401) if the token is invalid, expired, or revoked.
     """
     token = credentials.credentials
-    
+
     # Decode and verify signature/expiration
     # decode_access_token raises AuthError or TokenExpiredError (subclass of AuthError)
     payload = decode_access_token(token)
@@ -60,15 +63,18 @@ async def get_current_user(
 
     return payload
 
+
 # --- Authorization Dependencies ---
 
-def require_channel_access(channel_id_param: str = "channel_id") -> Callable:
+
+def require_channel_access(channel_id_param: str = "channel_id") -> Callable[..., Awaitable[str]]:
     """
     Factory function that returns a dependency to verify channel access.
     Usage: channel_id: str = Depends(require_channel_access("channel_id"))
-    
+
     Raises AuthorizationError (403) if the user lacks scope permissions.
     """
+
     async def _verify_access(
         channel_id: str = Path(..., alias=channel_id_param),
         current_user: TokenPayload = Depends(get_current_user),

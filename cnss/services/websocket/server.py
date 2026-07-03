@@ -9,11 +9,17 @@ import asyncio
 import json
 import logging
 import uuid
-from typing import Callable, Tuple
+from typing import Any, Callable, Tuple
 
 import websockets
+import websockets.WebSocketServer
 from pydantic import ValidationError
-from websockets.legacy.server import WebSocketServerProtocol
+
+# Import serve, WebSocketServer, and WebSocketServerProtocol from the legacy module
+from websockets.legacy.server import (
+    WebSocketServerProtocol,
+    serve,
+)
 
 from core.config import settings
 from core.contracts.auth import TokenPayload
@@ -66,13 +72,11 @@ class WebSocketServer:
         Starts the WebSocket server and binds to the configured host/port.
         Uses the 'websockets' library to handle the HTTP upgrade and protocol.
         """
-        logger.info(
-            f"Starting WebSocket server on {settings.cnss_host}:{settings.cnss_ws_port}..."
-        )
+        logger.info(f"Starting WebSocket server on {settings.cnss_host}:{settings.cnss_ws_port}...")
 
         # websockets.serve handles the HTTP handshake and upgrades to WS.
         # We pass the '_handler' method to process each new connection.
-        self._server = await websockets.serve(
+        self._server = await serve(
             self._handler,
             settings.cnss_host,
             settings.cnss_ws_port,
@@ -103,7 +107,7 @@ class WebSocketServer:
         """
         client_id = str(uuid.uuid4())
         session: Session | None = None
-        heartbeat_task: asyncio.Task | None = None
+        heartbeat_task: asyncio.Task[Any] | None = None
 
         try:
             # --- Phase 1: Authentication & Validation ---
@@ -127,14 +131,16 @@ class WebSocketServer:
             # --- Phase 5: Message Processing Loop ---
             # Listens for incoming JSON control messages (subscribe/unsubscribe).
             async for raw_message in websocket:
+                # websockets can yield bytes for binary frames; decode to str for JSON parsing
+                if isinstance(raw_message, bytes):
+                    raw_message = raw_message.decode("utf-8")
+
                 await self._process_message(websocket, session, raw_message)
 
         except ClientResponseError as e:
             # Handle expected validation errors with specific WS close codes.
-            logger.warning(
-                f"Connection rejected for client {client_id}: {e.message} (Code: {e.ws_close_code})"
-            )
-            await websocket.close(e.ws_close_code, e.message)
+            logger.warning(f"Connection rejected for client {client_id}: {e.message} (Code: {e.ws_close_code})")
+            await websocket.close(e.ws_close_code or 1011, e.message)
 
         except websockets.exceptions.ConnectionClosed:
             # Client disconnected normally or network dropped.
@@ -164,9 +170,7 @@ class WebSocketServer:
 
     # --- Helper Methods ---
 
-    async def _authenticate_connection(
-        self, websocket: WebSocketServerProtocol
-    ) -> Tuple[TokenPayload, str]:
+    async def _authenticate_connection(self, websocket: WebSocketServerProtocol) -> Tuple[TokenPayload, str]:
         """
         Validates the connection request: JWT, Channel ID, Scope, and Existence.
         Delegates JWT/Scope logic to 'auth.py' and performs Channel Existence check here.
@@ -196,9 +200,7 @@ class WebSocketServer:
         """
         pool = get_db_pool()
         async with pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT 1 FROM channels WHERE channel_id = $1", channel_id
-            )
+            row = await conn.fetchrow("SELECT 1 FROM channels WHERE channel_id = $1", channel_id)
             return row is not None
 
     async def _heartbeat_loop(self, session: Session) -> None:
@@ -214,9 +216,7 @@ class WebSocketServer:
             # Expected when the connection closes.
             pass
 
-    async def _process_message(
-        self, websocket: WebSocketServerProtocol, session: Session, raw_message: str
-    ) -> None:
+    async def _process_message(self, websocket: WebSocketServerProtocol, session: Session, raw_message: str) -> None:
         """
         Parses, validates, and routes incoming JSON control messages.
         """
@@ -237,8 +237,7 @@ class WebSocketServer:
         # The channel_id in the message MUST match the one from the connection URL.
         if request.channel_id != session.channel_id:
             logger.warning(
-                f"Channel mismatch for {session.client_id}: "
-                f"URL={session.channel_id}, Msg={request.channel_id}"
+                f"Channel mismatch for {session.client_id}: " f"URL={session.channel_id}, Msg={request.channel_id}"
             )
             # Close connection with 4003 as per architecture.
             await websocket.close(4003, "Subscription channel_id mismatch.")
@@ -271,9 +270,7 @@ class WebSocketServer:
         # Adds client to sub:listeners:{hash}, writes sub:registry:{hash},
         # and indexes hash in sub:active_hashes for the Reporting Worker.
         query_hash, push_channel = await self._sub_manager.subscribe(session, request)
-        logger.debug(
-            f"Client '{session.client_id}' registered for '{push_channel}' (hash: {query_hash})."
-        )
+        logger.debug(f"Client '{session.client_id}' registered for '{push_channel}' (hash: {query_hash}).")
 
         # --- Step 2: Fetch Initial Snapshot from TimescaleDB ---
         # Executes a read-only query to get the current state of the subscription.
@@ -286,9 +283,7 @@ class WebSocketServer:
                 params=request.params,
             )
         except ResourceNotFoundError as e:
-            logger.warning(
-                f"Snapshot fetch failed for client '{session.client_id}': {e.message}"
-            )
+            logger.warning(f"Snapshot fetch failed for client '{session.client_id}': {e.message}")
             # Do not close connection; the client may still receive updates via Pub/Sub.
             return
         except Exception as e:
@@ -301,10 +296,6 @@ class WebSocketServer:
         # --- Step 3: Push Initial Snapshot to the client ---
         try:
             await websocket.send(json.dumps(snapshot))
-            logger.debug(
-                f"Initial snapshot sent to client '{session.client_id}' for '{request.target}'."
-            )
+            logger.debug(f"Initial snapshot sent to client '{session.client_id}' for '{request.target}'.")
         except Exception as e:
-            logger.error(
-                f"Failed to send initial snapshot to client '{session.client_id}': {e}"
-            )
+            logger.error(f"Failed to send initial snapshot to client '{session.client_id}': {e}")

@@ -8,11 +8,10 @@
 import asyncio
 import logging
 import sys
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import asyncpg
 
-from core.config import settings
 from core.database import close_db_pool, init_db_pool
 from core.security.passwords import hash_password
 
@@ -22,7 +21,7 @@ logger = logging.getLogger(__name__)
 # --- Mock Data Configuration ---
 # Test users with their roles, passwords, and channel access scopes.
 # Admin scope is intentionally empty — admins bypass scope restrictions entirely.
-MOCK_USERS: Dict[str, Dict] = {
+MOCK_USERS: Dict[str, Dict[str, Any]] = {
     "admin": {
         "password": "admin123",
         "role": "admin",
@@ -44,6 +43,7 @@ MOCK_CHANNELS: List[str] = [
 
 
 # --- Database Seeding Functions ---
+
 
 async def seed_channels(conn: asyncpg.Connection) -> None:
     """
@@ -127,6 +127,7 @@ async def seed_scopes(conn: asyncpg.Connection, user_ids: Dict[str, str]) -> Non
 
 
 # --- Main Entry Point ---
+
 
 async def main() -> None:
     """

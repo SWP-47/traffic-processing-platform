@@ -72,9 +72,7 @@ class HostsTableHandler(BaseSubscriptionHandler):
         """Identifier for this handler, matching SubscribeRequest.target."""
         return "hosts_table"
 
-    async def execute(
-        self, db_pool: asyncpg.Pool, request: SubscribeRequest
-    ) -> Optional[Dict[str, Any]]:
+    async def execute(self, db_pool: asyncpg.Pool, request: SubscribeRequest) -> Optional[Dict[str, Any]]:
         """
         Executes the hosts table aggregation query and returns the formatted JSON result.
 
@@ -137,9 +135,7 @@ class HostsTableHandler(BaseSubscriptionHandler):
 
         # --- ORDER BY, LIMIT, OFFSET ---
         # All use strict whitelisting / parameterized placeholders for safety.
-        order_by_sql = build_order_by(
-            params.sort_by, params.sort_order, HOSTS_TABLE_SORT_WHITELIST
-        )
+        order_by_sql = build_order_by(params.sort_by, params.sort_order, HOSTS_TABLE_SORT_WHITELIST)
         limit_sql = build_limit_param(params.limit, pq)
         offset_sql = build_offset(params.offset, pq)
 
@@ -153,9 +149,9 @@ class HostsTableHandler(BaseSubscriptionHandler):
             -- Unfold each packet into 2 records: host (LAN/WAN) and remote
             -- For IN (direction=0): dst_ip is LAN host (receives), src_ip is WAN host (sends)
             -- For OUT (direction=1): src_ip is LAN host (sends), dst_ip is WAN host (receives)
-            
+
             -- LAN hosts: dst at IN (rx) OR src at OUT (tx)
-            SELECT 
+            SELECT
                 CASE WHEN direction = 0 THEN dst_ip ELSE src_ip END AS host_ip,
                 CASE WHEN direction = 0 THEN src_ip ELSE dst_ip END AS remote_ip,
                 'LAN' AS host_location,
@@ -164,11 +160,11 @@ class HostsTableHandler(BaseSubscriptionHandler):
                 time
             FROM packet_flows
             WHERE channel_id = {channel_ph} AND time > NOW() - ({interval_ph}::text)::interval
-            
+
             UNION ALL
-            
+
             -- WAN hosts: src at IN (tx) OR dst at OUT (rx)
-            SELECT 
+            SELECT
                 CASE WHEN direction = 0 THEN src_ip ELSE dst_ip END AS host_ip,
                 CASE WHEN direction = 0 THEN dst_ip ELSE src_ip END AS remote_ip,
                 'WAN' AS host_location,
@@ -224,11 +220,7 @@ class HostsTableHandler(BaseSubscriptionHandler):
                             "unique_destinations": int(row["unique_destinations"]),
                             "tx_per_sec": float(row["tx_per_sec"]),
                             "rx_per_sec": float(row["rx_per_sec"]),
-                            "last_activity": (
-                                row["last_activity"].isoformat()
-                                if row["last_activity"]
-                                else None
-                            ),
+                            "last_activity": (row["last_activity"].isoformat() if row["last_activity"] else None),
                         }
                     )
 
@@ -242,8 +234,7 @@ class HostsTableHandler(BaseSubscriptionHandler):
                 }
 
                 logger.debug(
-                    f"[hosts_table] Success for '{channel_id}': "
-                    f"{len(hosts)} hosts returned (total: {total_count})."
+                    f"[hosts_table] Success for '{channel_id}': " f"{len(hosts)} hosts returned (total: {total_count})."
                 )
                 return result
 
@@ -252,14 +243,10 @@ class HostsTableHandler(BaseSubscriptionHandler):
                 f"[hosts_table] Database error for channel '{channel_id}': {e}",
                 exc_info=True,
             )
-            raise DatabaseError(
-                message=f"Hosts table query failed for channel '{channel_id}'."
-            ) from e
+            raise DatabaseError(message=f"Hosts table query failed for channel '{channel_id}'.") from e
         except Exception as e:
             logger.error(
                 f"[hosts_table] Unexpected error for channel '{channel_id}': {e}",
                 exc_info=True,
             )
-            raise DatabaseError(
-                message=f"Unexpected hosts table query failure for channel '{channel_id}'."
-            ) from e
+            raise DatabaseError(message=f"Unexpected hosts table query failure for channel '{channel_id}'.") from e

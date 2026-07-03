@@ -77,6 +77,7 @@ async def check_token_revocation(jti: str) -> None:
     if is_revoked:
         raise TokenRevokedError()
 
+
 # --- Refresh Token Creation ---
 def create_refresh_token(subject: str, role: str, scope: List[str]) -> str:
     """
@@ -107,15 +108,12 @@ def decode_refresh_token(token: str, verify_exp: bool = True) -> RefreshTokenPay
     """
     try:
         raw_payload = jwt.decode(
-            token,
-            settings.jwt_secret_key,
-            algorithms=[settings.jwt_algorithm],
-            options={"verify_exp": verify_exp}
+            token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm], options={"verify_exp": verify_exp}
         )
         # Ensure the token is actually a refresh token to prevent access token misuse
         if raw_payload.get("type") != "refresh":
             raise AuthError("Invalid token type.")
-        
+
         # Validate and construct the typed Pydantic model
         return RefreshTokenPayload(**raw_payload)
     except jwt.ExpiredSignatureError:

@@ -9,8 +9,7 @@ import logging
 from typing import Any, Dict
 
 from core.contracts.subscriptions import SubscriptionParams
-from core.database import get_db_pool
-from core.exceptions import DatabaseError, ResourceNotFoundError
+from core.exceptions import ResourceNotFoundError
 
 # --- Module Logger ---
 logger = logging.getLogger(__name__)
@@ -23,12 +22,10 @@ class SnapshotFetcher:
     Each subscription target (e.g., 'telemetry', 'lan_hosts') has a dedicated handler.
     """
 
-    async def fetch_snapshot(
-        self, channel_id: str, target: str, params: SubscriptionParams
-    ) -> Dict[str, Any]:
+    async def fetch_snapshot(self, channel_id: str, target: str, params: SubscriptionParams) -> Dict[str, Any]:
         """
         Routes the snapshot request to the appropriate target-specific handler.
-        
+
         :param channel_id: The channel identifier to query.
         :param target: The data stream type (e.g., 'telemetry', 'lan_hosts').
         :param params: The subscription parameters (filters, limits, windows).

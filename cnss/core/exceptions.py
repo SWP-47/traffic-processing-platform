@@ -41,12 +41,6 @@ class AuthError(ClientResponseError):
         super().__init__(status_code=401, error_code="unauthorized", message=message, ws_close_code=4001)
 
 
-class InvalidCredentialsError(AuthError):
-    """Raised when username or password is incorrect during login."""
-
-    pass
-
-
 class TokenExpiredError(AuthError):
     """Raised when a JWT has exceeded its 'exp' claim."""
 
@@ -117,16 +111,20 @@ class ConfigurationError(ServerInternalError):
     def __init__(self, message: str = "Invalid application configuration."):
         super().__init__(message=message)
 
+
 class InvalidCredentialsError(AuthError):
     """Raised when username or password is incorrect during login."""
+
     def __init__(self, message: str = "Invalid username or password."):
         super().__init__(message=message)
         # Override the default 'unauthorized' error code from AuthError
         # to match the specific API specification (api.md §6).
         self.error_code = "invalid_credentials"
 
+
 # --- Health Check Errors (HTTP 503) ---
 class UnhealthyError(ClientResponseError):
     """Raised when the /health endpoint detects a degraded or failed component."""
+
     def __init__(self, message: str = "Service is currently unhealthy."):
         super().__init__(status_code=503, error_code="unhealthy", message=message)

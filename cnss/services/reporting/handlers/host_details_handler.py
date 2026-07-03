@@ -54,9 +54,7 @@ class HostDetailsHandler(BaseSubscriptionHandler):
         """Identifier for this handler, matching SubscribeRequest.target."""
         return "host_details"
 
-    async def execute(
-        self, db_pool: asyncpg.Pool, request: SubscribeRequest
-    ) -> Optional[Dict[str, Any]]:
+    async def execute(self, db_pool: asyncpg.Pool, request: SubscribeRequest) -> Optional[Dict[str, Any]]:
         """
         Executes the host details query and returns the formatted JSON result.
 
@@ -101,7 +99,7 @@ class HostDetailsHandler(BaseSubscriptionHandler):
         channel_ph = pq.add_param(channel_id)
         interval_ph = pq.add_param(interval_str)
         host_ip_ph = pq.add_param(params.host_ip)
-        seconds_ph = pq.add_param(period_seconds)
+        pq.add_param(period_seconds)
 
         # --- Query Assembly ---
         # Simple aggregation query:
@@ -157,19 +155,13 @@ class HostDetailsHandler(BaseSubscriptionHandler):
 
         except asyncpg.PostgresError as e:
             logger.error(
-                f"[host_details] Database error for host '{params.host_ip}' "
-                f"in channel '{channel_id}': {e}",
+                f"[host_details] Database error for host '{params.host_ip}' " f"in channel '{channel_id}': {e}",
                 exc_info=True,
             )
-            raise DatabaseError(
-                message=f"Host details query failed for host '{params.host_ip}'."
-            ) from e
+            raise DatabaseError(message=f"Host details query failed for host '{params.host_ip}'.") from e
         except Exception as e:
             logger.error(
-                f"[host_details] Unexpected error for host '{params.host_ip}' "
-                f"in channel '{channel_id}': {e}",
+                f"[host_details] Unexpected error for host '{params.host_ip}' " f"in channel '{channel_id}': {e}",
                 exc_info=True,
             )
-            raise DatabaseError(
-                message=f"Unexpected host details query failure for host '{params.host_ip}'."
-            ) from e
+            raise DatabaseError(message=f"Unexpected host details query failure for host '{params.host_ip}'.") from e

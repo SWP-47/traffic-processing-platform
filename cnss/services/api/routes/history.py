@@ -11,6 +11,7 @@ from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, Path, Query
 
+from core.config import settings
 from core.contracts.auth import TokenPayload
 from core.database import get_db_pool
 from core.exceptions import ResourceNotFoundError, ValidationError
@@ -21,7 +22,6 @@ from services.api.schemas import (
     HostHistoryPoint,
     HostHistoryResponse,
 )
-from core.config import settings
 
 # --- Router Configuration ---
 # Grouped under /api/v1 prefix. Tags provide OpenAPI documentation grouping.
@@ -65,25 +65,22 @@ def _validate_time_range(start_time: datetime, period: str) -> tuple[datetime, d
     Raises ValidationError (400) if constraints are violated.
     """
     now = datetime.now(timezone.utc)
-    
+
     # Ensure start_time is not in the future
     if start_time > now:
-        raise ValidationError(
-            error_code="bad_request",
-            message="start_time cannot be in the future."
-        )
-    
+        raise ValidationError(error_code="bad_request", message="start_time cannot be in the future.")
+
     # Calculate end_time based on period
     end_time = start_time + PERIOD_DELTAS[period]
-    
+
     # Ensure the requested range does not exceed the data retention policy
     retention_cutoff = now - timedelta(days=RETENTION_DAYS)
     if start_time < retention_cutoff:
         raise ValidationError(
             error_code="bad_request",
-            message=f"Requested time range exceeds data retention period ({RETENTION_DAYS} days)."
+            message=f"Requested time range exceeds data retention period ({RETENTION_DAYS} days).",
         )
-        
+
     return start_time, end_time
 
 
@@ -107,21 +104,18 @@ async def get_channel_history(
     if start_time is None:
         # Default to now - period
         start_time = now - PERIOD_DELTAS[period]
-    
+
     # Ensure start_time is timezone-aware (UTC) to prevent DB comparison errors
     if start_time.tzinfo is None:
         start_time = start_time.replace(tzinfo=timezone.utc)
-        
+
     validated_start, validated_end = _validate_time_range(start_time, period)
     interval_sec = PERIOD_BUCKET_SEC[period]
-    
+
     # --- Channel Existence Check ---
     db_pool = get_db_pool()
     async with db_pool.acquire() as conn:
-        channel_row = await conn.fetchrow(
-            "SELECT 1 FROM channels WHERE channel_id = $1",
-            channel_id
-        )
+        channel_row = await conn.fetchrow("SELECT 1 FROM channels WHERE channel_id = $1", channel_id)
     if not channel_row:
         raise ResourceNotFoundError(message=f"Channel '{channel_id}' not found.")
 
@@ -153,16 +147,10 @@ async def get_channel_history(
     FROM aggregated a
     ORDER BY a.bucket_start;
     """
-    
+
     async with db_pool.acquire() as conn:
-        rows = await conn.fetch(
-            query,
-            validated_start,
-            validated_end,
-            interval_sec,
-            channel_id
-        )
-        
+        rows = await conn.fetch(query, validated_start, validated_end, interval_sec, channel_id)
+
     # --- Response Formatting ---
     points = [
         HistoryPoint(
@@ -173,7 +161,7 @@ async def get_channel_history(
         )
         for row in rows
     ]
-    
+
     return ChannelHistoryResponse(
         channel_id=channel_id,
         period=period,
@@ -187,10 +175,7 @@ async def get_channel_history(
 # ==============================================================================
 # GET /api/v1/channel/{channel_id}/hosts/{host_ip}/history
 # ==============================================================================
-@router.get(
-    "/channel/{channel_id}/hosts/{host_ip}/history", 
-    response_model=HostHistoryResponse
-)
+@router.get("/channel/{channel_id}/hosts/{host_ip}/history", response_model=HostHistoryResponse)
 async def get_host_history(
     channel_id: str = Depends(require_channel_access("channel_id")),
     host_ip: str = Path(..., description="IP address of the host (IPv4/IPv6)."),
@@ -200,27 +185,24 @@ async def get_host_history(
 ) -> HostHistoryResponse:
     """
     Lazy-loads historical Rx/Tx rate data for a specific Host Line Chart.
-    Queries the raw packet_flows hypertable since continuous aggregates 
+    Queries the raw packet_flows hypertable since continuous aggregates
     do not store per-host IP breakdowns.
     """
     # --- Time Range Validation & Defaults ---
     now = datetime.now(timezone.utc)
     if start_time is None:
         start_time = now - PERIOD_DELTAS[period]
-    
+
     if start_time.tzinfo is None:
         start_time = start_time.replace(tzinfo=timezone.utc)
-        
+
     validated_start, validated_end = _validate_time_range(start_time, period)
     interval_sec = PERIOD_BUCKET_SEC[period]
-    
+
     # --- Channel Existence Check ---
     db_pool = get_db_pool()
     async with db_pool.acquire() as conn:
-        channel_row = await conn.fetchrow(
-            "SELECT 1 FROM channels WHERE channel_id = $1",
-            channel_id
-        )
+        channel_row = await conn.fetchrow("SELECT 1 FROM channels WHERE channel_id = $1", channel_id)
     if not channel_row:
         raise ResourceNotFoundError(message=f"Channel '{channel_id}' not found.")
 
@@ -230,10 +212,10 @@ async def get_host_history(
     # For each bucket, we manually compute the range [bucket_start, bucket_end) and aggregate
     # packet_flows data within that range. This avoids time_bucket misalignment issues.
     # Rx/Tx logic: dst_ip = host means IN (receiving), src_ip = host means OUT (sending).
-    # 
+    #
     # IMPORTANT TYPE INFERENCE FIX:
     # We must explicitly cast $3 to ::int BEFORE concatenation (i.e., $3::int || ' seconds').
-    # Without this, asyncpg's query parser sees "$3 || ' seconds'" and incorrectly infers 
+    # Without this, asyncpg's query parser sees "$3 || ' seconds'" and incorrectly infers
     # that $3 is of type 'text', causing a TypeError when we pass an integer from Python.
     query = """
     WITH time_buckets AS (
@@ -259,17 +241,10 @@ async def get_host_history(
     FROM aggregated a
     ORDER BY a.bucket_start;
     """
-    
+
     async with db_pool.acquire() as conn:
-        rows = await conn.fetch(
-            query,
-            validated_start,
-            validated_end,
-            interval_sec,
-            host_ip,
-            channel_id
-        )
-        
+        rows = await conn.fetch(query, validated_start, validated_end, interval_sec, host_ip, channel_id)
+
     # --- Response Formatting ---
     points = [
         HostHistoryPoint(
@@ -279,7 +254,7 @@ async def get_host_history(
         )
         for row in rows
     ]
-    
+
     return HostHistoryResponse(
         channel_id=channel_id,
         host_ip=host_ip,

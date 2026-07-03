@@ -57,7 +57,6 @@ class Settings(BaseSettings):
     # Note: This setting affects only local dev builds (make run-websocket).
     cnss_ws_port: int = Field(default=8001, alias="CnSS_WS_PORT")
 
-
     # --- Timeouts & Intervals ---
     # Channel inactivity timeout in milliseconds (used for REST/WS fallback status)
     activity_timeout_ms: int = Field(default=5000, alias="ACTIVITY_TIMEOUT_MS")
@@ -66,7 +65,9 @@ class Settings(BaseSettings):
     # Interval in seconds for the Ghost Cleaner to scan and remove stale subscription listeners
     ghost_cleanup_interval_sec: float = Field(default=5.0, alias="GHOST_CLEANUP_INTERVAL_SEC")
     # Interval in seconds for the Reporting Worker's Cannel state syncer to sync drops and state to TimescaleDB
-    reporting_channel_state_syncer_interval_sec: float = Field(default=1.0, alias="REPORTING_CAHNNEL_STATE_SYNCER_INTERVAL_SEC")
+    reporting_channel_state_syncer_interval_sec: float = Field(
+        default=1.0, alias="REPORTING_CAHNNEL_STATE_SYNCER_INTERVAL_SEC"
+    )
     # Interval in seconds for the Reporting Worker's Poller to process active subsribtions
     reporting_poller_interval_sec: float = Field(default=1.0, alias="REPORTING_POLLER_INTERVAL_SEC")
 

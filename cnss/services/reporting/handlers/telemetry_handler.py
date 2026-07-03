@@ -75,9 +75,7 @@ class TelemetryHandler(BaseSubscriptionHandler):
         """Identifier for this handler, matching SubscribeRequest.target."""
         return "telemetry"
 
-    async def execute(
-        self, db_pool: asyncpg.Pool, request: SubscribeRequest
-    ) -> Optional[Dict[str, Any]]:
+    async def execute(self, db_pool: asyncpg.Pool, request: SubscribeRequest) -> Optional[Dict[str, Any]]:
         """
         Executes the telemetry aggregation query and returns the formatted JSON result.
 
@@ -100,7 +98,7 @@ class TelemetryHandler(BaseSubscriptionHandler):
         # --- Parameter Extraction ---
         params = request.params
         window_sec = params.window_sec if params.window_sec is not None else DEFAULT_WINDOW_SEC
-        
+
         # Validate window_sec to prevent division by zero or negative values
         if window_sec < MIN_WINDOW_SEC:
             logger.warning(
@@ -108,7 +106,7 @@ class TelemetryHandler(BaseSubscriptionHandler):
                 f"Using default {DEFAULT_WINDOW_SEC}s."
             )
             window_sec = DEFAULT_WINDOW_SEC
-        
+
         channel_id = request.channel_id
 
         logger.debug(
@@ -126,7 +124,7 @@ class TelemetryHandler(BaseSubscriptionHandler):
         # This is critical for accurate rate calculation when window_sec is not a whole number.
         # Example: window_sec=1.5 reads 2 buckets (2s actual), so we divide by 2, not 1.5.
         query = """
-            SELECT 
+            SELECT
                 c.is_active,
                 c.dropped,
                 COALESCE(SUM(t.packets_in), 0) AS total_in,
@@ -134,8 +132,8 @@ class TelemetryHandler(BaseSubscriptionHandler):
                 COUNT(t.bucket) AS bucket_count,
                 MAX(t.bucket) AS latest_bucket
             FROM channels c
-            LEFT JOIN telemetry_1s t 
-                ON c.channel_id = t.channel_id 
+            LEFT JOIN telemetry_1s t
+                ON c.channel_id = t.channel_id
                 AND t.bucket > NOW() - ($1 * INTERVAL '1 second') - INTERVAL '1 second'
                 AND t.bucket <= NOW() - INTERVAL '1 second'
             WHERE c.channel_id = $2
@@ -155,7 +153,7 @@ class TelemetryHandler(BaseSubscriptionHandler):
             total_in = int(row["total_in"])
             total_out = int(row["total_out"])
             bucket_count = int(row["bucket_count"])
-            
+
             # --- Accurate Rate Calculation ---
             # Use actual bucket count as the real time window.
             # Each bucket in telemetry_1s represents exactly 1 second.
@@ -166,8 +164,7 @@ class TelemetryHandler(BaseSubscriptionHandler):
                 pps_out = 0
                 actual_window_sec = 0.0
                 logger.debug(
-                    f"[telemetry] No buckets found for channel '{channel_id}'. "
-                    f"Requested window: {window_sec}s."
+                    f"[telemetry] No buckets found for channel '{channel_id}'. " f"Requested window: {window_sec}s."
                 )
             else:
                 # Each bucket = 1 second, so bucket_count = actual time window in seconds
@@ -216,14 +213,10 @@ class TelemetryHandler(BaseSubscriptionHandler):
                 f"[telemetry] Database error for channel '{channel_id}': {e}",
                 exc_info=True,
             )
-            raise DatabaseError(
-                message=f"Telemetry query failed for channel '{channel_id}'."
-            ) from e
+            raise DatabaseError(message=f"Telemetry query failed for channel '{channel_id}'.") from e
         except Exception as e:
             logger.error(
                 f"[telemetry] Unexpected error for channel '{channel_id}': {e}",
                 exc_info=True,
             )
-            raise DatabaseError(
-                message=f"Unexpected telemetry query failure for channel '{channel_id}'."
-            ) from e
+            raise DatabaseError(message=f"Unexpected telemetry query failure for channel '{channel_id}'.") from e

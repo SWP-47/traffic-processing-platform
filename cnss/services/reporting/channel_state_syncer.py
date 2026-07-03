@@ -67,7 +67,8 @@ class ChannelStateSyncer:
         if self._task is None or self._task.done():
             self._task = asyncio.create_task(self._sync_loop())
             logger.info(
-                f"Channel State Syncer started. Sync interval: {settings.reporting_channel_state_syncer_interval_sec}s, "
+                f"Channel State Syncer started. Sync interval:"
+                " {settings.reporting_channel_state_syncer_interval_sec}s, "
                 f"Timeout threshold: {settings.activity_timeout_ms}ms."
             )
 
@@ -164,7 +165,7 @@ class ChannelStateSyncer:
                 # Handle both str and bytes returns from Redis depending on decode_responses
                 if isinstance(key, bytes):
                     key = key.decode("utf-8")
-                channel_id = key[len(STATE_KEY_PREFIX):]
+                channel_id = key[len(STATE_KEY_PREFIX) :]
                 channel_ids.add(channel_id)
 
             if cursor == 0:
@@ -219,18 +220,16 @@ class ChannelStateSyncer:
             last_activity_at: Optional[datetime] = None
             if last_activity_at_raw:
                 try:
-                    last_activity_at = datetime.fromtimestamp(
-                        float(last_activity_at_raw), tz=timezone.utc
-                    )
+                    last_activity_at = datetime.fromtimestamp(float(last_activity_at_raw), tz=timezone.utc)
                 except (ValueError, TypeError):
-                    logger.warning(
-                        f"[{channel_id}] Invalid last_activity_at format in Redis: "
-                        f"{last_activity_at_raw}"
+                    safe_val = (
+                        last_activity_at_raw.decode("utf-8")
+                        if isinstance(last_activity_at_raw, bytes)
+                        else last_activity_at_raw
                     )
+                    logger.warning(f"[{channel_id}] Invalid last_activity_at format in Redis: " f"{safe_val}")
 
-            logger.debug(
-                f"[{channel_id}] Redis state: last_activity_at={last_activity_at}"
-            )
+            logger.debug(f"[{channel_id}] Redis state: last_activity_at={last_activity_at}")
 
             # --- Step 4: Database Update (UPSERT) ---
             # Auto-registers the channel if it doesn't exist yet (first time seen in Redis).
@@ -260,8 +259,7 @@ class ChannelStateSyncer:
                 )
 
             logger.info(
-                f"[{channel_id}] Synced: dropped_delta={dropped_delta}, "
-                f"last_activity_at={last_activity_at}."
+                f"[{channel_id}] Synced: dropped_delta={dropped_delta}, " f"last_activity_at={last_activity_at}."
             )
 
         except RedisError as e:

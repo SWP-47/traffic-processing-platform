@@ -7,7 +7,7 @@
 
 import logging
 import time
-from typing import List
+from typing import List, cast
 
 from core.contracts.auth import TokenPayload
 from core.exceptions import RedisError
@@ -151,7 +151,7 @@ class Session:
         subs_key = self._get_subs_key()
         try:
             members = await self._redis.smembers(subs_key)
-            return list(members) if members else []
+            return cast(list[str], list(members)) if members else []
         except Exception as e:
             logger.error(f"Failed to get subscriptions for session '{self.client_id}': {e}")
             return []

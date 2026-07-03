@@ -126,8 +126,7 @@ def build_order_by(
     sql_column = sort_whitelist.get(normalized_sort_by)
     if not sql_column:
         logger.warning(
-            f"Invalid sort_by '{sort_by}'. "
-            f"Allowed values: {list(sort_whitelist.keys())}. Skipping ORDER BY."
+            f"Invalid sort_by '{sort_by}'. " f"Allowed values: {list(sort_whitelist.keys())}. Skipping ORDER BY."
         )
         return ""
 
@@ -135,9 +134,7 @@ def build_order_by(
     normalized_order = (sort_order or "asc").lower().strip()
     sql_order = SORT_ORDER_WHITELIST.get(normalized_order, "ASC")
     if normalized_order not in SORT_ORDER_WHITELIST:
-        logger.debug(
-            f"Invalid sort_order '{sort_order}'. Defaulting to ASC."
-        )
+        logger.debug(f"Invalid sort_order '{sort_order}'. Defaulting to ASC.")
 
     # Construct the safe fragment
     order_clause = f"ORDER BY {sql_column} {sql_order}"
@@ -165,10 +162,7 @@ def build_limit(
         # Enforce boundaries: must be positive and not exceed max_limit
         effective_limit = max(1, min(limit, max_limit))
         if limit != effective_limit:
-            logger.debug(
-                f"Limit {limit} adjusted to {effective_limit} "
-                f"(bounds: 1-{max_limit})"
-            )
+            logger.debug(f"Limit {limit} adjusted to {effective_limit} " f"(bounds: 1-{max_limit})")
 
     limit_clause = f"LIMIT {effective_limit}"
     logger.debug(f"Built LIMIT clause: {limit_clause}")
@@ -299,10 +293,7 @@ def build_limit_param(
     else:
         effective_limit = max(1, min(limit, max_limit))
         if limit != effective_limit:
-            logger.debug(
-                f"Limit {limit} adjusted to {effective_limit} "
-                f"(bounds: 1-{max_limit})"
-            )
+            logger.debug(f"Limit {limit} adjusted to {effective_limit} " f"(bounds: 1-{max_limit})")
 
     placeholder = pq.add_param(effective_limit)
     fragment = f"LIMIT {placeholder}"

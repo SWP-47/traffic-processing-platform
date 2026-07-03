@@ -11,7 +11,7 @@ import math
 import random
 import socket
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 # --- Configuration ---
 TARGET_HOST = "127.0.0.1"
@@ -19,16 +19,23 @@ TARGET_PORT = 5140
 CHANNEL_ID = "test-channel-01"
 
 # Sinusoidal load parameters
-BASE_PACKETS = 10        # Baseline packet count
-AMPLITUDE = 10           # Amplitude of sine wave (±10 packets)
-PERIOD_SEC = 10.0        # Full sine wave period (10 seconds)
-SEND_INTERVAL_SEC = 0.05 # Send interval (50ms = 20 batches/sec)
+BASE_PACKETS = 10  # Baseline packet count
+AMPLITUDE = 10  # Amplitude of sine wave (±10 packets)
+PERIOD_SEC = 10.0  # Full sine wave period (10 seconds)
+SEND_INTERVAL_SEC = 0.05  # Send interval (50ms = 20 batches/sec)
 
 # IP pool for random generation
 IP_POOL = [
-    "10.0.0.1", "10.0.0.2", "10.0.0.3", "10.0.0.4", "10.0.0.5",
-    "192.168.1.10", "192.168.1.20", "192.168.1.30",
-    "172.16.0.100", "172.16.0.200",
+    "10.0.0.1",
+    "10.0.0.2",
+    "10.0.0.3",
+    "10.0.0.4",
+    "10.0.0.5",
+    "192.168.1.10",
+    "192.168.1.20",
+    "192.168.1.30",
+    "172.16.0.100",
+    "172.16.0.200",
 ]
 
 
@@ -41,7 +48,7 @@ def create_packet_meta(direction: int = 0) -> Dict[str, Any]:
     dst_ip = random.choice(IP_POOL)
     src_port = random.randint(1024, 65535)
     dst_port = random.choice([53, 80, 443, 123, 514, 8080, 3306])
-    
+
     return {
         "direction": direction,
         "src_ip": src_ip,
@@ -74,9 +81,9 @@ def create_telemetry_batch(
     """
     if timestamp is None:
         timestamp = int(time.time())
-    
+
     packets = [create_packet_meta(i % 2) for i in range(packets_count)]
-    
+
     return {
         "channel_id": channel_id,
         "timestamp": timestamp,
@@ -108,31 +115,31 @@ def main() -> None:
     print(f"Send Interval: {SEND_INTERVAL_SEC * 1000:.0f}ms")
     print("=" * 70)
     print("Press Ctrl+C to stop.\n")
-    
+
     # Create UDP socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sequence = 1000
     start_time = time.time()
     batch_count = 0
     total_packets = 0
-    
+
     try:
         while True:
             # Calculate elapsed time for sinusoidal function
             elapsed = time.time() - start_time
-            
+
             # Calculate packet count using sine wave
             packets_count = calculate_sinusoidal_packets(elapsed)
-            
+
             # Create and send batch
             batch = create_telemetry_batch(CHANNEL_ID, sequence, packets_count)
             packet_size = send_udp_packet(sock, batch)
-            
+
             # Update counters
             batch_count += 1
             total_packets += packets_count
             sequence += 1
-            
+
             # Print progress every second (20 batches)
             if batch_count % 20 == 0:
                 sine_phase = (elapsed % PERIOD_SEC) / PERIOD_SEC
@@ -143,10 +150,10 @@ def main() -> None:
                     f"Total: {total_packets:6d} pkts | "
                     f"Size: {packet_size:4d}B"
                 )
-            
+
             # Wait for next interval
             time.sleep(SEND_INTERVAL_SEC)
-    
+
     except KeyboardInterrupt:
         print("\n\n" + "=" * 70)
         print("Simulation stopped by user.")
@@ -154,7 +161,7 @@ def main() -> None:
         print(f"Total packets simulated: {total_packets}")
         print(f"Duration: {time.time() - start_time:.1f}s")
         print("=" * 70)
-    
+
     finally:
         sock.close()
 

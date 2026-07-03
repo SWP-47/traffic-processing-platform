@@ -67,9 +67,7 @@ class HostTopDestinationsHandler(BaseSubscriptionHandler):
         """Identifier for this handler, matching SubscribeRequest.target."""
         return "host_top_destinations"
 
-    async def execute(
-        self, db_pool: asyncpg.Pool, request: SubscribeRequest
-    ) -> Optional[Dict[str, Any]]:
+    async def execute(self, db_pool: asyncpg.Pool, request: SubscribeRequest) -> Optional[Dict[str, Any]]:
         """
         Executes the host top destinations query and returns the formatted JSON result.
 
@@ -120,9 +118,7 @@ class HostTopDestinationsHandler(BaseSubscriptionHandler):
 
         # --- ORDER BY, LIMIT, OFFSET ---
         # All use strict whitelisting / parameterized placeholders for safety.
-        order_by_sql = build_order_by(
-            params.sort_by, params.sort_order, HOST_TOP_DESTINATIONS_SORT_WHITELIST
-        )
+        order_by_sql = build_order_by(params.sort_by, params.sort_order, HOST_TOP_DESTINATIONS_SORT_WHITELIST)
         limit_sql = build_limit_param(params.limit, pq)
         offset_sql = build_offset(params.offset, pq)
 
@@ -135,17 +131,17 @@ class HostTopDestinationsHandler(BaseSubscriptionHandler):
         WITH host_flows AS (
             -- Find all packets where host_ip participates
             -- Extract remote_ip and classify as LAN/WAN based on direction and role
-            SELECT 
-                CASE 
+            SELECT
+                CASE
                     WHEN direction = 0 AND dst_ip = {host_ip_ph}::inet THEN src_ip
                     WHEN direction = 1 AND src_ip = {host_ip_ph}::inet THEN dst_ip
                 END AS remote_ip,
-                CASE 
+                CASE
                     -- WAN: IP appears as src_ip when direction=0 OR as dst_ip when direction=1
-                    WHEN (direction = 0 AND src_ip = CASE 
+                    WHEN (direction = 0 AND src_ip = CASE
                         WHEN direction = 0 AND dst_ip = {host_ip_ph}::inet THEN src_ip
                         WHEN direction = 1 AND src_ip = {host_ip_ph}::inet THEN dst_ip
-                    END) OR (direction = 1 AND dst_ip = CASE 
+                    END) OR (direction = 1 AND dst_ip = CASE
                         WHEN direction = 0 AND dst_ip = {host_ip_ph}::inet THEN src_ip
                         WHEN direction = 1 AND src_ip = {host_ip_ph}::inet THEN dst_ip
                     END) THEN 'WAN'
@@ -201,11 +197,7 @@ class HostTopDestinationsHandler(BaseSubscriptionHandler):
                             "ip": str(row["remote_ip"]),
                             "location": row["location"],
                             "received_per_sec": float(row["received_per_sec"]),
-                            "last_seen": (
-                                row["last_seen"].isoformat()
-                                if row["last_seen"]
-                                else None
-                            ),
+                            "last_seen": (row["last_seen"].isoformat() if row["last_seen"] else None),
                         }
                     )
 
@@ -231,9 +223,7 @@ class HostTopDestinationsHandler(BaseSubscriptionHandler):
                 f"in channel '{channel_id}': {e}",
                 exc_info=True,
             )
-            raise DatabaseError(
-                message=f"Host top destinations query failed for host '{params.host_ip}'."
-            ) from e
+            raise DatabaseError(message=f"Host top destinations query failed for host '{params.host_ip}'.") from e
         except Exception as e:
             logger.error(
                 f"[host_top_destinations] Unexpected error for host '{params.host_ip}' "

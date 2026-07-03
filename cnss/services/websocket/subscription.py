@@ -55,7 +55,7 @@ class SubscriptionManager:
         Registers a new subscription for a client.
         Creates the registry entry if it doesn't exist, adds the client to the
         listener set, and indexes the hash for the Reporting Worker.
-        
+
         :param session: The client's ephemeral session object.
         :param request: The validated subscription control message.
         :return: A tuple of (query_hash, pubsub_channel).
@@ -100,7 +100,7 @@ class SubscriptionManager:
         Removes a client from a subscription's listener set.
         If the listener set becomes empty, cleans up the registry and active index
         to stop the Reporting Worker from querying the database unnecessarily.
-        
+
         :param session: The client's ephemeral session object.
         :param request: The validated unsubscription control message.
         :return: The query_hash that was unsubscribed from.
@@ -115,7 +115,7 @@ class SubscriptionManager:
 
             # 2. Check if the listener set is now empty
             listener_count = await self._redis.scard(listeners_key)
-            
+
             if listener_count == 0:
                 # No more clients listening. Clean up to save DB resources.
                 pipeline = self._redis.pipeline(transaction=False)
@@ -123,10 +123,9 @@ class SubscriptionManager:
                 pipeline.delete(listeners_key)
                 pipeline.srem(ACTIVE_HASHES_KEY, query_hash)
                 await pipeline.execute()
-                
+
                 logger.info(
-                    f"Subscription '{query_hash}' has no more listeners. "
-                    f"Registry and active index cleaned up."
+                    f"Subscription '{query_hash}' has no more listeners. " f"Registry and active index cleaned up."
                 )
             else:
                 logger.debug(

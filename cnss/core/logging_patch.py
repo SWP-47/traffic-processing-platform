@@ -7,6 +7,7 @@
 
 import logging
 import sys
+from typing import Any
 
 
 def _install_logging_patch() -> None:
@@ -18,15 +19,15 @@ def _install_logging_patch() -> None:
         return  # No patch needed for older Python versions
 
     # Save the original getMessage method
-    original_getMessage = logging.LogRecord.getMessage
+    original_get_message = logging.LogRecord.getMessage
 
-    def _patched_getMessage(self) -> str:
+    def _patched_get_message(self: logging.LogRecord) -> str:
         """
         Wrapped getMessage method that catches TypeError from %d/%x formatting
         and coerces string arguments to integers before retrying.
         """
         try:
-            return original_getMessage(self)
+            return original_get_message(self)
         except TypeError as e:
             # Only patch known format errors
             error_msg = str(e)
@@ -39,7 +40,7 @@ def _install_logging_patch() -> None:
 
             # Coerce string arguments to integers where possible
             if isinstance(self.args, tuple):
-                new_args = []
+                new_args: list[Any] = []
                 for arg in self.args:
                     if isinstance(arg, str):
                         try:
@@ -47,16 +48,16 @@ def _install_logging_patch() -> None:
                             new_args.append(int(arg))
                         except (ValueError, TypeError):
                             # If conversion fails, keep original value
-                            new_args.append(arg)
+                            new_args.append(int(arg))
                     else:
                         new_args.append(arg)
                 self.args = tuple(new_args)
 
             # Retry formatting with corrected arguments
-            return original_getMessage(self)
+            return original_get_message(self)
 
     # Apply the patch to the instance method
-    logging.LogRecord.getMessage = _patched_getMessage
+    logging.LogRecord.getMessage = _patched_get_message  # type: ignore[method-assign]
 
 
 # Auto-install on import

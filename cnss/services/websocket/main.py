@@ -8,8 +8,6 @@
 
 # CRITICAL: Apply logging patch BEFORE any other imports
 # to fix compatibility issues with passlib and uvicorn.
-import core.logging_patch  # noqa: F401
-
 import asyncio
 import logging
 import signal
@@ -18,6 +16,7 @@ from typing import Dict, Optional
 
 from websockets.legacy.server import WebSocketServerProtocol
 
+import core.logging_patch  # noqa: F401
 from core.config import settings
 from core.database import close_db_pool, init_db_pool
 from core.logging import setup_logging
@@ -117,8 +116,7 @@ async def run_websocket_service() -> None:
         # --- WebSocket Server Startup ---
         await ws_server.start()
         logger.info(
-            f"WebSocket Service is fully operational and listening on "
-            f"{settings.cnss_host}:{settings.cnss_ws_port}."
+            f"WebSocket Service is fully operational and listening on " f"{settings.cnss_host}:{settings.cnss_ws_port}."
         )
 
         # --- Pub/Sub Consumer Startup ---
@@ -166,9 +164,7 @@ def main() -> None:
     # Initialize logging configuration before anything else
     setup_logging()
 
-    logger.info(
-        f"Starting CnSS WebSocket Service (HTTP/WS Port: {settings.cnss_ws_port})..."
-    )
+    logger.info(f"Starting CnSS WebSocket Service (HTTP/WS Port: {settings.cnss_ws_port})...")
 
     # Create the main asyncio event loop
     loop = asyncio.new_event_loop()

@@ -58,16 +58,16 @@ HOST_TOP_PORTS_SORT_WHITELIST: Dict[str, str] = {
 # Set of common UDP ports used for protocol inference.
 # This is a pragmatic approximation since packet_flows lacks a protocol field.
 WELL_KNOWN_UDP_PORTS = {
-    53,    # DNS
-    67,    # DHCP Server
-    68,    # DHCP Client
-    69,    # TFTP
-    123,   # NTP
-    161,   # SNMP
-    162,   # SNMP Trap
-    514,   # Syslog (UDP variant)
+    53,  # DNS
+    67,  # DHCP Server
+    68,  # DHCP Client
+    69,  # TFTP
+    123,  # NTP
+    161,  # SNMP
+    162,  # SNMP Trap
+    514,  # Syslog (UDP variant)
     1194,  # OpenVPN
-    51820, # WireGuard
+    51820,  # WireGuard
 }
 
 
@@ -84,9 +84,7 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
         """Identifier for this handler, matching SubscribeRequest.target."""
         return "host_top_ports"
 
-    async def execute(
-        self, db_pool: asyncpg.Pool, request: SubscribeRequest
-    ) -> Optional[Dict[str, Any]]:
+    async def execute(self, db_pool: asyncpg.Pool, request: SubscribeRequest) -> Optional[Dict[str, Any]]:
         """
         Executes the host top ports query and returns the formatted JSON result.
 
@@ -136,9 +134,7 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
 
         # --- ORDER BY, LIMIT, OFFSET ---
         # All use strict whitelisting / parameterized placeholders for safety.
-        order_by_sql = build_order_by(
-            params.sort_by, params.sort_order, HOST_TOP_PORTS_SORT_WHITELIST
-        )
+        order_by_sql = build_order_by(params.sort_by, params.sort_order, HOST_TOP_PORTS_SORT_WHITELIST)
         limit_sql = build_limit_param(params.limit, pq)
         offset_sql = build_offset(params.offset, pq)
 
@@ -151,8 +147,8 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
         WITH port_flows AS (
             -- Find all packets where host_ip participates
             -- Extract the remote_port (the port of the other side)
-            SELECT 
-                CASE 
+            SELECT
+                CASE
                     WHEN direction = 0 AND dst_ip = {host_ip_ph}::inet THEN src_port
                     WHEN direction = 1 AND src_ip = {host_ip_ph}::inet THEN dst_port
                 END AS remote_port,
@@ -223,22 +219,16 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
 
         except asyncpg.PostgresError as e:
             logger.error(
-                f"[host_top_ports] Database error for host '{params.host_ip}' "
-                f"in channel '{channel_id}': {e}",
+                f"[host_top_ports] Database error for host '{params.host_ip}' " f"in channel '{channel_id}': {e}",
                 exc_info=True,
             )
-            raise DatabaseError(
-                message=f"Host top ports query failed for host '{params.host_ip}'."
-            ) from e
+            raise DatabaseError(message=f"Host top ports query failed for host '{params.host_ip}'.") from e
         except Exception as e:
             logger.error(
-                f"[host_top_ports] Unexpected error for host '{params.host_ip}' "
-                f"in channel '{channel_id}': {e}",
+                f"[host_top_ports] Unexpected error for host '{params.host_ip}' " f"in channel '{channel_id}': {e}",
                 exc_info=True,
             )
-            raise DatabaseError(
-                message=f"Unexpected host top ports query failure for host '{params.host_ip}'."
-            ) from e
+            raise DatabaseError(message=f"Unexpected host top ports query failure for host '{params.host_ip}'.") from e
 
     def _get_protocol_by_port(self, port: int) -> str:
         """

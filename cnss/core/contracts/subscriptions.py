@@ -28,24 +28,37 @@ def compute_query_hash(channel_id: str, target: str, params: Dict[str, Any]) -> 
 # --- Subscription Parameters Model ---
 # Flexible container for subscription-specific filters and settings.
 # Uses extra="allow" to support varying parameters across different targets
-# (e.g., 'lan_hosts' vs 'telemetry') without strict schema rejection.
 class SubscriptionParams(BaseModel):
     """
     Dynamic parameters for a subscription query.
     Allows arbitrary fields to accommodate different subscription targets.
     """
-
     # Allow any additional fields to be passed through without validation errors
     model_config = {"extra": "allow"}
 
-    # Common optional parameters found in various subscription types
-    ip_subnet: Optional[str] = Field(default=None, description="Target IP subnet filter (e.g., '192.168.1.0/24').")
-    rx_min: Optional[float] = Field(default=None, description="Minimum receive rate threshold.")
-    rx_max: Optional[float] = Field(default=None, description="Maximum receive rate threshold.")
+    # --- Common Sorting & Pagination ---
     sort_by: Optional[str] = Field(default=None, description="Column name to sort results by.")
     sort_order: Optional[Literal["asc", "desc"]] = Field(default=None, description="Sort direction (ASC or DESC).")
-    limit: Optional[int] = Field(default=None, ge=1, description="Maximum number of records to return.")
+    limit: Optional[int] = Field(default=None, ge=1, description="Maximum number of records to return (Page size).")
+    offset: Optional[int] = Field(default=None, ge=0, description="Pagination offset.")
+
+    # --- Telemetry Specific ---
     window_sec: Optional[float] = Field(default=None, ge=0.1, description="Aggregation time window in seconds.")
+
+    # --- Hosts Table & Details Specific ---
+    period: Optional[Literal["5m", "15m", "1h", "24h", "7d", "30d"]] = Field(
+        default=None, description="Duration of the time window for aggregation."
+    )
+    location: Optional[Literal["LAN", "WAN"]] = Field(
+        default=None, description="Filter by network location (LAN or WAN)."
+    )
+    
+    # --- IP Filtering ---
+    ip: Optional[str] = Field(default=None, description="Exact IP address match filter.")
+    ip_subnet: Optional[str] = Field(default=None, description="Target IP subnet filter (e.g., '192.168.1.0/24').")
+    
+    # --- Host Specific Details ---
+    host_ip: Optional[str] = Field(default=None, description="IP address of the specific host.")
 
 
 # --- Subscription Request Model ---
@@ -55,16 +68,15 @@ class SubscribeRequest(BaseModel):
     Incoming WebSocket subscription control message.
     Validates the structure and generates a deterministic hash for Redis caching.
     """
-
     # Action type: supports both subscribe and unsubscribe lifecycle events
     action: Literal["subscribe", "unsubscribe"] = Field(..., description="Control action to perform.")
-
+    
     # Target channel identifier (must match the JWT scope and connection URL)
     channel_id: str = Field(..., min_length=1, description="Identifier of the channel to subscribe to.")
-
-    # Data target type (e.g., 'telemetry', 'lan_hosts')
+    
+    # Data target type (e.g., 'telemetry', 'hosts_table', 'host_details')
     target: str = Field(..., min_length=1, description="Type of data stream to subscribe to.")
-
+    
     # Dynamic query parameters
     params: SubscriptionParams = Field(default_factory=SubscriptionParams, description="Filter and sorting parameters.")
 
@@ -81,3 +93,4 @@ class SubscribeRequest(BaseModel):
         # Exclude None values to ensure consistent hashing regardless of omitted optional fields
         params_dict = self.params.model_dump(exclude_none=True)
         return compute_query_hash(channel_id=self.channel_id, target=self.target, params=params_dict)
+    

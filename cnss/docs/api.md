@@ -83,6 +83,68 @@ The Control and Status Server (CnSS) provides a decoupled API for the Management
 }
 ```
 
+**Response Headers**:
+
+```http
+Set-Cookie: refresh_token=eyJhbG...; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth/refresh; Max-Age=604800
+```
+
+*Note: The `refresh_token` is **never** returned in the JSON response body. It is strictly set as an `HttpOnly` cookie to mitigate XSS attacks. The `Path` attribute is restricted to the refresh endpoint for additional security.*
+
+#### `POST /api/v1/auth/refresh`
+
+**Description**: Issues a new short-lived `access_token` using the long-lived `refresh_token` stored in the `HttpOnly` cookie.
+
+**Auth**: None (relies on the `refresh_token` cookie).
+
+**Request**:
+The browser automatically attaches the cookie. No request body is required.
+
+```http
+POST /api/v1/auth/refresh HTTP/1.1
+Cookie: refresh_token=eyJhbG...
+```
+
+**Response 200**:
+
+```json
+{
+  "access_token": "new_access_token_eyJhbG...",
+  "token_type": "Bearer",
+  "expires_in": 86400,
+  "issued_at": "2026-06-19T12:00:00Z"
+}
+```
+
+**Response 401**:
+
+```json
+{
+  "error": "unauthorized",
+  "message": "Refresh token is missing, invalid, expired, or revoked."
+}
+```
+
+#### `POST /api/v1/auth/logout`
+
+**Description**: Invalidates the current session by revoking the `refresh_token` in Redis and clearing the cookie from the client.
+
+**Auth**: None (relies on the `refresh_token` cookie).
+
+**Response 200**:
+
+```json
+{
+  "message": "Successfully logged out."
+}
+```
+
+**Response Headers**:
+
+```http
+Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth/refresh; Max-Age=0
+```
+
 ### 3.2 System Health & Discovery
 
 #### `GET /api/v1/health`
@@ -514,9 +576,11 @@ Top ports and protocols for a specific host.
 
 ---
 
-## 5. Security & JWT Specification
+### 5. Security & JWT Specification
 
-### 5.1 JWT Claims
+#### 5.1 JWT Claims
+
+**Access Token Claims** (Short-lived, stored in MUI memory):
 
 | Claim | Type | Description |
 | :--- | :--- | :--- |
@@ -527,18 +591,31 @@ Top ports and protocols for a specific host.
 | `role` | string | `admin` or `viewer`. |
 | `scope` | array | List of accessible `channel_id`. Ignored for `admin`. |
 
-### 5.2 Authorization Matrix
+**Refresh Token Claims** (Long-lived, stored in HttpOnly Cookie):
+
+| Claim | Type | Description |
+| :--- | :--- | :--- |
+| `sub` | string | User identifier. |
+| `jti` | string | Unique JWT ID (used for revocation on logout). |
+| `iat` | integer | Issued At (Unix timestamp). |
+| `exp` | integer | Expiration Time (Default: 7 days). |
+| `type` | string | Hardcoded to `"refresh"` to prevent misuse as an access token. |
+
+#### 5.2 Authorization Matrix
 
 | Role | Access |
 | :--- | :--- |
 | `admin` | Unrestricted access to all channels. |
 | `viewer` | Strictly limited to `channel_id`s present in the `scope` array. |
 
-### 5.3 Security Constraints
+#### 5.3 Security Constraints
 
-- **Client-Side Storage**: MUI **MUST** store the JWT exclusively in memory (JavaScript variable). Usage of `localStorage` or `sessionStorage` is strictly prohibited to mitigate XSS token theft.
-- **Transport Security**: All external communication is secured via `wss://` and `https://` through the Edge Nginx reverse proxy (Centralized TLS).
-- **Logging**: CnSS sanitizes all access logs. Tokens in query parameters are replaced with `[REDACTED]`.
+- **Access Token Storage**: MUI **MUST** store the `access_token` exclusively in memory (JavaScript variable). Usage of `localStorage` or `sessionStorage` is strictly prohibited to mitigate XSS token theft.
+- **Refresh Token Storage**: The `refresh_token` **MUST** be stored exclusively in an `HttpOnly`, `Secure`, `SameSite=Strict` cookie. This prevents client-side scripts from accessing the token, providing robust protection against XSS.
+- **Cookie Path Restriction**: The `refresh_token` cookie `Path` must be strictly limited to `/api/v1/auth/refresh` to prevent it from being sent to other endpoints unnecessarily.
+- **Transport Security**: All external communication is secured via `wss://` and `https://` through the Edge Nginx reverse proxy (Centralized TLS). The `Secure` flag on the cookie ensures it is never transmitted over unencrypted HTTP.
+- **Logging**: CnSS sanitizes all access logs. Tokens in query parameters, headers, or cookies are replaced with `[REDACTED]`.
+- **Revocation Flow**: Both `access_token` and `refresh_token` contain a `jti` claim. Upon `POST /api/v1/auth/logout`, the backend extracts the `jti` from the refresh token and adds it to the Redis `jwt:revoked` set. The `/refresh` endpoint must verify the `jti` against this set before issuing a new `access_token`.
 
 ---
 

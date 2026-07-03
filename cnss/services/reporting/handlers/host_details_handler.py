@@ -110,13 +110,12 @@ class HostDetailsHandler(BaseSubscriptionHandler):
         # - Calculate tx/rx rates based on packet direction relative to host
         query = f"""
         SELECT
-            SUM(CASE WHEN src_ip = {host_ip_ph}::inet THEN 1 ELSE 0 END)::float / {seconds_ph} AS tx_per_sec,
-            SUM(CASE WHEN dst_ip = {host_ip_ph}::inet THEN 1 ELSE 0 END)::float / {seconds_ph} AS rx_per_sec,
-            MAX(time) AS last_activity
+            COUNT(*) FILTER (WHERE src_ip = {host_ip_ph}::inet)::float / $4 AS tx_per_sec,
+            COUNT(*) FILTER (WHERE dst_ip = {host_ip_ph}::inet)::float / $4 AS rx_per_sec
         FROM packet_flows
         WHERE channel_id = {channel_ph}
-            AND time > NOW() - {interval_ph}::interval
-            AND (src_ip = {host_ip_ph}::inet OR dst_ip = {host_ip_ph}::inet)
+        AND time > NOW() - ({interval_ph}::text)::interval
+        AND (src_ip = {host_ip_ph}::inet OR dst_ip = {host_ip_ph}::inet)
         """
 
         # --- Execution ---

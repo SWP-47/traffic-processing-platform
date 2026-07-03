@@ -163,7 +163,7 @@ class HostsTableHandler(BaseSubscriptionHandler):
                 CASE WHEN direction = 0 THEN 1 ELSE 0 END AS is_rx,
                 time
             FROM packet_flows
-            WHERE channel_id = {channel_ph} AND time > NOW() - {interval_ph}::interval
+            WHERE channel_id = {channel_ph} AND time > NOW() - ({interval_ph}::text)::interval
             
             UNION ALL
             
@@ -176,7 +176,7 @@ class HostsTableHandler(BaseSubscriptionHandler):
                 CASE WHEN direction = 1 THEN 1 ELSE 0 END AS is_rx,
                 time
             FROM packet_flows
-            WHERE channel_id = {channel_ph} AND time > NOW() - {interval_ph}::interval
+            WHERE channel_id = {channel_ph} AND time > NOW() - ({interval_ph}::text)::interval
         ),
         aggregated AS (
             SELECT

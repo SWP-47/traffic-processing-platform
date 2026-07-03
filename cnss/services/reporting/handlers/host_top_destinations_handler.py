@@ -155,7 +155,7 @@ class HostTopDestinationsHandler(BaseSubscriptionHandler):
                 time
             FROM packet_flows
             WHERE channel_id = {channel_ph}
-                AND time > NOW() - {interval_ph}::interval
+                AND time > NOW() - ({interval_ph}::text)::interval
                 AND (
                     (direction = 0 AND dst_ip = {host_ip_ph}::inet)
                     OR (direction = 1 AND src_ip = {host_ip_ph}::inet)

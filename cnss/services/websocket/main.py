@@ -6,6 +6,10 @@
 # shutdown upon OS signals.
 # ==============================================================================
 
+# CRITICAL: Apply logging patch BEFORE any other imports
+# to fix compatibility issues with passlib and uvicorn.
+import core.logging_patch  # noqa: F401
+
 import asyncio
 import logging
 import signal

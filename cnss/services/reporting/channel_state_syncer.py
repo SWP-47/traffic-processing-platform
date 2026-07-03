@@ -232,28 +232,29 @@ class ChannelStateSyncer:
                 f"[{channel_id}] Redis state: last_activity_at={last_activity_at}"
             )
 
-            # --- Step 4: Database Update ---
-            # UPDATE channels:
+            # --- Step 4: Database Update (UPSERT) ---
+            # Auto-registers the channel if it doesn't exist yet (first time seen in Redis).
+            # If it already exists, accumulates drops and updates activity state.
             # - dropped = dropped + $1 (accumulate drops, even if 0)
-            # - is_active = TRUE (channel is active in Redis)
+            # - is_active = $2 (channel is active in Redis)
             # - last_activity_at = $4 (exact timestamp from Redis, avoiding NOW() drift)
             #   Only update if timestamp is valid; otherwise preserve existing value.
             async with self._db_pool.acquire() as conn:
                 await conn.execute(
                     """
-                    UPDATE channels
-                    SET 
-                        dropped = dropped + $1,
-                        is_active = TRUE,
-                        last_activity_at = CASE 
-                            WHEN $4::timestamptz IS NOT NULL 
-                            THEN $4::timestamptz 
-                            ELSE last_activity_at 
+                    INSERT INTO channels (channel_id, is_active, dropped, last_activity_at)
+                    VALUES ($3, $2, $1, $4)
+                    ON CONFLICT (channel_id) DO UPDATE SET
+                        dropped = channels.dropped + EXCLUDED.dropped,
+                        is_active = EXCLUDED.is_active,
+                        last_activity_at = CASE
+                            WHEN EXCLUDED.last_activity_at IS NOT NULL
+                            THEN EXCLUDED.last_activity_at
+                            ELSE channels.last_activity_at
                         END
-                    WHERE channel_id = $3
                     """,
                     dropped_delta,
-                    True,  # is_active = TRUE (not used in query, kept for clarity)
+                    True,
                     channel_id,
                     last_activity_at,
                 )

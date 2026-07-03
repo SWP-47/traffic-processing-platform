@@ -36,7 +36,7 @@
                         #00000008 0%),
                      var(--color-surface);
 
-    --gradient-button: linear-gradient(90deg, #6140EC 0%, #53A2E7 100%);
+    --gradient-button: linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 100%);
 
     /* Other */
     --card-border-radius: 35px;
@@ -54,7 +54,7 @@ p, h1, h2, h3, h4, h5, h6, span {
 }
 
 h1 {
-    font-size: 2rem;
+    font-size: 1.7rem;
 }
 
 button {

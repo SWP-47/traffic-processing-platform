@@ -67,7 +67,8 @@ module top
 ); 
 
 (* DONT_TOUCH = "yes" *) wire                            sys_clk;                      //single end clock
-
+logic block_but;
+assign block_but = 1'b1;
 
 IBUFDS sys_clk_ibufgds
 (
@@ -137,7 +138,7 @@ traffic_monitor traffic_monitor_out_e1 (
     .rxdv_read (  out_rxdv_read  ),
     .rxd_read  (  out_rxd_read   ), 
     
-    // .block_but (  block_but      ),
+    .block_but (  block_but      ),
     
     .isBlocked (  isBlocked_out  )
 );
@@ -150,7 +151,7 @@ traffic_monitor traffic_monitor_in_e1 (
     .rxdv_read (  in_rxdv_read  ),
     .rxd_read  (  in_rxd_read   ), 
     
-    // .block_but (  block_but     ),
+    .block_but (  block_but     ),
     
     .isBlocked (  isBlocked_in  )
 );

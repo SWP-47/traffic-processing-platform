@@ -5,6 +5,10 @@
 # and manages the lifecycle of shared infrastructure (Database pool, Redis client).
 # ==============================================================================
 
+# CRITICAL: Apply logging patch BEFORE any other imports
+# to fix compatibility issues with passlib and uvicorn.
+import core.logging_patch  # noqa: F401
+
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator

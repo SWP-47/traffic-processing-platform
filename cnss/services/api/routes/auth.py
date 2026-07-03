@@ -89,12 +89,16 @@ async def login(
     # Admins bypass scope restrictions entirely (Architecture §5.1).
     # Their scope list remains empty, and verify_channel_access() grants unrestricted access.
     scope: list[str] = []
-    if role == "viewer":
-        async with db_pool.acquire() as conn:
+    async with db_pool.acquire() as conn:
+        if role == "viewer":
             scope_rows = await conn.fetch(
                 "SELECT channel_id FROM user_channel_scopes WHERE user_id = $1",
                 user_row["id"],
             )
+            scope = [str(row["channel_id"]) for row in scope_rows]
+        elif role == "admin":
+            # Fetch all registered channels for admin
+            scope_rows = await conn.fetch("SELECT channel_id FROM channels")
             scope = [str(row["channel_id"]) for row in scope_rows]
 
     # --- Step 4: Generate JWT tokens ---

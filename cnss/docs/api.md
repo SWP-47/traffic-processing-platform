@@ -1,4 +1,4 @@
-# API Documentation (MVP v2)
+# API Documentation
 
 ## 1. Overview & Architectural Principles
 

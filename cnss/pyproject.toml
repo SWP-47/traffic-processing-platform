@@ -2,7 +2,7 @@
 name = "cnss"
 version = "2.0.0"
 description = "Control and Status Server (CnSS) - Backend core of the traffic processing platform"
-readme = "README.md"
+# readme = "README.md"
 requires-python = ">=3.11"
 
 # Core dependencies shared across all microservices (Ingestion, Reporting, WS, API)

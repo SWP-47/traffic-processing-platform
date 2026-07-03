@@ -40,16 +40,17 @@ class MissingChannelError(ClientResponseError):
 
 
 # --- Query Parameter Extraction ---
-def _parse_query_params(websocket: WebSocketServerProtocol) -> dict[str, str]:
+def _parse_query_params(websocket) -> dict[str, str]:
     """
-    Extracts and parses query parameters from the WebSocket connection URL.
-    Returns a dictionary of parameter names to their first values.
+    Extracts and parses the query parameters from the WebSocket upgrade request URL.
     """
-    # The websocket.path contains the full request path including query string
+    # In websockets >= 13.0, the new API groups HTTP request details under `.request`.
+    # We use hasattr for backward compatibility with the legacy API if needed.
+    path = websocket.request.path if hasattr(websocket, "request") else websocket.path
+    
     # e.g., "/ws?token=eyJ...&channel_id=bridge-01"
-    parsed = urllib.parse.urlparse(websocket.path)
+    parsed = urllib.parse.urlparse(path)
     query_params = urllib.parse.parse_qs(parsed.query)
-
     # parse_qs returns lists for each key; flatten to single string values
     return {k: v[0] for k, v in query_params.items()}
 

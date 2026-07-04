@@ -26,7 +26,6 @@ from core.contracts.auth import TokenPayload
 from core.contracts.subscriptions import SubscribeRequest
 from core.database import get_db_pool
 from core.exceptions import (
-    AuthorizationError,
     ClientResponseError,
     ResourceNotFoundError,
 )

@@ -4,8 +4,9 @@
 # against architectural specifications (architecture.md §2.3, §4.2).
 # ==============================================================================
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from core.exceptions import RedisError
 from services.websocket.subscription import (
@@ -16,8 +17,8 @@ from services.websocket.subscription import (
     SubscriptionManager,
 )
 
-
 # --- Test Fixtures ---
+
 
 @pytest.fixture
 def mock_redis():
@@ -68,6 +69,7 @@ def manager(mock_redis):
 
 # --- Key Construction Tests ---
 
+
 def test_registry_key_format(manager):
     """
     Architecture §3.2: Registry key must follow 'sub:registry:{query_hash}' pattern.
@@ -96,6 +98,7 @@ def test_push_channel_format(manager):
 
 
 # --- Subscribe Success Tests ---
+
 
 async def test_subscribe_registers_in_redis(manager, mock_redis, mock_session, mock_request):
     """
@@ -173,6 +176,7 @@ async def test_subscribe_listener_member_is_composite(manager, mock_redis, mock_
 
 # --- Subscribe Error Handling Tests ---
 
+
 async def test_subscribe_wraps_redis_error(manager, mock_redis, mock_session, mock_request):
     """
     Verify that Redis errors during subscription are wrapped in RedisError
@@ -189,6 +193,7 @@ async def test_subscribe_wraps_redis_error(manager, mock_redis, mock_session, mo
 
 
 # --- Unsubscribe Success Tests ---
+
 
 async def test_unsubscribe_removes_listener(manager, mock_redis, mock_session, mock_request):
     """
@@ -254,6 +259,7 @@ async def test_unsubscribe_last_listener_cleans_up(manager, mock_redis, mock_ses
 
 # --- Unsubscribe Error Handling Tests ---
 
+
 async def test_unsubscribe_wraps_redis_error(manager, mock_redis, mock_session, mock_request):
     """
     Verify that Redis errors during unsubscription are wrapped in RedisError.
@@ -282,6 +288,7 @@ async def test_unsubscribe_wraps_cleanup_pipeline_error(manager, mock_redis, moc
 
 
 # --- Active Hashes Index Tests ---
+
 
 async def test_subscribe_indexes_hash_in_active_set(manager, mock_redis, mock_session, mock_request):
     """

@@ -4,8 +4,9 @@
 # no orphaned listener entries remain and empty registry keys are purged.
 # ==============================================================================
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from services.websocket.gc import (
     ACTIVE_HASHES_KEY,
@@ -13,6 +14,7 @@ from services.websocket.gc import (
 )
 
 # --- Test Fixtures ---
+
 
 @pytest.fixture
 def mock_redis():
@@ -36,14 +38,15 @@ def gc(mock_redis):
 
 # --- Cleanup Method Tests ---
 
+
 async def test_cleanup_empty_session(gc, mock_redis):
     """
     Verify that cleanup does nothing if the client has no active subscriptions.
     """
     mock_redis.smembers.return_value = []
-    
+
     await gc.cleanup("client-uuid-123")
-    
+
     # Verify SMEMBERS was called for the session subs key
     mock_redis.smembers.assert_awaited_once_with("ws:session:client-uuid-123:subs")
     # Verify no further Redis operations were performed
@@ -57,9 +60,9 @@ async def test_cleanup_multiple_subscriptions(gc, mock_redis):
     mock_redis.smembers.return_value = [b"hash-1:sub-1", b"hash-2:sub-2"]
     mock_redis.srem.return_value = 1
     mock_redis.scard.return_value = 0
-    
+
     await gc.cleanup("client-uuid-123")
-    
+
     # Verify SREM was called for both listeners keys
     assert mock_redis.srem.await_count == 2
     mock_redis.srem.assert_any_await("sub:listeners:hash-1", "client-uuid-123:sub-1")
@@ -71,12 +74,13 @@ async def test_cleanup_handles_redis_error(gc, mock_redis):
     Verify that Redis errors during cleanup are caught and do not crash the handler.
     """
     mock_redis.smembers.side_effect = Exception("Connection lost")
-    
+
     # Should not raise any exceptions
     await gc.cleanup("client-uuid-123")
 
 
 # --- Cleanup Subscription Method Tests ---
+
 
 async def test_cleanup_subscription_removes_member_and_purges_empty_set(gc, mock_redis):
     """
@@ -85,19 +89,19 @@ async def test_cleanup_subscription_removes_member_and_purges_empty_set(gc, mock
     """
     mock_redis.srem.return_value = 1
     mock_redis.scard.return_value = 0
-    
+
     await gc._cleanup_subscription("client-uuid-123", "hash-abc", "sub-123")
-    
+
     # Verify SREM was called with the composite member
     mock_redis.srem.assert_awaited_once_with("sub:listeners:hash-abc", "client-uuid-123:sub-123")
-    
+
     # Verify SCARD was called to check remaining listeners
     mock_redis.scard.assert_awaited_once_with("sub:listeners:hash-abc")
-    
+
     # Verify pipeline was created and executed
     mock_redis.pipeline.assert_called_once_with(transaction=False)
     pipeline = mock_redis.pipeline.return_value
-    
+
     pipeline.delete.assert_any_call("sub:registry:hash-abc")
     pipeline.delete.assert_any_call("sub:listeners:hash-abc")
     pipeline.srem.assert_called_once_with(ACTIVE_HASHES_KEY, "hash-abc")
@@ -110,13 +114,13 @@ async def test_cleanup_subscription_keeps_non_empty_set(gc, mock_redis):
     """
     mock_redis.srem.return_value = 1
     mock_redis.scard.return_value = 2
-    
+
     await gc._cleanup_subscription("client-uuid-123", "hash-abc", "sub-123")
-    
+
     # Verify SREM and SCARD were called
     mock_redis.srem.assert_awaited_once()
     mock_redis.scard.assert_awaited_once()
-    
+
     # Verify pipeline was NOT created (other listeners remain)
     mock_redis.pipeline.assert_not_called()
 
@@ -127,12 +131,12 @@ async def test_cleanup_subscription_member_not_found(gc, mock_redis):
     no further checks or cleanups are performed.
     """
     mock_redis.srem.return_value = 0
-    
+
     await gc._cleanup_subscription("client-uuid-123", "hash-abc", "sub-123")
-    
+
     # Verify SREM was called
     mock_redis.srem.assert_awaited_once()
-    
+
     # Verify SCARD and pipeline were NOT called
     mock_redis.scard.assert_not_awaited()
     mock_redis.pipeline.assert_not_called()
@@ -143,7 +147,7 @@ async def test_cleanup_subscription_handles_srem_error(gc, mock_redis):
     Verify that Redis errors during SREM are caught and do not crash the handler.
     """
     mock_redis.srem.side_effect = Exception("Connection lost")
-    
+
     # Should not raise any exceptions
     await gc._cleanup_subscription("client-uuid-123", "hash-abc", "sub-123")
 
@@ -156,6 +160,6 @@ async def test_cleanup_subscription_handles_pipeline_error(gc, mock_redis):
     mock_redis.scard.return_value = 0
     pipeline = mock_redis.pipeline.return_value
     pipeline.execute.side_effect = Exception("Pipeline failed")
-    
+
     # Should not raise any exceptions
     await gc._cleanup_subscription("client-uuid-123", "hash-abc", "sub-123")

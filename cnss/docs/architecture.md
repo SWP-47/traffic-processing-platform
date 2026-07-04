@@ -58,15 +58,15 @@ The CnSS is deployed as a set of Docker containers. If any container crashes, Do
 **Responsibilities**:
 
 1. **Connection Lifecycle**: Handles MUI WebSocket upgrades. Validates JWT tokens, checks `channel_id` presence, verifies JWT `scope` against the channel, and confirms channel existence. Returns specific close codes (`4001`-`4004`) on failure. Before accepting the connection, the service checks the token's `jti` (JWT ID) against a Redis revocation set (`jwt:revoked`). If the token has been revoked, the connection is closed with code `4001`.
-2. **Subscription Management**: Receives JSON control messages from MUI. Generates a deterministic `query_hash` for the subscription parameters.
-3. **Redis State Sync**: Registers the subscription in Redis (`sub:registry:{hash}`) and adds the client ID to the listener set (`sub:listeners:{hash}`).
+2. **Subscription Management**: Receives JSON control messages from MUI. Generates a deterministic `query_hash` for the subscription parameters. **The client-provided `id` is strictly excluded from the hash calculation** to ensure database query deduplication remains intact even for parallel identical subscriptions.
+3. **Redis State Sync**: Registers the subscription in Redis (`sub:registry:{hash}`) and adds the composite `client_id:sub_id` to the listener set (`sub:listeners:{hash}`).
 4. **Initial Snapshot (Race-condition safe):** To prevent missing updates that occur between the DB query and the Pub/Sub subscription, the WebSocket Service MUST follow this strict order:
     - Execute `SUBSCRIBE ws:push:{query_hash}` in Redis.
     - Execute the read-only query against TimescaleDB (Initial Snapshot).
     - Push the Initial Snapshot to the client.
     > *(Note: The client must be designed to handle and deduplicate minor overlaps based on timestamps).*
-5. **Pub/Sub Consumption**: Subscribes to the corresponding `ws:push:{query_hash}` Redis channels. Upon receiving messages, it maps the `query_hash` back to the connected WebSocket client IDs and pushes the JSON payload.
-6. **Garbage Collection**: On client disconnect, removes the client ID from Redis listener sets. If a listener set becomes empty, it deletes the subscription registry key to stop the Reporting Worker from querying the DB.
+5. **Pub/Sub Consumption**: Subscribes to the corresponding `ws:push:{query_hash}` Redis channels. Upon receiving messages, it maps the `query_hash` back to the connected `client_id:sub_id` pairs, injects the `sub_id` into the JSON payload as `"id"`, and pushes it to the specific client WebSocket.
+6. **Garbage Collection**: On client disconnect, reads the session's tracking set to find all `query_hash:sub_id` pairs. Removes the `client_id:sub_id` from Redis listener sets. If a listener set becomes empty, it deletes the subscription registry key to stop the Reporting Worker from querying the DB.
 7. **Session Heartbeat & TTL**: The `ws:session:{ws_client_id}` key in Redis is created with a strict **TTL of 10 seconds**. The WebSocket Service must periodically refresh this TTL (e.g., every 5 seconds) via a background heartbeat task. If the container crashes, the keys automatically expire, preventing orphaned subscriptions and memory leaks.
 8. **Subscription Scope Validation**: The channel_id specified in the WebSocket subscription control message must strictly match the channel_id provided in the initial WebSocket connection URL. If they differ, the WebSocket Service must reject the subscription and close the connection with code 4003 (channel_forbidden).
 
@@ -174,18 +174,19 @@ Redis serves as the central nervous system, handling buffering, state synchroniz
 #### **Subscription Registry**
 
 - `sub:registry:{query_hash}` (String, **No TTL**). Stores the JSON definition. It is explicitly deleted by the WebSocket Service ONLY when the last listener is removed from `sub:listeners:{query_hash}`.
-- `sub:listeners:{query_hash}` (Set): Stores the IDs of connected WebSocket clients requesting this specific data.
+- `sub:listeners:{query_hash}` (Set): Stores the composite IDs of connected WebSocket clients (`client_id:sub_id`) requesting this specific data. This allows a single client to maintain multiple parallel subscriptions to the same `query_hash`.
 
-#### *Session & Buffer Management**
+#### **Session & Buffer Management**
 
 - `ws:session:{ws_client_id}` (Hash): Tracks active subscriptions for a specific WebSocket client to facilitate rapid cleanup on disconnect.
+- `ws:session:{ws_client_id}:subs` (Set): Stores the active subscription instances as `query_hash:sub_id` strings for rapid garbage collection.
 - `udp:buffer:{channel_id}` (List): High-speed buffer for raw packet metadata. The Ingestion Worker pushes here; the background flusher pops and inserts into TimescaleDB.
 - `jwt:session:{token_jti}` (Hash, Optional): Tracks active JWTs to support immediate token revocation.
 - `channel:seq:{channel_id}` (String): Stores the `last_sequence` integer per channel to survive Ingestion Worker restarts.
 - `channel:state:{channel_id}` (Hash, TTL 6s): Ephemeral channel state buffer containing:
   - `last_activity_at`: Unix timestamp of the last batch with actual packets (not keep-alive).
   - `is_active`: Flag (1/0) indicating if the channel is currently receiving traffic.
-  - `dropped_delta`: Accumulated count of dropped packets since last flush to TimescaleDB. Atomically read and reset by the Reporting Worker via Lua script.  
+  - `dropped_delta`: Accumulated count of dropped packets since last flush to TimescaleDB. Atomically read and reset by the Reporting Worker via Lua script.
 - `sub:active_hashes` (Set): Maintains a fast-lookup index of all active `query_hash` values. The WebSocket Service adds/removes hashes here upon subscribe/unsubscribe, replacing the need for the blocking `KEYS` command.
 - `jwt:revoked` (Set): Stores the `jti` (JWT ID) of revoked tokens for immediate session termination.
 
@@ -205,11 +206,12 @@ The simplistic subscription model is replaced by a highly flexible, parameterize
 
 ### 4.1 Subscription Payload Structure
 
-Clients send JSON control messages to subscribe or unsubscribe.
+Clients send JSON control messages to subscribe or unsubscribe. The `id` field is a **required** client-generated unique identifier used to distinguish between multiple identical parallel subscriptions.
 
 ```json
 {
   "action": "subscribe",
+  "id": "sub-abc-123",
   "channel_id": "bridge-01",
   "target": "lan_hosts",
   "params": {
@@ -226,12 +228,13 @@ Clients send JSON control messages to subscribe or unsubscribe.
 
 ### 4.2 Query Hash Generation
 
-To optimize database queries and deduplicate identical requests from multiple users, the WebSocket Service generates a deterministic `query_hash`.
+To optimize database queries and deduplicate identical requests from multiple users, the WebSocket Service generates a deterministic `query_hash`. **The `id` field is explicitly excluded from this calculation.**
 
 ```python
 import hashlib, json
 
 def compute_query_hash(channel_id: str, target: str, params: dict) -> str:
+    # 'id' is intentionally omitted to ensure identical queries share the same DB execution
     normalized = {"channel_id": channel_id, "target": target, "params": params}
     raw = json.dumps(normalized, sort_keys=True)
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
@@ -248,12 +251,12 @@ The core `telemetry_update` stream is now unified under this mechanic.
 
 ### 4.4 Lifecycle Flow
 
-1. **Subscribe**: WS Service computes `query_hash`, writes to `sub:registry:{hash}`, adds client to `sub:listeners:{hash}`, fetches Initial Snapshot via direct DB read, and subscribes to `ws:push:{hash}`.
-2. **Update**: Reporting Worker ticks (1Hz), reads registry, executes SQL, publishes to `ws:push:{hash}`. WS Service receives Pub/Sub message and broadcasts to all clients in `sub:listeners:{hash}`.
-3. **Unsubscribe**: WS Service removes client from `sub:listeners:{hash}`. If the set is empty, it deletes `sub:registry:{hash}`.
-4. **Disconnect**: WS Service reads `ws:session:{client_id}`, removes the client from all associated listener sets, and cleans up empty registry keys.
+1. **Subscribe**: WS Service computes `query_hash` (excluding `id`), writes to `sub:registry:{hash}`, adds `client_id:sub_id` to `sub:listeners:{hash}`, fetches Initial Snapshot via direct DB read, injects `"id": sub_id` into the snapshot, and pushes it to the client.
+2. **Update**: Reporting Worker ticks (1Hz), reads registry, executes SQL, publishes to `ws:push:{hash}`. WS Service receives Pub/Sub message, iterates over `client_id:sub_id` pairs in the listener set, injects `"id": sub_id` into the payload for each, and broadcasts to the specific clients.
+3. **Unsubscribe**: WS Service removes `client_id:sub_id` from `sub:listeners:{hash}`. If the set is empty, it deletes `sub:registry:{hash}`.
+4. **Disconnect**: WS Service reads `ws:session:{client_id}:subs`, parses all `query_hash:sub_id` pairs, removes the `client_id:sub_id` from all associated listener sets, and cleans up empty registry keys.
 
-> The sub:registry:{query_hash} key must not rely on a short TTL for cleanup. Instead, it should have a long TTL (e.g., 1 hour) or no TTL, and be explicitly deleted by the WebSocket Service only when the last listener is removed from sub:listeners:{query_hash}.
+> The `sub:registry:{query_hash}` key must not rely on a short TTL for cleanup. Instead, it should have a long TTL (e.g., 1 hour) or no TTL, and be explicitly deleted by the WebSocket Service only when the last listener is removed from `sub:listeners:{query_hash}`.
 
 ---
 

@@ -4,12 +4,10 @@
 # Listens to all 'ws:push:{query_hash}' channels and routes incoming messages
 # to the appropriate connected WebSocket clients based on the listener registry.
 # ==============================================================================
-
 import asyncio
 import json
 import logging
-from typing import Any, Callable, Dict, Optional
-
+from typing import Any, Callable, Dict, List, Optional
 from core.exceptions import RedisError
 from core.redis.client import get_redis_client
 
@@ -19,6 +17,7 @@ logger = logging.getLogger(__name__)
 # --- Constants ---
 # Redis Pub/Sub pattern to subscribe to all subscription push channels.
 PUSH_CHANNEL_PATTERN = "ws:push:*"
+
 # Prefix length to extract the query_hash from the channel name.
 PUSH_CHANNEL_PREFIX_LEN = len("ws:push:")
 
@@ -57,13 +56,11 @@ class PubSubConsumer:
                 await self._task
             except asyncio.CancelledError:
                 pass
-
         if self._pubsub:
             await self._pubsub.unsubscribe()
             await self._pubsub.close()
             self._pubsub = None
-
-        logger.info("Pub/Sub Consumer stopped.")
+            logger.info("Pub/Sub Consumer stopped.")
 
     async def _listen_loop(self) -> None:
         """
@@ -72,7 +69,6 @@ class PubSubConsumer:
         """
         redis_client = get_redis_client()
         self._pubsub = redis_client.pubsub()
-
         try:
             # Subscribe to all channels matching the push pattern
             await self._pubsub.psubscribe(PUSH_CHANNEL_PATTERN)
@@ -82,7 +78,6 @@ class PubSubConsumer:
             async for message in self._pubsub.listen():
                 if message["type"] == "pmessage":
                     await self._handle_message(message)
-
         except asyncio.CancelledError:
             raise
         except Exception as e:
@@ -92,14 +87,15 @@ class PubSubConsumer:
     async def _handle_message(self, message: Dict[str, Any]) -> None:
         """
         Processes a single Pub/Sub message and routes it to connected clients.
+        Injects the client-specific 'sub_id' into the payload as the "id" field.
         :param message: The raw Redis Pub/Sub message dictionary.
         """
         # Extract the query_hash from the channel name (e.g., "ws:push:abc123" -> "abc123")
         channel_name = message["channel"]
         if isinstance(channel_name, bytes):
             channel_name = channel_name.decode("utf-8")
-
         query_hash = channel_name[PUSH_CHANNEL_PREFIX_LEN:]
+
         raw_data = message["data"]
 
         # Parse the JSON payload from the Reporting Worker
@@ -111,27 +107,28 @@ class PubSubConsumer:
             logger.error(f"Failed to parse Pub/Sub message for hash '{query_hash}': {e}")
             return
 
-        # Retrieve the list of client IDs listening to this specific query_hash
+        # Retrieve the list of composite listener keys (client_id:sub_id)
         redis_client = get_redis_client()
         listeners_key = f"sub:listeners:{query_hash}"
-
         try:
-            client_ids = await redis_client.smembers(listeners_key)
+            listener_members = await redis_client.smembers(listeners_key)
         except Exception as e:
             logger.error(f"Failed to retrieve listeners for hash '{query_hash}': {e}")
             return
 
-        if not client_ids:
+        if not listener_members:
             return
 
-        # Serialize the payload once for all clients
-        json_payload = json.dumps(payload)
+        # Group listeners by client_id to avoid redundant WebSocket lookups
+        # Structure: { "client_uuid": ["sub_id_1", "sub_id_2"] }
+        grouped_listeners: Dict[str, List[str]] = {}
+        for member in listener_members:
+            member_str = member.decode("utf-8") if isinstance(member, bytes) else member
+            c_id, s_id = member_str.rsplit(":", 1)
+            grouped_listeners.setdefault(c_id, []).append(s_id)
 
         # Route the message to each connected client
-        for client_id in client_ids:
-            if isinstance(client_id, bytes):
-                client_id = client_id.decode("utf-8")
-
+        for client_id, sub_ids in grouped_listeners.items():
             websocket = self._get_websocket(client_id)
             if websocket is None:
                 # Client disconnected but hasn't been cleaned up from the listener set yet.
@@ -139,9 +136,14 @@ class PubSubConsumer:
                 logger.debug(f"Client '{client_id}' not found in active connections. Skipping.")
                 continue
 
-            try:
-                await websocket.send(json_payload)
-                logger.debug(f"Pushed update to client '{client_id}' for hash '{query_hash}'.")
-            except Exception as e:
-                logger.warning(f"Failed to send message to client '{client_id}': {e}")
-                # Do not remove from listener set here; let the connection handler's GC do it.
+            for sub_id in sub_ids:
+                # Inject the sub_id into the payload as the "id" field
+                payload_with_id = {**payload, "id": sub_id}
+                json_payload = json.dumps(payload_with_id)
+
+                try:
+                    await websocket.send(json_payload)
+                    logger.debug(f"Pushed update to client '{client_id}' (sub: {sub_id}) for hash '{query_hash}'.")
+                except Exception as e:
+                    logger.warning(f"Failed to send message to client '{client_id}': {e}")
+                    # Do not remove from listener set here; let the connection handler's GC do it.

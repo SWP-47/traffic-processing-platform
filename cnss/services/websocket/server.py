@@ -12,7 +12,6 @@ import uuid
 from typing import Any, Callable, Tuple
 
 import websockets
-import websockets.WebSocketServer
 from pydantic import ValidationError
 
 # Import serve, WebSocketServer, and WebSocketServerProtocol from the legacy module
@@ -261,7 +260,6 @@ class WebSocketServer:
         1. SUBSCRIBE ws:push:{query_hash} in Redis (register in listener set).
         2. Execute read-only query against TimescaleDB (Initial Snapshot).
         3. Push Initial Snapshot to the client.
-
         This order prevents the race condition where a Pub/Sub update arrives
         between the DB query and the Redis subscription, which would cause
         the client to miss the update.
@@ -270,7 +268,10 @@ class WebSocketServer:
         # Adds client to sub:listeners:{hash}, writes sub:registry:{hash},
         # and indexes hash in sub:active_hashes for the Reporting Worker.
         query_hash, push_channel = await self._sub_manager.subscribe(session, request)
-        logger.debug(f"Client '{session.client_id}' registered for '{push_channel}' (hash: {query_hash}).")
+        logger.debug(
+            f"Client '{session.client_id}' registered for '{push_channel}' "
+            f"(hash: {query_hash}, id: {request.id})."
+        )
 
         # --- Step 2: Fetch Initial Snapshot from TimescaleDB ---
         # Executes a read-only query to get the current state of the subscription.
@@ -295,7 +296,15 @@ class WebSocketServer:
 
         # --- Step 3: Push Initial Snapshot to the client ---
         try:
+            # Inject the client-provided 'id' into the snapshot payload
+            # so the MUI can associate this initial state with the correct subscription.
+            if isinstance(snapshot, dict):
+                snapshot["id"] = request.id
+
             await websocket.send(json.dumps(snapshot))
-            logger.debug(f"Initial snapshot sent to client '{session.client_id}' for '{request.target}'.")
+            logger.debug(
+                f"Initial snapshot sent to client '{session.client_id}' "
+                f"for '{request.target}' (id: {request.id})."
+            )
         except Exception as e:
             logger.error(f"Failed to send initial snapshot to client '{session.client_id}': {e}")

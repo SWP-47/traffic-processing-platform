@@ -73,6 +73,9 @@ class SubscribeRequest(BaseModel):
     # Action type: supports both subscribe and unsubscribe lifecycle events
     action: Literal["subscribe", "unsubscribe"] = Field(..., description="Control action to perform.")
 
+    # Client-generated unique identifier
+    id: str
+
     # Target channel identifier (must match the JWT scope and connection URL)
     channel_id: str = Field(..., min_length=1, description="Identifier of the channel to subscribe to.")
 
@@ -93,5 +96,5 @@ class SubscribeRequest(BaseModel):
         Used to deduplicate identical requests from multiple users.
         """
         # Exclude None values to ensure consistent hashing regardless of omitted optional fields
-        params_dict = self.params.model_dump(exclude_none=True)
+        params_dict = self.params.model_dump(exclude={"id"})
         return compute_query_hash(channel_id=self.channel_id, target=self.target, params=params_dict)

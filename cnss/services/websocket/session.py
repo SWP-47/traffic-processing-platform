@@ -4,11 +4,9 @@
 # Enforces strict TTL (10s) and provides heartbeat refresh (5s) to detect
 # orphaned connections and prevent memory leaks in the subscription registry.
 # ==============================================================================
-
 import logging
 import time
 from typing import List, cast
-
 from core.contracts.auth import TokenPayload
 from core.exceptions import RedisError
 from core.redis.client import get_redis_client
@@ -117,36 +115,44 @@ class Session:
         except Exception as e:
             logger.error(f"Failed to destroy session for client '{self.client_id}': {e}")
 
-    async def add_subscription(self, query_hash: str) -> None:
+    # ==========================================================================
+    # Subscription Tracking (Updated for Parallel Subscriptions)
+    # ==========================================================================
+
+    async def add_subscription(self, query_hash: str, sub_id: str) -> None:
         """
         Registers a subscription hash in the session's tracking set.
-        Used for rapid cleanup of all subscriptions upon client disconnect.
+        Stores as 'query_hash:sub_id' to allow multiple parallel subscriptions
+        to the same query_hash from the same client.
         :param query_hash: The deterministic hash of the subscription parameters.
+        :param sub_id: The client-generated unique identifier for this subscription instance.
         """
         subs_key = self._get_subs_key()
         try:
-            await self._redis.sadd(subs_key, query_hash)
-            logger.debug(f"Subscription '{query_hash}' added to session '{self.client_id}'.")
+            # Save the composite key to distinguish parallel subscriptions
+            await self._redis.sadd(subs_key, f"{query_hash}:{sub_id}")
+            logger.debug(f"Subscription '{query_hash}:{sub_id}' added to session '{self.client_id}'.")
         except Exception as e:
             logger.error(f"Failed to add subscription to session '{self.client_id}': {e}")
 
-    async def remove_subscription(self, query_hash: str) -> None:
+    async def remove_subscription(self, query_hash: str, sub_id: str) -> None:
         """
-        Removes a subscription hash from the session's tracking set.
+        Removes a specific subscription instance from the session's tracking set.
         :param query_hash: The deterministic hash of the subscription parameters.
+        :param sub_id: The client-generated unique identifier for this subscription instance.
         """
         subs_key = self._get_subs_key()
         try:
-            await self._redis.srem(subs_key, query_hash)
-            logger.debug(f"Subscription '{query_hash}' removed from session '{self.client_id}'.")
+            await self._redis.srem(subs_key, f"{query_hash}:{sub_id}")
+            logger.debug(f"Subscription '{query_hash}:{sub_id}' removed from session '{self.client_id}'.")
         except Exception as e:
             logger.error(f"Failed to remove subscription from session '{self.client_id}': {e}")
 
     async def get_subscriptions(self) -> List[str]:
         """
-        Retrieves all active subscription hashes for this session.
+        Retrieves all active subscription instances for this session.
         Used by the Garbage Collector during disconnect to clean up listener sets.
-        :return: List of query_hash strings.
+        :return: List of strings in format 'query_hash:sub_id'.
         """
         subs_key = self._get_subs_key()
         try:

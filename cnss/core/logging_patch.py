@@ -48,7 +48,7 @@ def _install_logging_patch() -> None:
                             new_args.append(int(arg))
                         except (ValueError, TypeError):
                             # If conversion fails, keep original value
-                            new_args.append(int(arg))
+                            new_args.append(arg)
                     else:
                         new_args.append(arg)
                 self.args = tuple(new_args)

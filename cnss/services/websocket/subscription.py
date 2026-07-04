@@ -4,7 +4,6 @@
 # Handles registration, listener tracking, and cleanup of the subscription
 # registry to optimize Reporting Worker database queries.
 # ==============================================================================
-
 import logging
 from typing import Tuple
 
@@ -19,10 +18,13 @@ logger = logging.getLogger(__name__)
 # --- Constants ---
 # Redis key prefix for the subscription registry (stores JSON definition).
 REGISTRY_KEY_PREFIX = "sub:registry:"
-# Redis key prefix for the listener set (stores connected client IDs).
+
+# Redis key prefix for the listener set (stores composite client IDs).
 LISTENERS_KEY_PREFIX = "sub:listeners:"
+
 # Redis key for the global index of active subscription hashes.
 ACTIVE_HASHES_KEY = "sub:active_hashes"
+
 # Redis Pub/Sub channel prefix for pushing aggregated data to clients.
 PUSH_CHANNEL_PREFIX = "ws:push:"
 
@@ -53,9 +55,8 @@ class SubscriptionManager:
     async def subscribe(self, session: Session, request: SubscribeRequest) -> Tuple[str, str]:
         """
         Registers a new subscription for a client.
-        Creates the registry entry if it doesn't exist, adds the client to the
-        listener set, and indexes the hash for the Reporting Worker.
-
+        Creates the registry entry if it doesn't exist, adds the composite
+        client ID to the listener set, and indexes the hash for the Reporting Worker.
         :param session: The client's ephemeral session object.
         :param request: The validated subscription control message.
         :return: A tuple of (query_hash, pubsub_channel).
@@ -64,33 +65,35 @@ class SubscriptionManager:
         registry_key = self._get_registry_key(query_hash)
         listeners_key = self._get_listeners_key(query_hash)
         push_channel = self._get_push_channel(query_hash)
+        
+        # Composite listener member allows multiple parallel subscriptions per client
+        listener_member = f"{session.client_id}:{request.id}"
 
         try:
             # Use a pipeline for atomic registration
             pipeline = self._redis.pipeline(transaction=False)
-
+            
             # 1. Register the subscription definition (NX ensures we don't overwrite existing)
             # The registry stores the full request JSON for the Reporting Worker to parse
             registry_data = request.model_dump_json()
             pipeline.set(registry_key, registry_data, nx=True)
-
-            # 2. Add the client ID to the listener set
-            pipeline.sadd(listeners_key, session.client_id)
-
+            
+            # 2. Add the composite client ID to the listener set
+            pipeline.sadd(listeners_key, listener_member)
+            
             # 3. Add the hash to the global active hashes index
             pipeline.sadd(ACTIVE_HASHES_KEY, query_hash)
-
+            
             await pipeline.execute()
-
+            
             # 4. Track the subscription in the client's session for GC on disconnect
-            await session.add_subscription(query_hash)
-
+            await session.add_subscription(query_hash, request.id)
+            
             logger.info(
                 f"Client '{session.client_id}' subscribed to '{request.target}' "
-                f"on channel '{request.channel_id}' (hash: {query_hash})."
+                f"with id '{request.id}' on channel '{request.channel_id}' (hash: {query_hash})."
             )
             return query_hash, push_channel
-
         except Exception as e:
             logger.error(f"Failed to register subscription for client '{session.client_id}': {e}")
             raise RedisError(f"Subscription registration failed for client '{session.client_id}'") from e
@@ -100,7 +103,6 @@ class SubscriptionManager:
         Removes a client from a subscription's listener set.
         If the listener set becomes empty, cleans up the registry and active index
         to stop the Reporting Worker from querying the database unnecessarily.
-
         :param session: The client's ephemeral session object.
         :param request: The validated unsubscription control message.
         :return: The query_hash that was unsubscribed from.
@@ -108,14 +110,17 @@ class SubscriptionManager:
         query_hash = request.query_hash
         registry_key = self._get_registry_key(query_hash)
         listeners_key = self._get_listeners_key(query_hash)
+        
+        # Composite listener member must match the one used during subscribe
+        listener_member = f"{session.client_id}:{request.id}"
 
         try:
-            # 1. Remove the client from the listener set
-            await self._redis.srem(listeners_key, session.client_id)
-
+            # 1. Remove the composite client ID from the listener set
+            await self._redis.srem(listeners_key, listener_member)
+            
             # 2. Check if the listener set is now empty
             listener_count = await self._redis.scard(listeners_key)
-
+            
             if listener_count == 0:
                 # No more clients listening. Clean up to save DB resources.
                 pipeline = self._redis.pipeline(transaction=False)
@@ -123,21 +128,17 @@ class SubscriptionManager:
                 pipeline.delete(listeners_key)
                 pipeline.srem(ACTIVE_HASHES_KEY, query_hash)
                 await pipeline.execute()
-
-                logger.info(
-                    f"Subscription '{query_hash}' has no more listeners. " f"Registry and active index cleaned up."
-                )
+                logger.info(f"Subscription '{query_hash}' has no more listeners. Cleaned up.")
             else:
                 logger.debug(
-                    f"Client '{session.client_id}' unsubscribed from '{query_hash}'. "
+                    f"Client '{session.client_id}' unsubscribed id '{request.id}'. "
                     f"Remaining listeners: {listener_count}."
                 )
-
+            
             # 3. Remove the subscription from the client's session tracking
-            await session.remove_subscription(query_hash)
-
+            await session.remove_subscription(query_hash, request.id)
+            
             return query_hash
-
         except Exception as e:
             logger.error(f"Failed to unregister subscription for client '{session.client_id}': {e}")
             raise RedisError(f"Subscription unregistration failed for client '{session.client_id}'") from e

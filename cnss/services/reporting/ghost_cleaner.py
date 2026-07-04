@@ -1,7 +1,7 @@
 # ==============================================================================
 # CnSS Ghost Subscription Cleaner
 # Background task that prevents "ghost" subscriptions from consuming database
-# resources. When the WebSocket Service crashes, it may leave stale client_id
+# resources. When the WebSocket Service crashes, it may leave stale client_id:sub_id
 # entries in sub:listeners:{hash} sets. This cleaner validates each listener
 # against the ephemeral ws:session:{client_id} key in Redis and removes
 # orphaned entries, ensuring the Reporting Worker only executes SQL for
@@ -9,10 +9,9 @@
 #
 # Architecture Reference: §2.2.8 (Ghost Subscription Prevention)
 # ==============================================================================
-
 import asyncio
 import logging
-from typing import Optional, Set, cast
+from typing import Dict, Optional, Set, cast
 
 from core.config import settings
 from core.redis.client import get_redis_client
@@ -27,7 +26,7 @@ logger = logging.getLogger(__name__)
 # Global index of all active subscription hashes (Set).
 ACTIVE_HASHES_KEY = "sub:active_hashes"
 
-# Prefix for the listener set of a specific subscription (Set of client_ids).
+# Prefix for the listener set of a specific subscription (Set of client_id:sub_id).
 LISTENERS_KEY_PREFIX = "sub:listeners:"
 
 # Prefix for the ephemeral WebSocket session hash (Hash with TTL=10s).
@@ -40,10 +39,10 @@ REGISTRY_KEY_PREFIX = "sub:registry:"
 # --- Ghost Cleaner Class ---
 class GhostCleaner:
     """
-    Periodically scans active subscriptions and removes stale client_id
-    entries from listener sets. If a listener set becomes empty after
-    cleanup, the corresponding registry and active hash index entries
-    are deleted to stop the Reporting Worker from polling the database.
+    Periodically scans active subscriptions and removes stale client_id:sub_id
+    entries from listener sets. If a listener set becomes empty after cleanup,
+    the corresponding registry and active hash index entries are deleted to
+    stop the Reporting Worker from polling the database.
     """
 
     def __init__(self) -> None:
@@ -113,8 +112,7 @@ class GhostCleaner:
     async def _clean_subscription(self, query_hash: str) -> None:
         """
         Validates all listeners for a specific subscription hash.
-        Removes stale client_ids and cleans up empty subscriptions.
-
+        Removes stale client_id:sub_id entries and cleans up empty subscriptions.
         :param query_hash: The deterministic hash of the subscription.
         """
         listeners_key = f"{LISTENERS_KEY_PREFIX}{query_hash}"
@@ -133,12 +131,24 @@ class GhostCleaner:
             await self._cleanup_empty_subscription(query_hash)
             return
 
-        # --- Validate Each Listener ---
-        stale_client_ids: Set[str] = set()
+        # --- Group Listeners by client_id for Batch Session Check ---
+        # Parse composite keys (client_id:sub_id) and group by client_id
+        # to minimize EXISTS checks (one per unique client_id, not per listener).
+        client_to_members: Dict[str, Set[str]] = {}
+        for listener in listeners:
+            # Split composite key: "client_id:sub_id"
+            # SHA-256 hash does not contain ':', so rsplit is safe.
+            parts = listener.rsplit(":", 1)
+            if len(parts) != 2:
+                logger.warning(f"[{query_hash}] Malformed listener entry: '{listener}'. Removing.")
+                continue
+            client_id, _ = parts
+            client_to_members.setdefault(client_id, set()).add(listener)
 
-        for client_id in listeners:
+        # --- Validate Each Unique client_id ---
+        stale_members: Set[str] = set()
+        for client_id, members in client_to_members.items():
             session_key = f"{SESSION_KEY_PREFIX}{client_id}"
-
             try:
                 # EXISTS returns 1 if the key exists, 0 otherwise.
                 # This is an O(1) operation in Redis.
@@ -152,18 +162,24 @@ class GhostCleaner:
             if not exists:
                 # Session key is missing: the WebSocket client has disconnected
                 # or the WS Service container crashed and the TTL expired.
-                stale_client_ids.add(client_id)
+                # All members (client_id:sub_id) for this client_id are stale.
+                stale_members.update(members)
                 logger.debug(
-                    f"[{query_hash}] Ghost detected: client '{client_id}' " f"has no active session at '{session_key}'."
+                    f"[{query_hash}] Ghost detected: client '{client_id}' "
+                    f"has no active session at '{session_key}'. "
+                    f"Marking {len(members)} listener(s) for removal."
                 )
 
         # --- Remove Stale Listeners ---
-        if stale_client_ids:
+        if stale_members:
             try:
                 # SREM removes one or more members from a set.
                 # Returns the number of members that were removed.
-                removed_count = await self._redis.srem(listeners_key, *stale_client_ids)
-                logger.info(f"[{query_hash}] Removed {removed_count} ghost listener(s): " f"{stale_client_ids}")
+                removed_count = await self._redis.srem(listeners_key, *stale_members)
+                logger.info(
+                    f"[{query_hash}] Removed {removed_count} ghost listener(s): "
+                    f"{stale_members}"
+                )
             except Exception as e:
                 logger.error(f"[{query_hash}] Failed to remove stale listeners from '{listeners_key}': {e}")
                 return
@@ -180,14 +196,13 @@ class GhostCleaner:
             # to stop the Reporting Worker from polling the database.
             await self._cleanup_empty_subscription(query_hash)
         else:
-            logger.debug(f"[{query_hash}] Ghost cleanup complete. " f"Remaining valid listeners: {remaining_count}.")
+            logger.debug(f"[{query_hash}] Ghost cleanup complete. Remaining valid listeners: {remaining_count}.")
 
     async def _cleanup_empty_subscription(self, query_hash: str) -> None:
         """
         Removes all Redis keys associated with an empty subscription.
         This prevents the Reporting Worker from executing SQL for
         subscriptions that have no active WebSocket clients.
-
         :param query_hash: The deterministic hash of the subscription.
         """
         registry_key = f"{REGISTRY_KEY_PREFIX}{query_hash}"
@@ -202,7 +217,6 @@ class GhostCleaner:
             pipeline.delete(listeners_key)
             pipeline.srem(ACTIVE_HASHES_KEY, query_hash)
             await pipeline.execute()
-
             logger.info(
                 f"[{query_hash}] Empty subscription fully cleaned up. "
                 f"Removed registry, listeners, and active hash index."

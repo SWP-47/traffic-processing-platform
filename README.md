@@ -156,6 +156,7 @@ make stop
 
 - **System Documentation**: [System Documentation](docs/system-documentation.md)
 - **API Documentation**: [API Documentation](api/README.md)
+- **Development Process & Git Workflow**: [Development Process](docs/development-process.md)
 - **Current Deployment / Runnable Artifacts**: http://10.93.26.186
 - **Week 2 Reports**:
   - [Week 2 Report](reports/week2/README.md)

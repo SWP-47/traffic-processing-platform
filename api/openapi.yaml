@@ -15,7 +15,7 @@ info:
     - **Mechanism**: JWT Bearer Token. The token contains `role` and `scope` claims for per-channel access control.
 
     ## WebSocket Stream (CnSS to MUI)
-    - **Endpoint**: `wss://{{cnss_host}}:{{cnss_http_port}}/api/v1/ws/telemetry`
+    - **Endpoint**: `wss://{{cnss_host}}:{{cnss_ws_port}}/api/v1/ws/telemetry`
     - **Auth**: Query parameters `?token={{access_token}}&channel_id={{channel_id}}`
     - **Payload Schema**: `TelemetryUpdate` (defined in components/schemas)
     - **Frequency**: 1 Hz (aggregated by Reporting Worker from TimescaleDB)
@@ -25,7 +25,7 @@ info:
 servers:
   - url: https://{{cnss_host}}
     description: CnSS REST Server
-  - url: wss://{{cnss_host}}:{{cnss_http_port}}
+  - url: wss://{{cnss_host}}:{{cnss_ws_port}}
     description: CnSS WebSocket Server
 
 paths:

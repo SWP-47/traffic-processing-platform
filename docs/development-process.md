@@ -7,31 +7,29 @@ This document is the main artifact describing the team's development, branching 
 The team strictly follows the **Gitflow** branching model, adapted to meet specific course requirements. Below is a visual representation of our Git process:
 
 ```mermaid
+%%{init: { 'gitGraph': { 'mainBranchName': 'general'}} }%%
 gitGraph
     commit id: "Initial Commit"
     branch develop
     checkout develop
     commit id: "Setup Monorepo"
+    checkout general
+    
     branch feature/42-tp-counter
     checkout feature/42-tp-counter
     commit id: "feat: add counter"
     checkout develop
     merge feature/42-tp-counter id: "Merge PR #42"
+    
     branch release/1.0.0
     checkout release/1.0.0
     commit id: "chore: bump version"
+    
     checkout general
     merge release/1.0.0 id: "Release v1.0.0" tag: "v1.0.0"
+    
     checkout develop
     merge release/1.0.0 id: "Sync release to develop"
-    checkout general
-    branch hotfix/99-critical-fix
-    checkout hotfix/99-critical-fix
-    commit id: "fix: critical bug"
-    checkout general
-    merge hotfix/99-critical-fix id: "Merge Hotfix" tag: "v1.0.1"
-    checkout develop
-    merge hotfix/99-critical-fix id: "Sync hotfix to develop"
 ```
 
 ## 2. Workflow Description & Practical Usage
@@ -59,9 +57,9 @@ gitGraph
 * **Responsibilities:** CnSS development, CI/CD pipeline, repository administration, and project tracking.
 * **Task Instructions:** Manage GitHub Project Board and CI/CD (including Lychee). Work inside `cnss/`. Create `release/` branches for MVP deployment. Review and merge PRs.
 
-#### @Rena-ln (Core Systems Engineer, Business Analyst)
+#### @Rena-ln (Core Systems Engineer)
 
-* **Responsibilities:** Traffic Processor (TP), Communication Node (CN), and system architecture.
+* **Responsibilities:** Traffic Processor (TP), Communication Node (CN)
 * **Task Instructions:** Work inside `traffic-processor/` and `communication-node/`. Implement transparent inline bridge and telemetry logic. Ensure all code passes CI checks before requesting a review.
 
 #### @Minnezing (Frontend Lead, UI/UX Designer)
@@ -72,6 +70,7 @@ gitGraph
 ### Development Guidelines
 
 #### Commit Messages
+
 Use Conventional Commits: `<type>: <description>`
 
 * `feat`: A new feature

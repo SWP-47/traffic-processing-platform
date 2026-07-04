@@ -129,10 +129,10 @@ jobs:
 
       - name: Run dependency audit
         run: |
-          # Генерируем плоский requirements.txt для pip-audit
+          # Generation of requirements.txt for pip-audit
           uv pip compile pyproject.toml --all-extras -o requirements.txt
           uv pip install pip-audit
-          pip-audit -r requirements.txt
+          uv run pip-audit -r requirements.txt
   mui:
     name: MUI Check
     runs-on: ubuntu-latest

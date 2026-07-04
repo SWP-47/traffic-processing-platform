@@ -151,6 +151,13 @@ make logs
 # Stop MUI containers
 make stop
 ```
+## Documentation
+
+- **Hosted Documentation Site**: [https://swp-47.github.io/traffic-processing-platform/](https://swp-47.github.io/traffic-processing-platform/)
+- **System Documentation**: [docs/system-documentation.md](docs/system-documentation.md)
+- **API Documentation**: [api/README.md](api/README.md)
+- **Development Process**: [docs/development-process.md](docs/development-process.md)
+- **Architecture Documentation**: [docs/architecture/README.md](docs/architecture/README.md)
 
 ## Links and Reports
 
@@ -163,3 +170,4 @@ make stop
   - [MVP v0 Report](reports/week2/mvp-v0-report.md)
 - **Week 3 Reports:**
   - [Week 3 Report](reports/week3/README.md)
+- **Hosted Documentation Site**: [https://swp-47.github.io/traffic-processing-platform/](https://swp-47.github.io/traffic-processing-platform/)

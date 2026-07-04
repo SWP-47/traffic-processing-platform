@@ -32,6 +32,8 @@ gitGraph
     merge release/1.0.0 id: "Sync release to develop"
 ```
 
+> *This is exmaple*
+
 ## 2. Workflow Description & Practical Usage
 
 ### Branching Strategy
@@ -50,7 +52,7 @@ gitGraph
 #### @arinamnova (Technical Writer, Translator)
 
 * **Responsibilities:** Documentation management, translation, and content coordination.
-* **Task Instructions:** Maintain the `docs/` and `reports/` directory. Ensure all transcripts and reports are **sanitized** (no real names, no private recording links). Maintain root docs (`README.md`, `CHANGELOG.md`). Create branches named `docs/<issue-number>-<topic>`.
+* **Task Instructions:** Maintain the `docs/` and `reports/` directory. Ensure all transcripts and reports are **sanitized** (no real names, no private recording links). Maintain root docs (`README.md`). Create branches named `docs/<issue-number>-<topic>`.
 
 #### @jinseisieko (Backend Lead, DevOps Engineer, Project Manager)
 
@@ -123,4 +125,5 @@ Use Conventional Commits: `<type>: <description>`
 4. **Cleanup:** Delete remote/local branches and move the issue to `Done`.
 
 ### Step 6: Integration Validation (Post-Merge)
+
 Because this is a tightly coupled monorepo, verify adjacent components after merging into `develop` (e.g., if TP telemetry format changed, verify CN can still parse it).

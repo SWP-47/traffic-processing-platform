@@ -14,3 +14,4 @@
 - **API Documentation**: [api/README.md](../../api/README.md)
 - **Architecture Documentation**: [docs/architecture/README.md](../../docs/architecture/README.md)
 - **Development Process**: [docs/development-process.md](../../docs/development-process.md)
+- **Hosted Documentation Site**: [https://swp-47.github.io/traffic-processing-platform/](https://swp-47.github.io/traffic-processing-platform/)

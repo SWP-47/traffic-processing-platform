@@ -177,7 +177,12 @@ class HostsTableHandler(BaseSubscriptionHandler):
         aggregated AS (
             SELECT
                 host_ip,
-                MAX(host_location) AS location,
+                CASE 
+                    WHEN SUM(CASE WHEN host_location = 'LAN' THEN 1 ELSE 0 END) >= 
+                         SUM(CASE WHEN host_location = 'WAN' THEN 1 ELSE 0 END) 
+                    THEN 'LAN' 
+                    ELSE 'WAN' 
+                END AS location,
                 COUNT(DISTINCT remote_ip) AS unique_destinations,
                 SUM(is_tx)::float / {period_seconds} AS tx_per_sec,
                 SUM(is_rx)::float / {period_seconds} AS rx_per_sec,

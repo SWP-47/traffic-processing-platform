@@ -150,8 +150,8 @@ function ChannelSelector() {
 
   const handleHeaderClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!isOpened) fetchChannels();
     setIsOpened((prev) => !prev);
-    fetchChannels();
   };
 
   const handleChannelSelect = (id: string) => {

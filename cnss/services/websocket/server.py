@@ -203,17 +203,25 @@ class WebSocketServer:
             row = await conn.fetchrow("SELECT 1 FROM channels WHERE channel_id = $1", channel_id)
             return row is not None
 
-    async def _heartbeat_loop(self, session: Session) -> None:
+    async def _heartbeat_loop(self, session: Session, interval: float = 5.0) -> None:
         """
         Background task to keep the session alive in Redis.
-        Refreshes the TTL every 5 seconds (Architecture 2.3.7).
+        Refreshes the TTL every `interval` seconds (Architecture 2.3.7).
+        Continues running even if refresh_ttl fails to prevent orphaned connections.
+        :param session: The ephemeral session object.
+        :param interval: Sleep interval in seconds (default 5.0, overridable for testing).
         """
         try:
             while True:
-                await asyncio.sleep(5)
-                await session.refresh_ttl()
+                await asyncio.sleep(interval)
+                try:
+                    await session.refresh_ttl()
+                except Exception as e:
+                    # Log the error but continue the loop
+                    # Architecture §2.3.7: heartbeat failure should not crash the connection handler
+                    logger.error(f"Failed to refresh TTL for session '{session.client_id}': {e}")
         except asyncio.CancelledError:
-            # Expected when the connection closes.
+            # Expected when the connection closes
             pass
 
     async def _process_message(self, websocket: WebSocketServerProtocol, session: Session, raw_message: str) -> None:
@@ -241,7 +249,7 @@ class WebSocketServer:
             )
             # Close connection with 4003 as per architecture.
             await websocket.close(4003, "Subscription channel_id mismatch.")
-            raise AuthorizationError(message="Subscription channel_id mismatch.")
+            return
 
         # --- Route to Subscription Manager ---
         if request.action == "subscribe":

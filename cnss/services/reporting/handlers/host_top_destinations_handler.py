@@ -160,11 +160,11 @@ class HostTopDestinationsHandler(BaseSubscriptionHandler):
         destination_stats AS (
             SELECT
                 remote_ip,
-                CASE 
-                    WHEN SUM(CASE WHEN location = 'LAN' THEN 1 ELSE 0 END) >= 
-                         SUM(CASE WHEN location = 'WAN' THEN 1 ELSE 0 END) 
-                    THEN 'LAN' 
-                    ELSE 'WAN' 
+                CASE
+                    WHEN SUM(CASE WHEN location = 'LAN' THEN 1 ELSE 0 END) >=
+                         SUM(CASE WHEN location = 'WAN' THEN 1 ELSE 0 END)
+                    THEN 'LAN'
+                    ELSE 'WAN'
                 END AS location,
                 COUNT(*)::float / {seconds_ph} AS received_per_sec,
                 MAX(time) AS last_seen

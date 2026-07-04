@@ -4,25 +4,26 @@
 # and the processing pipeline orchestration against architecture.md §2.1.
 # ==============================================================================
 
-import asyncio
 import json
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from core.contracts.udp_contracts import PacketMeta, TelemetryBatch
 from core.exceptions import ConfigurationError
 from services.ingestion.udp_server import UDPIngestionProtocol, UDPIngestionServer
 
-
 # --- Custom Mock Helper ---
+
 
 class MockAsyncMethod:
     """
     Custom async method mock to bypass Python 3.13 AsyncMock GC warnings.
-    Python 3.13's AsyncMock can emit 'coroutine was never awaited' warnings 
-    during garbage collection. This lightweight class provides the exact 
+    Python 3.13's AsyncMock can emit 'coroutine was never awaited' warnings
+    during garbage collection. This lightweight class provides the exact
     same assertion semantics without relying on unittest.mock internals.
     """
+
     def __init__(self):
         self.call_count = 0
         self.call_args = None
@@ -38,6 +39,7 @@ class MockAsyncMethod:
 
 # --- Test Fixtures ---
 
+
 @pytest.fixture
 def mock_transport():
     """Provides a mocked asyncio transport."""
@@ -48,8 +50,8 @@ def mock_transport():
 def mock_on_batch_received():
     """
     Provides a mock for the batch received callback.
-    IMPORTANT: We use MagicMock instead of AsyncMock here. In synchronous tests 
-    where asyncio.create_task is mocked, using AsyncMock would create a coroutine 
+    IMPORTANT: We use MagicMock instead of AsyncMock here. In synchronous tests
+    where asyncio.create_task is mocked, using AsyncMock would create a coroutine
     that is never awaited, triggering Python 3.13 GC warnings.
     """
     return MagicMock()
@@ -80,13 +82,12 @@ def valid_batch_payload():
         "timestamp": 1700000000,
         "sequence": 100,
         "window_ms": 1000,
-        "packets": [
-            {"direction": 0, "src_ip": "10.0.0.1", "dst_ip": "10.0.0.2", "src_port": 1234, "dst_port": 80}
-        ],
+        "packets": [{"direction": 0, "src_ip": "10.0.0.1", "dst_ip": "10.0.0.2", "src_port": 1234, "dst_port": 80}],
     }
 
 
 # --- UDPIngestionProtocol Tests ---
+
 
 class TestUDPIngestionProtocol:
     """Tests for the low-level UDP datagram handling and validation."""
@@ -103,9 +104,9 @@ class TestUDPIngestionProtocol:
         """
         data = json.dumps(valid_batch_payload).encode("utf-8")
         addr = ("192.168.1.1", 5000)
-        
+
         protocol.datagram_received(data, addr)
-        
+
         # Verify create_task was called to schedule the async callback
         mock_create_task.assert_called_once()
 
@@ -119,9 +120,9 @@ class TestUDPIngestionProtocol:
         mock_settings.cnss_udp_mtu = 10
         data = json.dumps(valid_batch_payload).encode("utf-8")
         addr = ("192.168.1.1", 5000)
-        
+
         protocol.datagram_received(data, addr)
-        
+
         # Verify it was still scheduled despite exceeding MTU
         mock_create_task.assert_called_once()
 
@@ -132,9 +133,9 @@ class TestUDPIngestionProtocol:
         """
         data = b"not a json string"
         addr = ("192.168.1.1", 5000)
-        
+
         protocol.datagram_received(data, addr)
-        
+
         mock_create_task.assert_not_called()
 
     @patch("services.ingestion.udp_server.asyncio.create_task")
@@ -145,9 +146,9 @@ class TestUDPIngestionProtocol:
         # Missing required fields like 'channel_id', 'sequence', etc.
         data = json.dumps({"invalid": "payload"}).encode("utf-8")
         addr = ("192.168.1.1", 5000)
-        
+
         protocol.datagram_received(data, addr)
-        
+
         mock_create_task.assert_not_called()
 
     def test_error_received(self, protocol):
@@ -163,6 +164,7 @@ class TestUDPIngestionProtocol:
 
 
 # --- UDPIngestionServer Tests ---
+
 
 class TestUDPIngestionServer:
     """Tests for the high-level server orchestration and lifecycle."""
@@ -182,19 +184,19 @@ class TestUDPIngestionServer:
             packets=[PacketMeta(direction=0, src_ip="10.0.0.1", dst_ip="10.0.0.2", src_port=1234, dst_port=80)],
         )
         addr = ("192.168.1.1", 5000)
-        
+
         # Use custom MockAsyncMethod to completely bypass Python 3.13 AsyncMock GC warnings
         mock_register = MockAsyncMethod()
         mock_process = MockAsyncMethod()
         mock_push = MockAsyncMethod()
-        
+
         # Inject custom mocks directly into the server's dependencies
         server._flusher.register_channel = mock_register
         server._state_manager.process_batch = mock_process
         server._buffer_manager.push_packets = mock_push
-        
+
         await server._handle_batch(batch, addr)
-        
+
         # Verify pipeline execution and arguments
         mock_register.assert_called_once_with("test-ch")
         mock_process.assert_called_once_with(batch)
@@ -206,20 +208,20 @@ class TestUDPIngestionServer:
         """
         mock_transport = MagicMock()
         mock_protocol = MagicMock()
-        
+
         with patch("asyncio.get_running_loop") as mock_get_loop:
             mock_loop = MagicMock()
-            
+
             # Define a real async function to mock the endpoint creation.
             # This prevents AsyncMock from generating unawaited coroutines.
             async def mock_create_endpoint(*args, **kwargs):
                 return (mock_transport, mock_protocol)
-            
+
             mock_loop.create_datagram_endpoint = mock_create_endpoint
             mock_get_loop.return_value = mock_loop
-            
+
             await server.start()
-            
+
             # Verify transport and protocol were assigned correctly
             assert server.transport == mock_transport
             assert server.protocol == mock_protocol
@@ -230,7 +232,7 @@ class TestUDPIngestionServer:
         """
         with patch("services.ingestion.udp_server.settings") as mock_settings:
             mock_settings.cnss_udp_port = 0  # Invalid port
-            
+
             with pytest.raises(ConfigurationError):
                 await server.start()
 
@@ -240,9 +242,9 @@ class TestUDPIngestionServer:
         """
         mock_transport = MagicMock()
         server.transport = mock_transport
-        
+
         await server.stop()
-        
+
         mock_transport.close.assert_called_once()
         assert server.transport is None
         assert server.protocol is None

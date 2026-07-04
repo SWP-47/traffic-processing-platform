@@ -5,14 +5,16 @@
 # ==============================================================================
 
 import json
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from core.exceptions import DatabaseError, RedisError
 from services.ingestion.flusher import BUFFER_KEY_PREFIX, BackgroundFlusher
 
 # --- Test Fixtures ---
+
 
 @pytest.fixture
 def mock_lua_script():
@@ -34,8 +36,9 @@ def mock_db_pool():
 @pytest.fixture
 def flusher(mock_lua_script, mock_db_pool):
     """Provides a BackgroundFlusher instance with mocked Redis and DB dependencies."""
-    with patch("services.ingestion.flusher.get_lua_script", return_value=mock_lua_script), patch(
-        "services.ingestion.flusher.get_db_pool", return_value=mock_db_pool
+    with (
+        patch("services.ingestion.flusher.get_lua_script", return_value=mock_lua_script),
+        patch("services.ingestion.flusher.get_db_pool", return_value=mock_db_pool),
     ):
         yield BackgroundFlusher()
 

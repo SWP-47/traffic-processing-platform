@@ -25,19 +25,16 @@ PERIOD_SEC = 10.0  # Full sine wave period (10 seconds)
 SEND_INTERVAL_SEC = 0.05  # Send interval (50ms = 20 batches/sec)
 
 # IP pool for random generation
-LAN_IP_POOL = [
-    "192.168.1.10", "192.168.1.20", "192.168.1.30", "10.0.0.1", "10.0.0.2"
-]
-WAN_IP_POOL = [
-    "8.8.8.8", "1.1.1.1", "172.217.0.1", "151.101.1.140", "93.184.216.34"
-]
+LAN_IP_POOL = ["192.168.1.10", "192.168.1.20", "192.168.1.30", "10.0.0.1", "10.0.0.2"]
+WAN_IP_POOL = ["8.8.8.8", "1.1.1.1", "172.217.0.1", "151.101.1.140", "93.184.216.34"]
+
 
 def create_packet_meta(direction: int = 0) -> Dict[str, Any]:
     # Гарантируем, что IP LAN и WAN не будут пересекаться
-    if direction == 0: # IN: WAN -> LAN
+    if direction == 0:  # IN: WAN -> LAN
         src_ip = random.choice(WAN_IP_POOL)
         dst_ip = random.choice(LAN_IP_POOL)
-    else:              # OUT: LAN -> WAN
+    else:  # OUT: LAN -> WAN
         src_ip = random.choice(LAN_IP_POOL)
         dst_ip = random.choice(WAN_IP_POOL)
 

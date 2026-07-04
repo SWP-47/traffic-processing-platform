@@ -176,10 +176,7 @@ class GhostCleaner:
                 # SREM removes one or more members from a set.
                 # Returns the number of members that were removed.
                 removed_count = await self._redis.srem(listeners_key, *stale_members)
-                logger.info(
-                    f"[{query_hash}] Removed {removed_count} ghost listener(s): "
-                    f"{stale_members}"
-                )
+                logger.info(f"[{query_hash}] Removed {removed_count} ghost listener(s): " f"{stale_members}")
             except Exception as e:
                 logger.error(f"[{query_hash}] Failed to remove stale listeners from '{listeners_key}': {e}")
                 return

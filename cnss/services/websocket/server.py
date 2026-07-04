@@ -12,6 +12,7 @@ import uuid
 from typing import Any, Callable, Tuple
 
 import websockets
+import websockets.legacy.server
 from pydantic import ValidationError
 
 # Import serve, WebSocketServer, and WebSocketServerProtocol from the legacy module
@@ -57,7 +58,7 @@ class WebSocketServer:
         :param register_connection: Callback to register active WebSocket connections.
         :param unregister_connection: Callback to remove connections from the registry.
         """
-        self._server: websockets.WebSocketServer | None = None
+        self._server: websockets.legacy.server.WebSocketServer | None = None
         self._sub_manager = SubscriptionManager()
         self._gc = GarbageCollector()
         self._snapshot_fetcher = SnapshotFetcher()
@@ -269,8 +270,7 @@ class WebSocketServer:
         # and indexes hash in sub:active_hashes for the Reporting Worker.
         query_hash, push_channel = await self._sub_manager.subscribe(session, request)
         logger.debug(
-            f"Client '{session.client_id}' registered for '{push_channel}' "
-            f"(hash: {query_hash}, id: {request.id})."
+            f"Client '{session.client_id}' registered for '{push_channel}' " f"(hash: {query_hash}, id: {request.id})."
         )
 
         # --- Step 2: Fetch Initial Snapshot from TimescaleDB ---
@@ -303,8 +303,7 @@ class WebSocketServer:
 
             await websocket.send(json.dumps(snapshot))
             logger.debug(
-                f"Initial snapshot sent to client '{session.client_id}' "
-                f"for '{request.target}' (id: {request.id})."
+                f"Initial snapshot sent to client '{session.client_id}' " f"for '{request.target}' (id: {request.id})."
             )
         except Exception as e:
             logger.error(f"Failed to send initial snapshot to client '{session.client_id}': {e}")

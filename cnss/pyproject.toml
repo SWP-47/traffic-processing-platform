@@ -87,3 +87,6 @@ packages = ["core", "services"]
 plugins = ["pydantic.mypy"]
 strict = true 
 ignore_missing_imports = true 
+exclude = [
+    "^tests/",
+]

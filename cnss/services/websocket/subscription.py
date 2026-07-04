@@ -65,30 +65,30 @@ class SubscriptionManager:
         registry_key = self._get_registry_key(query_hash)
         listeners_key = self._get_listeners_key(query_hash)
         push_channel = self._get_push_channel(query_hash)
-        
+
         # Composite listener member allows multiple parallel subscriptions per client
         listener_member = f"{session.client_id}:{request.id}"
 
         try:
             # Use a pipeline for atomic registration
             pipeline = self._redis.pipeline(transaction=False)
-            
+
             # 1. Register the subscription definition (NX ensures we don't overwrite existing)
             # The registry stores the full request JSON for the Reporting Worker to parse
             registry_data = request.model_dump_json()
             pipeline.set(registry_key, registry_data, nx=True)
-            
+
             # 2. Add the composite client ID to the listener set
             pipeline.sadd(listeners_key, listener_member)
-            
+
             # 3. Add the hash to the global active hashes index
             pipeline.sadd(ACTIVE_HASHES_KEY, query_hash)
-            
+
             await pipeline.execute()
-            
+
             # 4. Track the subscription in the client's session for GC on disconnect
             await session.add_subscription(query_hash, request.id)
-            
+
             logger.info(
                 f"Client '{session.client_id}' subscribed to '{request.target}' "
                 f"with id '{request.id}' on channel '{request.channel_id}' (hash: {query_hash})."
@@ -110,17 +110,17 @@ class SubscriptionManager:
         query_hash = request.query_hash
         registry_key = self._get_registry_key(query_hash)
         listeners_key = self._get_listeners_key(query_hash)
-        
+
         # Composite listener member must match the one used during subscribe
         listener_member = f"{session.client_id}:{request.id}"
 
         try:
             # 1. Remove the composite client ID from the listener set
             await self._redis.srem(listeners_key, listener_member)
-            
+
             # 2. Check if the listener set is now empty
             listener_count = await self._redis.scard(listeners_key)
-            
+
             if listener_count == 0:
                 # No more clients listening. Clean up to save DB resources.
                 pipeline = self._redis.pipeline(transaction=False)
@@ -134,10 +134,10 @@ class SubscriptionManager:
                     f"Client '{session.client_id}' unsubscribed id '{request.id}'. "
                     f"Remaining listeners: {listener_count}."
                 )
-            
+
             # 3. Remove the subscription from the client's session tracking
             await session.remove_subscription(query_hash, request.id)
-            
+
             return query_hash
         except Exception as e:
             logger.error(f"Failed to unregister subscription for client '{session.client_id}': {e}")

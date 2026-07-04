@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Ingestion Worker entry point and UDP receiver (`services/ingestion/main.py`, `services/ingestion/udp_server.py`) with `asyncio.DatagramProtocol`, component wiring, graceful shutdown via OS signals, and MTU payload validation. ([#218](https://github.com/SWP-47/traffic-processing-platform/issues/218))
+- Sequence tracking and Fast Path state management (`services/ingestion/sequence_tracker.py`, `services/ingestion/state_manager.py`) featuring Redis-backed `last_sequence` persistence, >1,000,000 threshold reset detection, conditional `last_activity_at` updates, `dropped_delta` accumulation, and 6-second TTL enforcement. ([#218](https://github.com/SWP-47/traffic-processing-platform/issues/218))
+- Redis Capped List buffering (`services/ingestion/buffer_manager.py`) with `LLEN` checks and `LTRIM` enforcement at 100,000 items to prevent OOM, alongside a background asyncio flusher (`services/ingestion/flusher.py`) utilizing Lua atomic pops and `asyncpg.executemany` for batch `INSERT` operations into the `packet_flows` hypertable. ([#219](https://github.com/SWP-47/traffic-processing-platform/issues/219))
+- Docker orchestration (`docker-compose.yml`, `docker-compose.dev.yml`) for 4 microservices, TimescaleDB, and Redis with `restart: always` policies. ([#216](https://github.com/SWP-47/traffic-processing-platform/issues/216))
+- Redis configured in ephemeral mode (`save ""`, `appendonly no`) to maximize IOPS and prevent disk-write bottlenecks. ([#216](https://github.com/SWP-47/traffic-processing-platform/issues/216))
+- Lightweight Dockerfiles for `ingestion`, `reporting`, `websocket`, and `api` services utilizing `uv` for fast dependency resolution. ([#216](https://github.com/SWP-47/traffic-processing-platform/issues/216))
+- Alembic setup and initial relational schema migrations for `users`, `channels`, and `user_channel_scopes` tables. ([#217](https://github.com/SWP-47/traffic-processing-platform/issues/217))
+- TimescaleDB initialization including `packet_flows` hypertables, `telemetry_1s` Continuous Aggregates, and 7-day automated retention policies via pure SQL and migrations. ([#217](https://github.com/SWP-47/traffic-processing-platform/issues/217))
+- Project initialization with `pyproject.toml` (service extras), `Makefile` aliases, and environment templates. ([#214](https://github.com/SWP-47/traffic-processing-platform/issues/214))
+- Typed configuration via Pydantic Settings and structured logging with a custom `TokenMaskingFilter` for sensitive data redaction. ([#214](https://github.com/SWP-47/traffic-processing-platform/issues/214))
+- Custom exception hierarchy (`CnSSBaseError` -> `AuthError`, `ValidationError`) for standardized error handling. ([#214](https://github.com/SWP-47/traffic-processing-platform/issues/214))
+- Pydantic data contracts for UDP telemetry batches and WebSocket subscription payloads. ([#214](https://github.com/SWP-47/traffic-processing-platform/issues/214))
+- `asyncpg` pool manager and `redis.asyncio` client with auto-loading Lua scripts for atomic operations. ([#215](https://github.com/SWP-47/traffic-processing-platform/issues/215))
+- Security mechanisms including `passlib` (Argon2id) for password hashing, HS256 JWT encode/decode, and scope verification. ([#215](https://github.com/SWP-47/traffic-processing-platform/issues/215))
+- SQLAlchemy ORM models for `users`, `channels`, and `packet_flows` to support database migrations and type hints. ([#215](https://github.com/SWP-47/traffic-processing-platform/issues/215))
+- WebSocket server implementation with upgrade handling, JWT validation, `jwt:revoked` checks, and `channel_id` verification returning specific close codes (4001-4004). Includes a 5-second Heartbeat mechanism and a 10-second TTL for `ws:session` keys in Redis to track active connections. ([#220](https://github.com/SWP-47/traffic-processing-platform/issues/220))
+- Deterministic `query_hash` (SHA256) generation for subscriptions with a strict Initial Snapshot order (`SUBSCRIBE` -> DB query -> push to client -> listen to Pub/Sub). Implemented Garbage Collection to clean listener sets on disconnect and remove empty `sub:registry` entries, alongside `channel_id` match validation between URL and control message (close code 4003). ([#221](https://github.com/SWP-47/traffic-processing-platform/issues/221))
+- Reporting Worker with a 1Hz polling loop to read `sub:active_hashes` and a dynamic SQL generator featuring a strict whitelist for `sort_by` and `sort_order` to prevent SQL injection. Includes Ghost Cleanup to validate `ws:session` via `EXISTS`/`SREM`, atomic drop flushing (Lua -> UPDATE PG -> LTRIM Redis), and mass `UPDATE is_active=FALSE` for timed-out sessions. ([#222](https://github.com/SWP-47/traffic-processing-platform/issues/222))
+- FastAPI application factory with dependency injection (`get_db`, `get_current_user`, `require_scope`), Pydantic DTOs for request/response validation, and a `POST /api/v1/auth/login` endpoint for Argon2id credential validation and HS256 JWT issuance with claims (`sub`, `iat`, `exp`, `role`, `scope`). ([#223](https://github.com/SWP-47/traffic-processing-platform/issues/223))
+- REST API data routes including `GET /channels` and `GET /status` reading from the `channels` table, `GET /history` calculating historical data using TimescaleDB's `time_bucket` function, and a `GET /health` endpoint for system monitoring. ([#224](https://github.com/SWP-47/traffic-processing-platform/issues/224))
+- CLI utilities and scripts including `init_db.py` for admin user creation, `seed_data.py` for test data generation, `revoke_token.py` for adding a token's `jti` to the `jwt:revoked` set in Redis, and `load_test_udp.py` as a UDP stress generator. ([#225](https://github.com/SWP-47/traffic-processing-platform/issues/225))
+- Testing infrastructure setup using `conftest.py` with `fake_redis` and `fake_db` fixtures, an asynchronous UDP mock, and comprehensive unit tests for `sequence_tracker` (reset detection), `sql_builder` (SQL injection prevention), `query_hash` (determinism), and `scopes` (access matrix). ([#226](https://github.com/SWP-47/traffic-processing-platform/issues/226))
+- Integration tests for the ingestion pipeline, WebSocket subscription flow, ghost cleanup, and authentication flow using `testcontainers` to spin up real Redis and PostgreSQL instances, alongside an E2E test verifying the full pipeline from UDP packet reception to WebSocket client delivery. ([#227](https://github.com/SWP-47/traffic-processing-platform/issues/227))
+- Comprehensive documentation including `architecture.md`, `api.md`, `websocket_protocol.md`, and `deployment.md`, OpenAPI descriptions for all REST endpoints, and PlantUML diagrams (`data_flow.puml`, `subscription_lifecycle.puml`) visualizing system architecture and protocols. ([#228](https://github.com/SWP-47/traffic-processing-platform/issues/228))
 - Top Tables component on the dashboard page of MUI. ([#205](https://github.com/SWP-47/traffic-processing-platform/issues/205))
 
 ### Changed
@@ -16,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - N/A
 
 ### Deprecated
+
+- N/A
+
+### Removed
 
 - N/A
 

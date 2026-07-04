@@ -1,54 +1,140 @@
 # Control and Status Server (CnSS)
 
-Backend component responsible for aggregating telemetry data from the Communication Node (CN) and exposing operational status and real-time metrics to the Management User Interface (MUI).
+The Control and Status Server (CnSS) is the backend core of the traffic processing platform. The architecture is strictly decoupled into isolated, containerized microservices to ensure horizontal scalability, fault isolation, and high-performance telemetry ingestion.
 
----
+## Architecture Overview
+
+The CnSS consists of four main microservices:
+
+1. **Ingestion Worker**: High-performance UDP telemetry ingestion, sequence tracking, and database buffering.
+2. **Reporting Worker**: Periodic metric aggregation, state synchronization, and real-time event publishing.
+3. **WebSocket Service**: Persistent client connection management and subscription routing.
+4. **REST API & Auth Service**: HTTP gateway, identity management, and historical data retrieval.
 
 ## Prerequisites
 
-- [Docker](https://docs.docker.com/get-started/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/install/)
+- Python 3.11+
+- [uv](https://github.com/astral-sh/uv) (Fast Python package installer and resolver)
+- Docker & Docker Compose
 
----
+## Getting Started
 
-## Local Development (Dev Build)
+### 1. Installation
 
-Use this configuration for active local development. It includes hot-reload capabilities to reflect code changes instantly.
+Install all dependencies (including dev extras for linting and testing) using `uv`:
 
-1. Navigate to the `cnss/` directory:
-   ```bash
-   cd cnss/
-   ```
-2. (Optional) Create a local `.env` file based on the example:
-   ```bash
-   cp .env.example .env
-   ```
-3. Start the development environment:
-   ```bash
-   docker-compose up --build
-   ```
-   *The server will be available at `http://localhost:8000`.*
+```bash
+make install
+```
 
----
+### 2. Environment Setup
 
-## Production Deployment (VM Build)
+Copy the example environment file and adjust the variables if necessary:
 
-Use this configuration for deploying the service on a production Virtual Machine. It is optimized for security (non-root user) and performance (multiple Uvicorn workers).
+```bash
+cp .env.example .env
+```
 
-1. Copy the `cnss/` directory to your target VM.
-2. Ensure a `.env` file is present with production-appropriate values (do not use default dev tokens).
-3. Start the production environment in detached mode:
-   ```bash
-   docker-compose -f docker-compose.prod.yml up --build -d
-   ```
-4. Verify the container is running and healthy:
-   ```bash
-   docker-compose -f docker-compose.prod.yml ps
-   ```
+### 3. Running Infrastructure
 
----
+Start the required infrastructure services (TimescaleDB, Redis, pgAdmin) in detached mode using Docker Compose:
 
-## Related Documentation
+```bash
+make dev
+```
 
-- [Root README](../README.md) - Project overview and monorepo setup.
-- [API Documentation](../api/README.md) - Detailed endpoint specifications (updated as features are added).
+### 4. Database Migrations
+
+Apply the initial database schema, TimescaleDB hypertables, and continuous aggregates:
+
+```bash
+make migrate
+```
+
+## Development
+
+### Running Microservices Locally
+
+For active development, run microservices directly on your host machine to benefit from hot-reload and IDE debugging:
+
+**Run individual services:**
+
+```bash
+make run-api          # REST API (http://localhost:8000)
+make run-websocket    # WebSocket service (ws://localhost:8001)
+make run-ingestion    # UDP ingestion worker
+make run-reporting    # Background aggregator
+```
+
+**Run all services at once:**
+
+```bash
+make dev-all          # Start all services in background
+make logs             # Tail all service logs
+make stop-dev         # Stop all services
+```
+
+### Running Tests
+
+Execute the test suite (unit, integration, e2e):
+
+```bash
+make test
+```
+
+### Linting and Formatting
+
+The project uses `black`, `flake8`, `ruff`, and `mypy` for code quality:
+
+```bash
+make lint             # Check code quality
+make format           # Automatically format code
+```
+
+### Makefile Help
+
+View all available commands:
+
+```bash
+make help
+```
+
+## Production Deployment
+
+For production deployment, all services run in Docker containers:
+
+```bash
+make prod
+```
+
+This builds and starts the complete stack including:
+
+- All 4 microservices (API, WebSocket, Ingestion, Reporting)
+- TimescaleDB (persistent storage)
+- Redis (ephemeral buffer and pub/sub)
+- Nginx (reverse proxy and TLS termination)
+
+## Project Structure
+
+```text
+cnss/
+├── core/                   # Shared core modules
+│   ├── contracts/          # Pydantic models for data contracts
+│   ├── models/             # SQLAlchemy ORM models
+│   ├── redis/              # Redis client and Lua scripts
+│   └── security/           # JWT, passwords, scopes
+├── services/               # Microservices
+│   ├── api/                # REST API & Auth service
+│   ├── ingestion/          # UDP ingestion worker
+│   ├── reporting/          # Background aggregator
+│   └── websocket/          # WebSocket gateway
+├── docker/                 # Dockerfiles and configs
+├── migrations/             # Alembic database migrations
+├── sql/                    # TimescaleDB setup scripts
+├── tests/                  # Test suite
+└── docs/                   # Documentation
+```
+
+## Documentation
+
+Detailed architectural decisions, API specifications, WebSocket protocols, and deployment guides can be found in the `docs/` directory.

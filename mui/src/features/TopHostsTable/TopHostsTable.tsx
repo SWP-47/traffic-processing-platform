@@ -7,6 +7,17 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 import { useNavigate } from "react-router";
 import { useHostsUpdate } from '@/hooks/useHostsUpdate';
 
+function ProgressPktsValue(value: number, maxValue: number) {
+  return (
+    <div className={styles.progress}>
+      <div className={styles.progress_bar}>
+        <div className={styles.progress_bar_value} style={{ width: value / maxValue * 100 + '%' }}></div>
+      </div>
+      <p className={styles.progress_value}>{value} pkt/s</p>
+    </div>
+  );
+}
+
 function TopHostsTable({ mode }: { mode: 'lan' | 'wan' }) {
   const navigate = useNavigate();
   const [sorting, setSorting] = useState<HostsSorting>('last_seen');
@@ -28,7 +39,17 @@ function TopHostsTable({ mode }: { mode: 'lan' | 'wan' }) {
     { id: 'last_seen', name: 'Last seen',                allowSorting: true },
   ]
 
-  const data = hosts?.map(d => [ d.ip, d.tx_per_sec, d.rx_per_sec, d.last_activity ]) ?? [];
+  const maxReceivedValue = Math.max(...(hosts?.map(data => data.received_per_sec!) ?? [0]));
+  const maxSentValue = Math.max(...(hosts?.map(data => data.sent_per_sec!) ?? [0]));
+
+  const data = hosts?.map(d => 
+    [
+      d.ip,
+      ProgressPktsValue(d.sent_per_sec!, maxSentValue),
+      ProgressPktsValue(d.received_per_sec!, maxReceivedValue),
+      d.last_seen
+    ]
+  ) ?? [];
 
   return (
     <div className={`card ${styles.table}`}>

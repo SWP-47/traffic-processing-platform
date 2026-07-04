@@ -34,7 +34,7 @@ function TopTable({ columns, data, loading, onSortChange, onExpanding, defaultSo
         {columns.map((column, i) => (
           <div 
             key={i} 
-            className={`${styles.header_column} ${soringColumn == column.id && styles.sorting}`}
+            className={`${styles.header_column} ${soringColumn == column.id ? styles.sorting : ''}`}
             onClick={() => column.allowSorting && setSortingColumn(column.id)}
           >
             <span className={styles.column_name}>{column.name}</span>

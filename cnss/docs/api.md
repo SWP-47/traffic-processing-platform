@@ -221,8 +221,6 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 
 **Response 200**:
 
-**Response 200**:
-
 ```json
 {
     "channel_id": "bridge-berlin-01",
@@ -373,7 +371,7 @@ GET /api/v1/channel/bridge-berlin-01/hosts/192.168.1.100/history?period=1h&start
 
 All real-time data streams are treated as subscriptions.
 
-- **Deduplication**: CnSS generates a deterministic `query_hash` (SHA-256) based on `channel_id`, `target`, and `params`. Identical requests from multiple users share the same DB query.
+- **Deduplication**: CnSS generates a deterministic `query_hash` (SHA-256) based on `channel_id`, `target`, and `params`. **The client-provided `id` is strictly excluded from the hash calculation.** This ensures that identical requests from multiple users or parallel client subscriptions share the same backend DB query.
 - **Initial Snapshot**: Upon subscription, CnSS immediately executes a read-only DB query and pushes the current state to the client, preventing the "cold start" gap before the first 1Hz Reporting Worker tick.
 
 ### 4.3 Control Messages (Client -> Server)
@@ -383,24 +381,28 @@ All real-time data streams are treated as subscriptions.
 ```json
 {
     "action": "subscribe",
+    "id": "sub-abc-123",
     "channel_id": "{{channel_id}}",
     "target": "<TARGET_NAME>",
     "params": { ... }
 }
 ```
 
+*Note: The `id` field is a **required** client-generated unique identifier. It allows the MUI to distinguish between multiple identical parallel subscriptions. This field is ignored by the backend when calculating the `query_hash`.*
+
 #### Unsubscribe
 
 ```json
 {
     "action": "unsubscribe",
+    "id": "sub-abc-123",
     "channel_id": "{{channel_id}}",
     "target": "<TARGET_NAME>",
     "params": { ... } 
 }
 ```
 
-*(Note: `params` must match the original subscribe request to correctly compute the `query_hash` for unregistration).*
+*(Note: `params` must match the original subscribe request to correctly compute the `query_hash` for unregistration.*
 
 ---
 
@@ -423,6 +425,7 @@ Real-time channel packet rates.
 ```json
 {
    "type": "telemetry_update",
+   "id": "sub-abc-123",
    "channel_id": "{{channel_id}}",
    "is_active": true,
    "window_ms": 5000,
@@ -458,6 +461,7 @@ Aggregated table of all observed hosts with pagination and filtering.
 ```json
 {
     "type": "hosts_table_update",
+    "id": "sub-abc-123",
     "channel_id": "{{channel_id}}",
     "target": "hosts_table",
     "timestamp": "2026-06-17T12:00:05Z",
@@ -492,6 +496,7 @@ Real-time Rx/Tx rate for a specific host (for the Host Details page header).
 ```json
 {
     "type": "host_details_update",
+    "id": "sub-abc-123",
     "channel_id": "{{channel_id}}",
     "host_ip": "192.168.1.100",
     "timestamp": "2026-06-17T12:00:05Z",
@@ -521,6 +526,7 @@ Top destinations for a specific host.
 ```json
 {
     "type": "host_top_destinations_update",
+    "id": "sub-abc-123",
     "channel_id": "{{channel_id}}",
     "host_ip": "192.168.1.100",
     "timestamp": "2026-06-17T12:00:05Z",
@@ -558,6 +564,7 @@ Top ports and protocols for a specific host.
 ```json
 {
     "type": "host_top_ports_update",
+    "id": "sub-abc-123",
     "channel_id": "{{channel_id}}",
     "host_ip": "192.168.1.100",
     "timestamp": "2026-06-17T12:00:05Z",

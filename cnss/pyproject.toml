@@ -68,6 +68,9 @@ include = '\.pyi?$'
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning:websockets.*",
+]
 
 [build-system]
 requires = ["hatchling"]

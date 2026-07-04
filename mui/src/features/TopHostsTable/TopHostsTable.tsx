@@ -5,27 +5,21 @@ import { useEffect, useState } from 'react';
 import topHosts, { type HostsSorting, type HostsTarget } from '@/services/topHosts';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useNavigate } from "react-router";
+import { useHostsUpdate } from '@/hooks/useHostsUpdate';
 
 function TopHostsTable({ mode }: { mode: 'lan' | 'wan' }) {
   const navigate = useNavigate();
   const [sorting, setSorting] = useState<HostsSorting>('last_seen');
   const { connectionStatus } = useWebSocket();
   const target = `${mode}_hosts` as HostsTarget;
-  const hosts = useTopHosts(target);
-
-  useEffect(() => {
-    if (connectionStatus !== 'connected') return;
-
-    topHosts.requestSubscription(
-      target,  // Target
-      sorting, // Sorting
-      5        // Limit
-    );
-    
-    return () => {
-      topHosts.requestUnsubscription(`${mode}_hosts`);
-    }
-  }, [connectionStatus, mode, target, sorting]);
+  const hosts = useHostsUpdate({
+    period: "5m",
+    location: mode.toUpperCase(),
+    sort_by: sorting,
+    sort_order: 'desc',
+    limit: 5
+  });
+  console.log(hosts)
 
   const columns = [
     { id: 'ip',        name: `${mode.toUpperCase()} IP`, allowSorting: false },
@@ -34,7 +28,7 @@ function TopHostsTable({ mode }: { mode: 'lan' | 'wan' }) {
     { id: 'last_seen', name: 'Last seen',                allowSorting: true },
   ]
 
-  const data = hosts?.map(d => [ d.ip, d.sent_per_sec, d.received_per_sec, d.last_seen ]) ?? [];
+  const data = hosts?.map(d => [ d.ip, d.tx_per_sec, d.rx_per_sec, d.last_activity ]) ?? [];
 
   return (
     <div className={`card ${styles.table}`}>

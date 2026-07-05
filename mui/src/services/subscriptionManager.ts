@@ -1,5 +1,5 @@
 import websocket from "./websocket";
-import { type components } from '@/api/schema';
+import type { components } from '@/api/schema';
 
 type Callback = (update: Record<string, unknown>) => void;
 type WSControlMessage = components["schemas"]["WSControlMessage"];

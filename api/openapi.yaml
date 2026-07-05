@@ -25,7 +25,7 @@ info:
       - `4004` (channel_not_found): Channel or Target does not exist.
       - `1011` (internal_error): Unexpected server error.
     - **Unified Subscription Engine**: CnSS DOES NOT push data automatically. MUI MUST send a `subscribe` control message to start receiving updates. Initial snapshots are pushed immediately upon subscription.
-  version: 2.0.0
+  version: 2.0.1
 
 servers:
   - url: https://{{cnss_host}}

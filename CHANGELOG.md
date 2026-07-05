@@ -4,7 +4,6 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
 ## [Unreleased]
 
 ### Added
@@ -30,6 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 - N/A
+
+## [2.0.1] - 2026-07-05
+
+### Added
+
+- Upload unreleased necessary changes for v2.0.0 ([#256](https://github.com/SWP-47/traffic-processing-platform/issues/256))
 
 ## [2.0.0] - 2026-07-05
 
@@ -70,22 +75,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BREAKING**: REST API versioned to 2.0.0 with new subscription-based WebSocket protocol ([#220](https://github.com/SWP-47/traffic-processing-platform/issues/220))
 - **BREAKING**: Telemetry data model changed from aggregated counters to raw packet metadata arrays ([#218](https://github.com/SWP-47/traffic-processing-platform/issues/218))
 
-### Deprecated
-
-- N/A
-
 ### Removed
 
 - Legacy in-memory `StateStore` implementation (replaced by TimescaleDB + Redis) ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))
 - Deprecated `GET /api/v1/channel/status` endpoint (use `GET /api/v1/channel/{channel_id}/status`) ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
-
-### Fixed
-
-- N/A
-
-### Security
-
-- N/A
 
 ## [1.1.0] - 2026-06-28
 
@@ -140,10 +133,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added Docker configuration for Communication Node (CN) to simplify deployment and ensure environment consistency. ([#88](https://github.com/SWP-47/traffic-processing-platform/issues/88))
 - Added JSON format validation using library jsonschema ([#152](https://github.com/SWP-47/traffic-processing-platform/issues/152))
 - Architecture of hardware (FPGA) part of TP was updated to make it more stroung and useful for future development ([#209](https://github.com/SWP-47/traffic-processing-platform/issues/209))
-
-### Deprecated
-
-- N/A
 
 ### Removed
 
@@ -243,10 +232,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `GET /api/v1/channel/status` (without `channel_id` in path) is deprecated and will be removed in a future release. Use `GET /api/v1/channel/{channel_id}/status` instead. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 
-### Removed
-
-- N/A
-
 ### Fixed
 
 - Fixed incorrect IPv4 EtherType value in the Traffic Processor (FPGA) packet recognition logic ([#87](https://github.com/SWP-47/traffic-processing-platform/issues/87)).
@@ -260,7 +245,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added JWT-based authentication for all REST and WebSocket endpoints to protect telemetry data and prevent unauthorized access. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 - CnSS now sanitizes access logs to prevent `access_token` leakage via query parameters. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 
-[Unreleased]: https://github.com/SWP-47/traffic-processing-platform/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/SWP-47/traffic-processing-platform/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v2.0.0
 [2.0.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v2.0.0
 [1.1.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.1.0
 [1.0.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.0.0

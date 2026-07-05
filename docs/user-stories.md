@@ -7,7 +7,7 @@
 3. MoSCow priority
 4. ID
 
-*Last updated: June 28, 2026*
+*Last updated: July 5, 2026*
 
 | ID | Short title | MoSCoW priority | Issue | Requirement status | Work Status | Sprint |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -20,6 +20,7 @@
 | US-013 | Historical Traffic Statistics Storage | Should Have | [#97](https://github.com/SWP-47/traffic-processing-platform/issues/97) | Active | Done | [Sprint 2](https://github.com/SWP-47/traffic-processing-platform/milestone/2) |
 | US-015 | Real-time MUI Dashboard Updates | Should Have | [#98](https://github.com/SWP-47/traffic-processing-platform/issues/98) | Active | Done | [Sprint 1](https://github.com/SWP-47/traffic-processing-platform/milestone/1) |
 | US-012 | Basic Password Protection for MUI | Could Have | [#103](https://github.com/SWP-47/traffic-processing-platform/issues/103) | Active | Done | [Sprint 1](https://github.com/SWP-47/traffic-processing-platform/milestone/1) |
+| US-022 | Secure https and wss connection | Could Have | [#252](https://github.com/SWP-47/traffic-processing-platform/issues/252) | Active | Done | [Sprint 3](https://github.com/SWP-47/traffic-processing-platform/milestone/3) |
 | US-006 | Specific IP Traffic Analysis | Should Have | [#96](https://github.com/SWP-47/traffic-processing-platform/issues/96) | Active | To Do | — |
 | US-016 | Byte Volume Counting | Should Have | [#104](https://github.com/SWP-47/traffic-processing-platform/issues/104) | Active | To Do | — |
 | US-003 | Traffic Information Export | Could Have | [#99](https://github.com/SWP-47/traffic-processing-platform/issues/99) | Active | To Do | — |
@@ -30,4 +31,5 @@
 | US-018 | Traffic Tunneling / Allowing | Could Have | [#106](https://github.com/SWP-47/traffic-processing-platform/issues/106) | Active | To Do | — |
 | US-019 | Packet Metadata Capture and View | Could Have | [#107](https://github.com/SWP-47/traffic-processing-platform/issues/107) | Active | To Do | — |
 | US-020 | Atypical Connection / Port Monitoring | Could Have | [#108](https://github.com/SWP-47/traffic-processing-platform/issues/108) | Active | To Do | — |
+| US-021 | Keyboard Navigation Support | Could Have | [#207](https://github.com/SWP-47/traffic-processing-platform/issues/207) | Active | To Do | - |
 | US-007 | Uninterrupted Internet Access | — | — | Removed | — | — |

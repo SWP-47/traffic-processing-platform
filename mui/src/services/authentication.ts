@@ -2,12 +2,12 @@ import apiClient from '@/api/client';
 
 import type { components } from '@/api/schema';
 export type LoginRequest = components["schemas"]["LoginRequest"]; 
-export type Role = components["schemas"]["LoginResponse"]["role"];
+export type Role = components["schemas"]["TokenResponse"]["role"];
 
 export interface UserData {
     isAuthenticated: boolean,
     username: string | undefined,
-    role: Role
+    role?: Role
 };
 
 class AuthenticationService {
@@ -42,7 +42,7 @@ class AuthenticationService {
         return this.state.username;
     }
 
-    getRole(): Role {
+    getRole(): Role | undefined {
         return this.state.role;
     }
 

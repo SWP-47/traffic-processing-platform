@@ -79,7 +79,7 @@ function ChannelSelector() {
 
     try {
       const response = await getChannels();
-      const list: Channel[] = (response.channels ?? []).map((ch) => ({
+      const list: Channel[] = (response.channels ?? []).map((ch ) => ({
         id: ch.channel_id!,
         active: ch.is_active!,
       }));

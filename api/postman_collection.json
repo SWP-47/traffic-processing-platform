@@ -122,9 +122,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "wss://{{cnss_host}}:{{cnss_http_port}}/api/v1/ws/telemetry?token={{access_token}}&channel_id={{channel_id}}",
+              "raw": "wss://{{cnss_host}}:{{cnss_ws_port}}/api/v1/ws/telemetry?token={{access_token}}&channel_id={{channel_id}}",
               "protocol": "wss",
-              "host": ["{{cnss_host}}:{{cnss_http_port}}"],
+              "host": ["{{cnss_host}}:{{cnss_ws_port}}"],
               "path": ["api", "v1", "ws", "telemetry"],
               "query": [
                 {

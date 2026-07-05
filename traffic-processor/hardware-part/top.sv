@@ -5,7 +5,6 @@ module top
     input                           sys_clk_p,                    //system clock positive
     input                           sys_clk_n,                    //system clock negative 
     input                           rst_n,                        //reset ,low active
-    output[1:0]                     led,                          //display network rate status
     //ethernet 1
     output                          e1_reset,                     //phy reset
     output                          e1_mdc,                       //phy emdio clock
@@ -61,14 +60,40 @@ module top
     output                          e4_gtxc,                      //125Mhz ethernet gmii tx clock  
     output                          e4_txen,                      //GMII sending data valid    
     output                          e4_txer,                      //GMII sending data error                   
-    output[7:0]                     e4_txd                        //GMII sending data 
+    output[7:0]                     e4_txd,                       //GMII sending data 
 
-    // input                           block_but                     //Physical button, positive - block
+    input                           block_but_key,                //Physical button, positive - block
+    output                          led
 ); 
 
-(* DONT_TOUCH = "yes" *) wire                            sys_clk;                      //single end clock
+(* DONT_TOUCH = "yes" *) wire                            sys_clk;     //single end clock
+
+
+// --------------------------------------------------------------------
+// logic block_but;
+// logic prev_value;
+
+// assign led = block_but;
+
+// always_ff @( posedge sys_clk ) begin
+//     prev_value <= block_but_key;
+//     if (!block_but_key && prev_value)
+//         block_but <= ~block_but;
+// end
+
+// --------------------------------------------------------------------
+
 logic block_but;
-assign block_but = 1'b1;
+
+but_executor but_executor_inst (
+.rst_n         (  rst_n          ),
+.sys_clk       (  sys_clk        ),
+.block_but_key (  block_but_key  ),
+.block_but     (  block_but      ),
+.led           (  led            )
+);
+
+// --------------------------------------------------------------------
 
 IBUFDS sys_clk_ibufgds
 (

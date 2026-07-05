@@ -1,0 +1,194 @@
+@startuml deployment-diagram
+!theme plain
+title Traffic Processing Platform - Deployment Diagram
+
+' === Skin Parameters ===
+skinparam componentStyle rectangle
+skinparam nodeStyle frame
+
+' === External Entities ===
+actor "System Administrator" as Admin
+actor "Network User" as User
+cloud "Internet / WAN" as WAN
+
+' === Physical Deployment Node ===
+node "Production VM (Innopolis University)" as VM {
+    
+    ' === Network Boundary ===
+    boundary "Public IP: 10.93.26.186" as PublicIP
+    
+    ' === Infrastructure Layer ===
+    node "Infrastructure Layer" as InfraLayer {
+        component "Edge Nginx\n(TLS Termination)" as Nginx {
+            note right
+                - Listens on ports 80, 443
+                - Terminates TLS (self-signed or CA)
+                - Routes / to MUI
+                - Routes /api/ to CnSS REST API
+                - Routes /api/v1/ws/ to CnSS WebSocket
+                - Masks tokens in access logs
+            end note
+        }
+    }
+    
+    ' === CnSS Layer ===
+    node "CnSS Backend (Docker: cnss-network)" as CnSSLayer {
+        
+        component "cnss-api\n(FastAPI + Uvicorn)" as API {
+            note bottom
+                - Port: 8000 (internal)
+                - REST endpoints: /auth, /channels, /history, /health
+                - JWT authentication
+                - Argon2id password hashing
+            end note
+        }
+        
+        component "cnss-websocket\n(Python + websockets)" as WS {
+            note bottom
+                - Port: 8001 (internal)
+                - WebSocket endpoint: /api/v1/ws/telemetry
+                - JWT validation, scope enforcement
+                - Session management (Redis TTL 10s)
+                - Subscription lifecycle
+                - Pub/Sub consumer
+            end note
+        }
+        
+        component "cnss-ingestion\n(Python + asyncio)" as Ingestion {
+            note bottom
+                - Port: 5140/udp (exposed to host)
+                - UDP server for TelemetryBatch
+                - Sequence tracking (Redis)
+                - Buffer management (Redis capped list)
+                - Background flusher (Lua atomic pop)
+            end note
+        }
+        
+        component "cnss-reporting\n(Python + asyncio)" as Reporting {
+            note bottom
+                - No exposed ports
+                - 1Hz polling loop
+                - SQL query execution
+                - Pub/Sub publishing
+                - Channel state sync
+                - Ghost cleanup
+            end note
+        }
+        
+        database "TimescaleDB\n(PostgreSQL 15 + TimescaleDB)" as TSDB {
+            note bottom
+                - Port: 5432 (internal)
+                - Volume: timescaledb_data (persistent)
+                - Hypertables: packet_flows
+                - Continuous aggregates: telemetry_1s
+                - Retention: 7 days
+                - Tables: channels, users, user_channel_scopes
+            end note
+        }
+        
+        database "Redis 7 (Alpine)" as Redis {
+            note bottom
+                - Port: 6379 (internal)
+                - Ephemeral mode (no RDB/AOF)
+                - Max memory: 2GB
+                - Eviction: noeviction
+                - Buffers, state, pub/sub, sessions
+            end note
+        }
+        
+        component "pgAdmin 4\n(Database UI)" as PgAdmin {
+            note bottom
+                - Port: 5050 (internal)
+                - Development/debugging only
+            end note
+        }
+    }
+    
+    ' === MUI Layer ===
+    node "MUI Frontend (Docker: mui-network)" as MUILayer {
+        component "mui\n(Nginx + React SPA)" as MUI {
+            note bottom
+                - Port: 80 (internal)
+                - Serves static files from /app/dist
+                - Proxies /api/ to CnSS (dev mode)
+                - Production: Edge Nginx handles routing
+            end note
+        }
+    }
+    
+    ' === TP/CN Layer ===
+    node "Traffic Processor + Communication Node" as TPCNLayer {
+        
+        component "FPGA\n(ARTIX-7 AX7201)\nHardware Data Plane" as FPGA {
+            note right
+                - Wire-speed packet forwarding
+                - Transparent inline bridge
+                - LAN ↔ WAN bidirectional
+                - Zero latency passthrough
+                - Mirrors traffic to Software TP
+            end note
+        }
+        
+        component "tp\n(Python + Scapy)\nSoftware Telemetry Plane" as TP {
+            note bottom
+                - Network mode: host
+                - Privileged: true
+                - Receives mirrored traffic from FPGA
+                - Extracts packet metadata
+                - Sends to CN
+            end note
+        }
+        
+        component "cn\n(Python + Scapy)" as CN {
+            note bottom
+                - Network mode: host
+                - Privileged: true
+                - Batches packets into TelemetryBatch
+                - Sends to CnSS via UDP (port 5140)
+                - TIME_WINDOW: 500ms (configurable)
+            end note
+        }
+    }
+}
+
+' === Connections ===
+' Admin access
+Admin --> PublicIP : "HTTPS (443)\nBrowser access"
+PublicIP --> Nginx : "TLS termination"
+
+' Nginx routing
+Nginx --> MUI : "Proxy /\n(static files)"
+Nginx --> API : "Proxy /api/\n(REST)"
+Nginx --> WS : "Proxy /api/v1/ws/\n(WebSocket upgrade)"
+
+' User traffic through FPGA
+User --> FPGA : "LAN traffic\n(physical wire)"
+FPGA --> WAN : "WAN traffic\n(wire-speed forwarding)"
+
+' FPGA mirrors to Software TP
+FPGA --> TP : "Mirrored traffic\n(metadata extraction)"
+
+' TP to CN
+TP --> CN : "Raw packet metadata\n(local UDP/IPC)"
+
+' CN to CnSS
+CN --> Ingestion : "TelemetryBatch\n(UDP 5140)"
+
+' CnSS internal
+API --> TSDB : "asyncpg\n(queries)"
+API --> Redis : "redis.asyncio\n(token revocation)"
+WS --> TSDB : "asyncpg\n(initial snapshot)"
+WS --> Redis : "redis.asyncio\n(sessions, subscriptions, pub/sub)"
+Ingestion --> Redis : "redis.asyncio\n(buffering, sequence)"
+Ingestion --> TSDB : "asyncpg\n(batch insert)"
+Reporting --> Redis : "redis.asyncio\n(polling, pub/sub)"
+Reporting --> TSDB : "asyncpg\n(aggregation queries)"
+
+' MUI to CnSS (via Nginx)
+MUI ..> Nginx : "REST API calls\n(history, channels)"
+MUI ..> Nginx : "WebSocket connection\n(real-time telemetry)"
+
+' PgAdmin (dev only)
+PgAdmin --> TSDB : "Database management\n(dev/debug)"
+
+@enduml

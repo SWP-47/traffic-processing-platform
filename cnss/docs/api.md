@@ -13,7 +13,8 @@ The Control and Status Server (CnSS) provides a decoupled API for the Management
 | Placeholder | Description | Example |
 | :--- | :--- | :--- |
 | `{{cnss_host}}` | CnSS server hostname/IP | `cnss.example.com` |
-| `{{cnss_http_port}}` | HTTP/WS port (routed via Edge Nginx) | `443` |
+| `{{cnss_http_port}}` | HTTP port for REST server (proxied via Edge Nginx) | `443` |
+| `{{cnss_ws_port}}` | WebSocket backend port (internal) | `8001` |
 | `{{cnss_udp_port}}` | UDP port for CN ingestion | `5140` |
 | `{{access_token}}` | Bearer token for authenticated endpoints | `eyJhbG...` |
 | `{{channel_id}}` | Identifier for the monitored bridge | `primary-bridge-01` |
@@ -346,7 +347,9 @@ GET /api/v1/channel/bridge-berlin-01/hosts/192.168.1.100/history?period=1h&start
 
 ### 4.1 Connection Lifecycle
 
-**Endpoint**: `wss://{{cnss_host}}:{{cnss_http_port}}/api/v1/ws/telemetry?token={{access_token}}&channel_id={{channel_id}}`
+**Endpoint**: `wss://{{cnss_host}}:{{cnss_ws_port}}/api/v1/ws/telemetry?token={{access_token}}&channel_id={{channel_id}}`
+
+**Note:** In production, Edge Nginx may proxy WebSocket connections from `{{cnss_http_port}}` to the internal `{{cnss_ws_port}}`. Documentation uses `{{cnss_ws_port}}` where the WebSocket service binds directly.
 
 **Lifecycle Steps**:
 

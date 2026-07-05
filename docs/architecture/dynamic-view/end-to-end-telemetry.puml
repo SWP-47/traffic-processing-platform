@@ -1,0 +1,219 @@
+@startuml end-to-end-telemetry
+!theme plain
+title Dynamic View — End-to-End Telemetry Pipeline (Full System Flow)
+autonumber
+
+' === Skin Parameters ===
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 200
+skinparam sequenceParticipantPadding 20
+skinparam sequenceBoxPadding 10
+
+' === Participants ===
+actor "System\nAdministrator" as Admin
+participant "Management UI\n(MUI)" as MUI
+participant "CnSS REST API\n(FastAPI)" as REST
+participant "Traffic Processor\n(TP)" as TP
+participant "Communication\nNode (CN)" as CN
+participant "CnSS Ingestion\nWorker" as Ingest
+participant "Background\nFlusher" as Flusher
+participant "Redis\n(Ephemeral)" as Redis
+database "TimescaleDB\n(Persistent)" as DB
+participant "CnSS Reporting\nWorker (1Hz)" as Report
+participant "CnSS WebSocket\nService" as WS
+
+== Phase 1: Authentication & Channel Discovery (REST) ==
+
+Admin -> MUI : Login with credentials
+MUI -> REST : POST /api/v1/auth/login\n{username, password}
+REST -> REST : Validate via Argon2id hash
+REST --> MUI : 200 OK { access_token (JWT),\nrole, scope[] }
+
+MUI -> REST : GET /api/v1/channels\nAuthorization: Bearer <JWT>
+REST -> Redis : SISMEMBER jwt:revoked <jti>
+Redis --> REST : 0 (not revoked)
+REST -> DB : SELECT channels\n(filtered by scope)
+DB --> REST : Channel list
+REST --> MUI : 200 OK { channels: [\n{channel_id, is_active, last_activity}\n] }
+
+Admin -> MUI : Select channel\n"bridge-berlin-01"
+
+== Phase 2: WebSocket Connection & Initial Subscription ==
+
+MUI -> WS : WSS connect\n/api/v1/ws/telemetry?\ntoken=<JWT>&channel_id=bridge-berlin-01
+WS -> Redis : SISMEMBER jwt:revoked <jti>
+Redis --> WS : 0 (valid)
+WS -> WS : Verify channel in JWT scope
+WS --> MUI : 101 Switching Protocols
+
+MUI -> WS : {"action": "subscribe",\n"target": "telemetry",\n"channel_id": "bridge-berlin-01"}
+WS -> WS : Compute query_hash =\nSHA256(channel_id + target + params)
+WS -> Redis : SET sub:registry:{hash}\nSADD sub:listeners:{hash} client_id\nSADD sub:active_hashes {hash}
+
+note over WS, DB
+  **RACE-CONDITION SAFE ORDERING:**
+  1. SUBSCRIBE to Redis Pub/Sub FIRST
+  2. THEN query TimescaleDB for snapshot
+  3. THEN push snapshot to client
+  Prevents missing updates that arrive
+  between DB query and Pub/Sub subscription.
+end note
+
+WS -> Redis : SUBSCRIBE ws:push:{hash}
+WS -> DB : SELECT aggregated metrics\nfrom telemetry_1s\n(Continuous Aggregate)
+DB --> WS : Initial snapshot data
+WS --> MUI : telemetry_update\n(Initial Snapshot)
+
+== Phase 3: Physical Data Plane (Wire-Speed Forwarding) ==
+
+note over TP
+  TP's Data Plane operates independently
+  as a transparent inline bridge on FPGA.
+  Failure in monitoring NEVER impacts
+  core packet forwarding (US-005, US-009).
+end note
+
+loop Continuous Network Traffic
+    TP -> TP : Receive packets from\nSNIFF_INTERFACE_IN
+    TP -> TP : Forward at wire speed\nto SNIFF_INTERFACE_OUT
+    TP -> TP : Extract metadata\n(src_ip, dst_ip, ports, direction)
+    TP -> CN : Raw packet metadata\n(Local UDP/IPC)
+end
+
+== Phase 4: Telemetry Batching (Communication Node) ==
+
+note over CN
+  CN batches packets into fixed time windows
+  (e.g., window_ms: 50) and enforces UDP MTU
+  constraint (< 1400 bytes) to prevent
+  IP fragmentation and silent UDP drops.
+end note
+
+loop Every window_ms (e.g., 50ms)
+    CN -> CN : Aggregate buffered packets\ninto TelemetryBatch
+    CN -> CN : Increment 64-bit\nsequence counter
+    CN -> Ingest : UDP TelemetryBatch JSON\n{channel_id, sequence,\nwindow_ms, packets[]}
+end
+
+== Phase 5: High-Performance Ingestion & Redis Buffering ==
+
+Ingest -> Redis : HGET channel:seq:{channel_id}
+Redis --> Ingest : last_sequence
+
+alt incoming_sequence > last_sequence + 1
+    Ingest -> Ingest : Calculate dropped_batches\n= incoming - last - 1
+    Ingest -> Redis : HINCRBY channel:state:{channel_id}\ndropped_delta <dropped_count>
+else incoming_sequence <= last_sequence
+    Ingest -> Ingest : Ignore out-of-order\n(graceful handling)
+else last_sequence - incoming > 1,000,000
+    Ingest -> Ingest : CN reboot detected!\nForce-update baseline
+end
+
+Ingest -> Redis : HSET channel:seq:{channel_id}\nlast_sequence = incoming
+Ingest -> Redis : LPUSH udp:buffer:{channel_id}\n<raw packet metadata>
+Ingest -> Redis : LTRIM udp:buffer:{channel_id}\n0 99999 (cap at 100k, prevent OOM)
+Ingest -> Redis : HSET channel:state:{channel_id}\nlast_activity_at = NOW()\n(EXPIRE 6s)
+
+== Phase 6: Background Flush to TimescaleDB ==
+
+loop Periodic Background Flush
+    Flusher -> Redis : Lua script: atomic LPOP\nN items from udp:buffer
+    Redis --> Flusher : Batch of raw packets
+    Flusher -> DB : Batch INSERT INTO packet_flows\n(time, channel_id, direction,\nsrc_ip, dst_ip, src_port, dst_port)
+    DB --> Flusher : Commit OK
+end
+
+note over DB
+  TimescaleDB hypertable auto-partitions
+  by time. Retention policy: 7 days.
+  Continuous aggregate telemetry_1s
+  pre-computes 1-second buckets.
+end note
+
+== Phase 7: 1Hz Reporting Worker (Aggregation Loop) ==
+
+loop Every 1 second
+    Report -> Redis : SMEMBERS sub:active_hashes
+    Redis --> Report : {hash1, hash2, ...}
+    
+    Report -> Redis : SCARD sub:listeners:{hash}
+    Redis --> Report : N listeners
+    
+    alt N > 0 (subscribers exist)
+        Report -> Redis : GET sub:registry:{hash}
+        Redis --> Report : {target, params, channel_id}
+        Report -> Report : Build parameterized SQL\n(whitelist sort_by/sort_order)
+        Report -> DB : SELECT time_bucket(...),\nSUM(direction=0), SUM(direction=1)\nFROM telemetry_1s
+        DB --> Report : Aggregated metrics
+        Report -> Redis : PUBLISH ws:push:{hash}\n{type: "telemetry_update",\nmetrics, dropped_batches}
+    else N == 0
+        Report -> Report : Skip SQL query\n(save DB resources)
+    end
+    
+    Report -> Redis : Lua: atomic read/reset\ndropped_delta per channel
+    Report -> DB : UPDATE channels\nSET is_active = TRUE,\ndropped += delta,\nlast_activity_at = NOW()\nWHERE activity detected
+    DB --> Report : Updated rows
+end
+
+== Phase 8: Real-Time Push to MUI ==
+
+Redis -> WS : Pub/Sub message on\nws:push:{hash}
+WS -> WS : Lookup listeners for hash\nfrom sub:listeners:{hash}
+WS -> WS : Inject client-specific "id"\ninto payload
+WS -> MUI : WS Push: telemetry_update\n{channel_id, is_active: true,\nmetrics: {direction_in, direction_out},\ndropped_batches, timestamp}
+
+MUI -> MUI : Reactively update\nbinary activity indicator\n+ bidirectional packet graphs
+
+== Phase 9: Channel Timeout Detection ==
+
+note over Report
+  If CN stops sending telemetry
+  (network issue, CN crash, etc.),
+  Reporting Worker detects timeout.
+end note
+
+loop Every 1 second (timeout check)
+    Report -> DB : UPDATE channels\nSET is_active = FALSE\nWHERE last_activity_at <\nNOW() - INTERVAL '5 seconds'
+    DB --> Report : List of timed-out\nchannel_ids
+    
+    loop For each timed-out channel
+        Report -> Redis : SMEMBERS channel:subs:{channel_id}
+        Redis --> Report : Affected query_hashes
+        
+        loop For each affected hash
+            Report -> Redis : PUBLISH ws:push:{hash}\n{is_active: false}
+            Redis -> WS : Pub/Sub message
+            WS -> MUI : WS Push: telemetry_update\n{is_active: false}
+            MUI -> MUI : Switch indicator to RED\n(stop graph updates)
+        end
+    end
+end
+
+note over MUI
+  **CLIENT-SIDE FALLBACK:**
+  If MUI receives no telemetry_update
+  within 6000ms, it locally assumes
+  is_active = false (defensive design).
+end note
+
+== Phase 10: Session Heartbeat & Cleanup ==
+
+loop Every 5 seconds (heartbeat)
+    WS -> Redis : EXPIRE ws:session:{client_id} 10s
+    Redis --> WS : OK
+end
+
+note over WS, Redis
+  If WebSocket Service crashes:
+  - Session keys auto-expire (TTL 10s)
+  - Ghost Cleaner removes stale listeners
+  - Clients reconnect and re-subscribe
+  
+  If Redis restarts (no persistence):
+  - Buffers & sequence baselines lost
+  - System gracefully resets and resumes
+  - Accepted trade-off for max IOPS
+end note
+
+@enduml

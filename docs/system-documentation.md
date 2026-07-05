@@ -404,7 +404,7 @@ Payload Schema (Unsubscribe):
 
 * **Transport**: WebSocket (Text frames).
 * **Direction**: CnSS to MUI.
-* **Purpose**: Push real-time updates for LAN/WAN host tables. Sent immediately upon subscription (Initial Snapshot) and then periodically (1 Hz) by the *   **Reporting** Worker.
+* **Purpose**: Push real-time updates for LAN/WAN host tables. Sent immediately upon subscription (Initial Snapshot) and then periodically (1 Hz) by the **Reporting** Worker.
 
 Payload Schema (`hosts_update`):
 

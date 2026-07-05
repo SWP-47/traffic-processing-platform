@@ -1,0 +1,34 @@
+site_name: Traffic Processing Platform Documentation
+site_url: https://swp-47.github.io/traffic-processing-platform/
+site_description: Documentation for the Traffic Processing Platform
+site_author: SWP-47 Team
+
+repo_name: SWP-47/traffic-processing-platform
+repo_url: https://github.com/SWP-47/traffic-processing-platform
+
+theme:
+  name: mkdocs
+
+nav:
+  - Home: index.md
+  - Architecture:
+    - Overview: architecture/README.md
+    - Static View: architecture/static-view/README.md
+    - Dynamic View: architecture/dynamic-view/README.md
+    - Deployment View: architecture/deployment-view/README.md
+    - ADRs:
+      - ADR-001: architecture/adr/adr-001-hardware-software-separation.md
+      - ADR-002: architecture/adr/adr-002-ephemeral-redis-buffering.md
+      - ADR-003: architecture/adr/adr-003-microservice-decomposition.md
+  - Development:
+    - Development Process: development-process.md
+    - Quality Requirements: quality-requirements.md
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+
+plugins:
+  - search

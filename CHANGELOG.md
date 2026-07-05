@@ -35,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive documentation including `architecture.md`, `api.md`, `websocket_protocol.md`, and `deployment.md`, OpenAPI descriptions for all REST endpoints, and PlantUML diagrams (`data_flow.puml`, `subscription_lifecycle.puml`) visualizing system architecture and protocols. ([#228](https://github.com/SWP-47/traffic-processing-platform/issues/228))
 - Top Tables component on the dashboard page of MUI. ([#205](https://github.com/SWP-47/traffic-processing-platform/issues/205))
 - Added another (more user-friendly) behavior of button to turn on and off the blocking using it ([#240](https://github.com/SWP-47/traffic-processing-platform/issues/240))
+- Added hosts page to the dashboard of MUI. ([#197](https://github.com/SWP-47/traffic-processing-platform/issues/197))
+- Added subscription system to MUI to handle WebSocket subscription. ([#197](https://github.com/SWP-47/traffic-processing-platform/issues/197))
 
 ### Changed
 

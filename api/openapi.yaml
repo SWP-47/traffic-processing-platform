@@ -550,9 +550,9 @@ components:
         packets:
           type: array
           items:
-            $ref: '#/components/schemas/PacketMetadata'
+            $ref: '#/components/schemas/PacketFlow'
 
-    PacketMetadata:
+    PacketFlow:
       type: object
       properties:
         direction:
@@ -567,6 +567,10 @@ components:
           type: integer
         dst_port:
           type: integer
+        protocol:
+          type: string
+          enum: [TCP, UDP]
+          description: "Protocol (e.g., TCP/UDP). Required for accurate host_top_ports protocol reporting."
 
     # --- WebSocket Schemas ---
     WSControlMessage:

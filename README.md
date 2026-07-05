@@ -22,7 +22,7 @@ This is a monorepo containing minimally intrusive network traffic monitoring sys
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/<your-org>/traffic-processing-platform.git
+git clone https://github.com/SWP-47/traffic-processing-platform.git
 cd traffic-processing-platform
 ```
 
@@ -161,13 +161,9 @@ make stop
 
 ## Links and Reports
 
-- **System Documentation**: [System Documentation](docs/system-documentation.md)
-- **API Documentation**: [API Documentation](api/README.md)
-- **Development Process & Git Workflow**: [Development Process](docs/development-process.md)
-- **Current Deployment / Runnable Artifacts**: http://10.93.26.186
-- **Week 2 Reports**:
+- **Current Deployment**: [Runnable Artifact](http://10.93.26.186)
+- **Weekly Reports**:
   - [Week 2 Report](reports/week2/README.md)
-  - [MVP v0 Report](reports/week2/mvp-v0-report.md)
-- **Week 3 Reports:**
   - [Week 3 Report](reports/week3/README.md)
-- **Hosted Documentation Site**: [https://swp-47.github.io/traffic-processing-platform/](https://swp-47.github.io/traffic-processing-platform/)
+  - [Week 4 Report](reports/week4/README.md)
+  - [Week 5 Report](reports/week5/README.md)

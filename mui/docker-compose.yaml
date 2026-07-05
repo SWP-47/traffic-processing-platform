@@ -15,8 +15,8 @@ services:
     
     restart: unless-stopped
 
-    env_file:
-      - .env
+    networks:
+      - mui-network
 
     profiles:
       - prod
@@ -52,6 +52,14 @@ services:
 
     env_file:
       - .env
-    
+
+    networks:
+      - mui-network
+  
     profiles:
       - dev
+
+networks:
+  mui-network:
+    driver: bridge
+    name: mui-network

@@ -8,7 +8,7 @@ import arrow_up from '@/assets/arrow_up.svg';
 import { useState } from "react";
 
 function PacketsColumnChart() {
-  const [mode, setMode] = useState<'numerical' | 'bars'>('bars');
+  const [mode, setMode] = useState<'numerical' | 'bars'>('numerical');
   const packets_in = useTelemetrySelector((tel) => tel?.metrics?.direction_in?.packets_per_sec);
   const packets_out = useTelemetrySelector((tel) => tel?.metrics?.direction_out?.packets_per_sec);
 

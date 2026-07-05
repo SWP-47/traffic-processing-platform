@@ -1,14 +1,14 @@
 {
   "name": "mui",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "generate:api": "openapi-typescript ../api/openapi.yaml -o ./src/api/schema.d.ts",
+    "generate:api": "openapi-typescript ../api/openapi.yaml -o ./src/api/schema.d.ts  --properties-required-by-default",
     "test:ts": "tsc --noEmit"
   },
   "dependencies": {

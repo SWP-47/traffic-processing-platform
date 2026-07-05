@@ -75,14 +75,13 @@
 }
 
 .view {
-  grid-area: 1 / 1; /* Магия CSS Grid: кладем оба элемента в одну ячейку */
+  grid-area: 1 / 1;
   opacity: 0;
   transition: opacity 0.3s ease-in-out;
-  pointer-events: none; /* Чтобы скрытый элемент не перехватывал клики */
-  visibility: hidden;   /* Скрываем от скринридеров и полностью убираем из потока */
+  pointer-events: none;
+  visibility: hidden;
 }
 
-/* Активный режим */
 .view_active {
   opacity: 1;
   pointer-events: auto;

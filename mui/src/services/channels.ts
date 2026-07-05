@@ -1,8 +1,8 @@
 import apiClient from '@/api/client';
 import type { components } from '@/api/schema';
 
-export type ChannelsResponse = components["schemas"]["ChannelsResponse"];
-export type ChannelStatusResponse = components["schemas"]["ChannelStatusResponse"];
+export type ChannelsResponse = components["schemas"]["ChannelsListResponse"];
+export type ChannelStatusResponse = components["schemas"]["ChannelStatus"];
 
 export async function getChannels(): Promise<ChannelsResponse> {
     const { data, error } = await apiClient.GET('/api/v1/channels');

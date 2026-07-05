@@ -127,6 +127,7 @@ All Assignment 4 automated Quality Requirement Tests (QRT-001 through QRT-003), 
 ## 8. Release & Changelog
 
 * **SemVer Release (MVP v2):** [v2.0.0](https://github.com/SWP-47/traffic-processing-platform/releases/tag/v2.0.0)
+* **Hotfix SemVer Release (MVP v2):** [v2.0.1](https://github.com/SWP-47/traffic-processing-platform/releases/tag/v2.0.1) (*was added week5 reports that was accidentally not added to the main release*)
 * **Changelog:** [CHANGELOG.md](../../CHANGELOG.md)
 * **Public Sanitized Demo Video:** [Watch Demo (< 2 mins)](https://disk.yandex.ru/i/8geyKOzgUbzkOw)
 

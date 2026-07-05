@@ -8,23 +8,28 @@ info:
     - **Protocol**: UDP
     - **Endpoint**: `{{cnss_host}}:{{cnss_udp_port}}`
     - **Payload Schema**: `TelemetryBatch` (defined in components/schemas)
-    - **UDP MTU Constraint**: CN must ensure the serialized JSON payload does not exceed 1400 bytes. Adjust `window_ms` to prevent IP fragmentation.
+    - **UDP MTU Constraint**: CN must ensure the serialized JSON payload does not exceed 1400 bytes to prevent IP fragmentation.
+    - **Sequence Data Type**: CN MUST implement the `sequence` field as a 64-bit integer.
 
     ## Authentication
-    - **Endpoint**: `POST /api/v1/auth/login`
-    - **Mechanism**: JWT Bearer Token. The token contains `role` and `scope` claims for per-channel access control.
+    - **Mechanism**: JWT Bearer Token for REST API and WebSocket connections.
+    - **Refresh Token**: Stored in an `HttpOnly`, `Secure`, `SameSite=Strict` cookie named `refresh_token`.
 
     ## WebSocket Stream (CnSS to MUI)
     - **Endpoint**: `wss://{{cnss_host}}:{{cnss_ws_port}}/api/v1/ws/telemetry`
     - **Auth**: Query parameters `?token={{access_token}}&channel_id={{channel_id}}`
-    - **Payload Schema**: `TelemetryUpdate` (defined in components/schemas)
-    - **Frequency**: 1 Hz (aggregated by Reporting Worker from TimescaleDB)
-    - **Keep-Alive**: CnSS sends periodic `ping` frames. MUI must respond with `pong`.
-  version: 1.1.0
+    - **Connection Lifecycle & Close Codes**:
+      - `4001` (invalid_token): JWT missing, malformed, expired, or revoked.
+      - `4002` (missing_channel): `channel_id` query parameter is absent.
+      - `4003` (channel_forbidden): Scope mismatch, or subscription `channel_id` differs from URL.
+      - `4004` (channel_not_found): Channel or Target does not exist.
+      - `1011` (internal_error): Unexpected server error.
+    - **Unified Subscription Engine**: CnSS DOES NOT push data automatically. MUI MUST send a `subscribe` control message to start receiving updates. Initial snapshots are pushed immediately upon subscription.
+  version: 2.0.0
 
 servers:
   - url: https://{{cnss_host}}
-    description: CnSS REST Server
+    description: CnSS REST Server (Proxied via Edge Nginx)
   - url: wss://{{cnss_host}}:{{cnss_ws_port}}
     description: CnSS WebSocket Server
 
@@ -32,7 +37,8 @@ paths:
   /api/v1/auth/login:
     post:
       summary: User Authentication
-      description: Authenticate user and issue JWT token with role and scope information.
+      description: Authenticate user and issue JWT access token. Sets `refresh_token` as an HttpOnly cookie.
+      tags: [Authentication]
       requestBody:
         required: true
         content:
@@ -42,16 +48,15 @@ paths:
       responses:
         '200':
           description: Successful authentication
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: "refresh_token=eyJhbG...; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth/refresh; Max-Age=604800"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginResponse'
-        '400':
-          description: Bad request (missing fields)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/TokenResponse'
         '401':
           description: Invalid credentials
           content:
@@ -59,10 +64,52 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /api/v1/auth/refresh:
+    post:
+      summary: Refresh Access Token
+      description: Issues a new short-lived access token using the long-lived refresh token stored in the HttpOnly cookie.
+      tags: [Authentication]
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: New access token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenResponse'
+        '401':
+          description: Refresh token missing, invalid, expired, or revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/logout:
+    post:
+      summary: User Logout
+      description: Invalidates the current session by revoking the refresh token in Redis and clearing the cookie.
+      tags: [Authentication]
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Successfully logged out
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: "refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth/refresh; Max-Age=0"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+
   /api/v1/health:
     get:
       summary: System Health Check
       description: Verify operational status of the CnSS and aggregate channel statistics.
+      tags: [System]
       security:
         - bearerAuth: []
       responses:
@@ -77,7 +124,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthResponse'
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/v1/channels:
     get:
@@ -86,6 +133,7 @@ paths:
         List all channels accessible to the authenticated user.
         For `viewer`, the list is filtered by JWT `scope`.
         For `admin`, all known channels are returned.
+      tags: [Channels]
       security:
         - bearerAuth: []
       responses:
@@ -94,7 +142,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ChannelsResponse'
+                $ref: '#/components/schemas/ChannelsListResponse'
         '401':
           description: Unauthorized
           content:
@@ -106,6 +154,7 @@ paths:
     get:
       summary: Specific Channel Activity Status
       description: REST fallback for a specific channel's activity indicator.
+      tags: [Channels]
       security:
         - bearerAuth: []
       parameters:
@@ -121,7 +170,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ChannelStatusResponse'
+                $ref: '#/components/schemas/ChannelStatus'
         '403':
           description: Forbidden (user has no access to this channel)
           content:
@@ -139,8 +188,9 @@ paths:
     get:
       summary: Historical Telemetry Data (Line Chart)
       description: |
-        Lazy-loads historical telemetry data for the Line Chart. 
-        CnSS dynamically calculates the optimal `time_bucket` interval based on the requested period.
+        Lazy-loads historical telemetry data for the Channel Line Chart. 
+        CnSS dynamically calculates the optimal `time_bucket` interval (approx 1400 points).
+      tags: [History]
       security:
         - bearerAuth: []
       parameters:
@@ -155,41 +205,108 @@ paths:
           schema:
             type: string
             enum: ["1h", "24h", "7d", "30d"]
-          description: Time period to query.
+          description: Duration of the time window.
+        - in: query
+          name: start_time
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Start of the time range (ISO 8601). If omitted, defaults to `now - period`.
       responses:
         '200':
           description: Aggregated historical points
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HistoryResponse'
-        '401':
-          description: Unauthorized
+                $ref: '#/components/schemas/ChannelHistoryResponse'
+        '400':
+          description: Bad request (invalid start_time or exceeds retention)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/channel/{channel_id}/hosts/{host_ip}/history:
+    get:
+      summary: Historical Host Rx/Tx Data
+      description: Lazy-loads historical Rx/Tx rate data for a specific Host Line Chart.
+      tags: [History]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: channel_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: host_ip
+          required: true
+          schema:
+            type: string
+          description: IP address of the host (IPv4/IPv6).
+        - in: query
+          name: period
+          required: true
+          schema:
+            type: string
+            enum: ["1h", "24h", "7d", "30d"]
+        - in: query
+          name: start_time
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Aggregated host historical points
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HostHistoryResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Channel or host not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/v1/ws/telemetry:
     get:
-      summary: Real-time Telemetry Stream (WebSocket)
+      summary: Real-time WebSocket Gateway
       description: |
-        Upgrades to WebSocket for real-time push stream, scoped to a specific channel.
+        Upgrades to WebSocket for real-time push streams, scoped to a specific channel.
         Auth via query parameters `?token={{access_token}}&channel_id={{channel_id}}`.
-
-        **Connection Lifecycle & Close Codes:**
-        1. MUI opens WebSocket connection with `token` and `channel_id`.
-        2. CnSS validates token. On failure, closes with code `4001` (invalid_token).
-        3. CnSS checks if the `channel_id` query parameter is present in the URL. On failure, closes with code `4002` (missing_channel).
-        4. CnSS checks access to `channel_id` via JWT scope. On failure, closes with code `4003` (channel_forbidden).
-        5. CnSS checks if the provided `channel_id` value exists in the registry. On failure, closes with code `4004` (channel_not_found).
-        6. CnSS pushes `telemetry_update` frames at 1 Hz (aggregated by Reporting Worker from TimescaleDB).
-        7. **Keep-Alive:** CnSS sends periodic `ping` frames. MUI must respond with `pong`.
-        8. If no telemetry from CN for 5000ms, CnSS sends `is_active: false`.
-        9. **Control Messages:** MUI can send JSON text frames to manage subscriptions for host tables (e.g., `{"action": "subscribe", "target": "lan_hosts"}`).
-        10. **Host Updates:** CnSS pushes `hosts_update` frames to subscribed clients containing real-time LAN/WAN host statistics.
-
-        *Security Note: CnSS MUST NOT log the full request URL to prevent token leakage.*
+        
+        **Control Messages:**
+        MUI must send a JSON text frame to subscribe to specific data targets.
+        See `WSControlMessage` schema for details on targets and parameters.
+      tags: [WebSocket]
       parameters:
         - in: query
           name: token
@@ -206,6 +323,11 @@ paths:
       responses:
         '101':
           description: Switching Protocols to WebSocket
+          content:
+            application/json:
+              schema:
+                type: string
+                description: "WebSocket connection established. Client can now send WSControlMessage frames."
 
 components:
   securitySchemes:
@@ -213,13 +335,16 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: refresh_token
 
   schemas:
+    # --- Authentication Schemas ---
     LoginRequest:
       type: object
-      required:
-        - username
-        - password
+      required: [username, password]
       properties:
         username:
           type: string
@@ -229,217 +354,110 @@ components:
           format: password
           example: "secretpassword"
 
-    LoginResponse:
+    TokenResponse:
       type: object
       properties:
         access_token:
           type: string
-          description: JWT token for authenticated requests.
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
         token_type:
           type: string
+          enum: [Bearer]
           example: "Bearer"
         expires_in:
           type: integer
-          description: Token lifetime in seconds.
           example: 86400
         issued_at:
           type: string
           format: date-time
-          example: "2026-06-18T12:00:00Z"
         role:
           type: string
           enum: [admin, viewer]
-          example: "admin"
         scope:
           type: array
           items:
             type: string
-          description: List of accessible channel_ids.
-          example: ["bridge-berlin-01", "bridge-prague-01"]
+          description: List of accessible channel_ids. Empty for admin.
 
-    ErrorResponse:
+    RefreshTokenResponse:
       type: object
       properties:
-        error:
+        access_token:
           type: string
-          example: "invalid_credentials"
+        token_type:
+          type: string
+          enum: [Bearer]
+        expires_in:
+          type: integer
+        issued_at:
+          type: string
+          format: date-time
+
+    LogoutResponse:
+      type: object
+      properties:
         message:
           type: string
-          example: "Invalid username or password."
+          example: "Successfully logged out."
 
+    # --- System & Channel Schemas ---
     HealthResponse:
       type: object
       properties:
         status:
           type: string
-          enum: [healthy, degraded, unhealthy]
-          example: "healthy"
+          enum: [healthy, unhealthy]
         components:
           type: object
-          properties:
-            cnss:
-              type: string
-              enum: [active, inactive, error]
-              example: "active"
+          additionalProperties:
+            type: string
+            enum: [active, error]
         channels_active:
           type: integer
-          description: Number of channels currently reporting telemetry.
-          example: 3
         channels_total:
           type: integer
-          description: Total number of channels known to CnSS.
-          example: 4
         timestamp:
           type: string
           format: date-time
-          example: "2026-06-17T12:00:00Z"
 
-    ChannelsResponse:
+    ChannelStatus:
+      type: object
+      properties:
+        channel_id:
+          type: string
+        is_active:
+          type: boolean
+        last_activity_timestamp:
+          type: string
+          format: date-time
+          nullable: true
+
+    ChannelsListResponse:
       type: object
       properties:
         channels:
           type: array
           items:
-            $ref: '#/components/schemas/ChannelStatusResponse'
+            $ref: '#/components/schemas/ChannelStatus'
         total:
           type: integer
-          example: 2
 
-    ChannelStatusResponse:
-      type: object
-      properties:
-        channel_id:
-          type: string
-          example: "bridge-berlin-01"
-        is_active:
-          type: boolean
-          example: true
-        last_activity_timestamp:
-          type: string
-          format: date-time
-          example: "2026-06-17T12:00:00Z"
-
-    PacketMetadata:
-      type: object
-      description: Raw metadata for a single observed packet.
-      properties:
-        direction:
-          type: integer
-          enum: [0, 1]
-          description: "0 for IN, 1 for OUT."
-          example: 0
-        src_ip:
-          type: string
-          description: Source IP address (IPv4/IPv6).
-          example: "192.168.1.100"
-        dst_ip:
-          type: string
-          description: Destination IP address (IPv4/IPv6).
-          example: "8.8.8.8"
-        src_port:
-          type: integer
-          description: Source port.
-          example: 12345
-        dst_port:
-          type: integer
-          description: Destination port.
-          example: 53
-
-    TelemetryBatch:
-      type: object
-      description: |
-        Payload sent from CN to CnSS over UDP.
-        Contains raw packet metadata for a specific time window.
-        CN must keep `window_ms` small enough to ensure the JSON payload fits within a single UDP datagram (ideally < 1400 bytes to avoid IP fragmentation).
-      properties:
-        channel_id:
-          type: string
-          description: Identifier of the monitored channel/bridge. Used by CnSS to route the batch.
-          example: "bridge-berlin-01"
-        timestamp:
-          type: integer
-          description: Unix timestamp (seconds) of the window start.
-          example: 1718625600
-        sequence:
-          type: integer
-          description: Monotonically increasing sequence number per channel. Used by CnSS to detect dropped UDP datagrams.
-          example: 1042
-        window_ms:
-          type: integer
-          description: Duration of the batching window in milliseconds. Must be kept small enough to ensure the JSON fits within the UDP MTU (< 1400 bytes).
-          example: 50
-        packets:
-          type: array
-          description: Array of raw packet metadata captured during the window.
-          items:
-            $ref: '#/components/schemas/PacketMetadata'
-
-    TelemetryUpdate:
-      type: object
-      description: Payload pushed from CnSS to MUI over WebSocket. Aggregated by the Reporting Worker from TimescaleDB at 1 Hz.
-      properties:
-        type:
-          type: string
-          example: "telemetry_update"
-        channel_id:
-          type: string
-          example: "bridge-berlin-01"
-        is_active:
-          type: boolean
-          example: true
-        window_ms:
-          type: integer
-          example: 50
-        dropped_batches:
-          type: integer
-          description: Number of lost UDP datagrams between the previous and current batch for this channel.
-          example: 0
-        metrics:
-          type: object
-          properties:
-            direction_out:
-              type: object
-              properties:
-                packets_per_sec:
-                  type: number
-                  format: float
-                  example: 300.0
-                packets:
-                  type: integer
-                  example: 15
-            direction_in:
-              type: object
-              properties:
-                packets_per_sec:
-                  type: number
-                  format: float
-                  example: 280.0
-                packets:
-                  type: integer
-                  example: 14
-        timestamp:
-          type: string
-          format: date-time
-          description: Original timestamp from the latest CN batch.
-          example: "2026-06-17T12:00:00Z"
-        received_at:
-          type: string
-          format: date-time
-          description: Server time at CnSS when the aggregation was generated by the Reporting Worker.
-          example: "2026-06-17T12:00:00.050Z"
-
-    HistoryResponse:
+    # --- History Schemas ---
+    ChannelHistoryResponse:
       type: object
       properties:
         channel_id:
           type: string
         period:
           type: string
-          enum: ["1h", "24h", "7d", "30d"]
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
         interval_sec:
           type: integer
-          description: The calculated time bucket size in seconds.
         points:
           type: array
           items:
@@ -460,39 +478,264 @@ components:
         is_active:
           type: boolean
 
-    WSControlMessage:
+    HostHistoryResponse:
       type: object
-      description: Text frame sent from MUI to CnSS to manage WebSocket subscriptions.
       properties:
-        action:
-          type: string
-          enum: ["subscribe", "unsubscribe"]
-        target:
-          type: string
-          enum: ["lan_hosts", "wan_hosts"]
-        sort_by:
-          type: string
-          enum: ["sent", "received", "last_seen"]
-          description: Required if action is 'subscribe'.
-        limit:
-          type: integer
-          description: Required if action is 'subscribe'. Default 5.
-
-    HostsUpdate:
-      type: object
-      description: JSON frame pushed from CnSS to MUI with real-time host table data.
-      properties:
-        type:
-          type: string
-          example: "hosts_update"
-        target:
-          type: string
-          enum: ["lan_hosts", "wan_hosts"]
         channel_id:
           type: string
+        host_ip:
+          type: string
+        period:
+          type: string
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        interval_sec:
+          type: integer
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/HostHistoryPoint'
+
+    HostHistoryPoint:
+      type: object
+      properties:
         timestamp:
           type: string
           format: date-time
+        packets_in_per_sec:
+          type: number
+          format: float
+        packets_out_per_sec:
+          type: number
+          format: float
+
+    # --- Error Schema ---
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Machine-readable error code
+          example: "invalid_credentials"
+        message:
+          type: string
+          description: Human-readable description
+          example: "Invalid username or password."
+        details:
+          type: array
+          items:
+            type: object
+          description: Optional validation error details
+
+    # --- UDP Ingestion Schema ---
+    TelemetryBatch:
+      type: object
+      description: Payload sent from CN to CnSS over UDP.
+      properties:
+        channel_id:
+          type: string
+        timestamp:
+          type: integer
+          description: Unix timestamp (seconds)
+        sequence:
+          type: integer
+          format: int64
+          description: 64-bit monotonically increasing sequence number
+        window_ms:
+          type: integer
+        packets:
+          type: array
+          items:
+            $ref: '#/components/schemas/PacketMetadata'
+
+    PacketMetadata:
+      type: object
+      properties:
+        direction:
+          type: integer
+          enum: [0, 1]
+          description: "0 for IN, 1 for OUT"
+        src_ip:
+          type: string
+        dst_ip:
+          type: string
+        src_port:
+          type: integer
+        dst_port:
+          type: integer
+
+    # --- WebSocket Schemas ---
+    WSControlMessage:
+      type: object
+      description: |
+        Text frame sent from MUI to CnSS to manage WebSocket subscriptions.
+        The `id` field is required and must be unique per subscription instance.
+        The `params` object structure depends on the `target`.
+      required: [action, id, channel_id, target]
+      properties:
+        action:
+          type: string
+          enum: [subscribe, unsubscribe]
+        id:
+          type: string
+          description: Client-generated unique identifier
+        channel_id:
+          type: string
+        target:
+          type: string
+          enum: [telemetry, hosts_table, host_details, host_top_destinations, host_top_ports]
+        params:
+          type: object
+          description: |
+            Target-specific parameters. See schemas:
+            - `telemetry`: `TelemetryParams`
+            - `hosts_table`: `HostsTableParams`
+            - `host_details`: `HostDetailsParams`
+            - `host_top_destinations`: `HostTopDestinationsParams`
+            - `host_top_ports`: `HostTopPortsParams`
+
+    TelemetryParams:
+      type: object
+      properties:
+        window_sec:
+          type: number
+          format: float
+          description: Aggregation time window in seconds.
+
+    HostsTableParams:
+      type: object
+      properties:
+        period:
+          type: string
+          enum: ["5m", "15m", "1h", "24h", "7d", "30d"]
+        location:
+          type: string
+          enum: [LAN, WAN]
+          nullable: true
+        ip:
+          type: string
+          nullable: true
+        sort_by:
+          type: string
+          enum: [location, ip, unique_destinations, tx, rx, last_activity]
+        sort_order:
+          type: string
+          enum: [asc, desc]
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    HostDetailsParams:
+      type: object
+      properties:
+        host_ip:
+          type: string
+        period:
+          type: string
+          enum: ["5m", "15m", "1h", "24h", "7d", "30d"]
+
+    HostTopDestinationsParams:
+      type: object
+      properties:
+        host_ip:
+          type: string
+        period:
+          type: string
+          enum: ["5m", "15m", "1h", "24h", "7d", "30d"]
+        sort_by:
+          type: string
+          enum: [ip, location, received, last_seen]
+        sort_order:
+          type: string
+          enum: [asc, desc]
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    HostTopPortsParams:
+      type: object
+      properties:
+        host_ip:
+          type: string
+        period:
+          type: string
+          enum: ["5m", "15m", "1h", "24h", "7d", "30d"]
+        sort_by:
+          type: string
+          enum: [port, protocol, pps]
+        sort_order:
+          type: string
+          enum: [asc, desc]
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # --- WebSocket Push Payloads ---
+    TelemetryUpdate:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [telemetry_update]
+        id:
+          type: string
+        channel_id:
+          type: string
+        is_active:
+          type: boolean
+        window_ms:
+          type: integer
+        dropped_batches:
+          type: integer
+        metrics:
+          type: object
+          properties:
+            direction_out:
+              type: object
+              properties:
+                packets_per_sec:
+                  type: number
+                packets:
+                  type: integer
+            direction_in:
+              type: object
+              properties:
+                packets_per_sec:
+                  type: number
+                packets:
+                  type: integer
+        timestamp:
+          type: string
+          format: date-time
+        received_at:
+          type: string
+          format: date-time
+
+    HostsTableUpdate:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [hosts_table_update]
+        id:
+          type: string
+        channel_id:
+          type: string
+        target:
+          type: string
+          enum: [hosts_table]
+        timestamp:
+          type: string
+          format: date-time
+        total_count:
+          type: integer
         hosts:
           type: array
           items:
@@ -501,14 +744,106 @@ components:
     HostEntry:
       type: object
       properties:
+        location:
+          type: string
+          enum: [LAN, WAN]
         ip:
           type: string
-        sent_per_sec:
+        unique_destinations:
+          type: integer
+        tx_per_sec:
           type: number
-          format: float
+        rx_per_sec:
+          type: number
+        last_activity:
+          type: string
+          format: date-time
+
+    HostDetailsUpdate:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [host_details_update]
+        id:
+          type: string
+        channel_id:
+          type: string
+        host_ip:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        tx_per_sec:
+          type: number
+        rx_per_sec:
+          type: number
+
+    HostTopDestinationsUpdate:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [host_top_destinations_update]
+        id:
+          type: string
+        channel_id:
+          type: string
+        host_ip:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        total_count:
+          type: integer
+        destinations:
+          type: array
+          items:
+            $ref: '#/components/schemas/DestinationEntry'
+
+    DestinationEntry:
+      type: object
+      properties:
+        ip:
+          type: string
+        location:
+          type: string
+          enum: [LAN, WAN]
         received_per_sec:
           type: number
-          format: float
         last_seen:
           type: string
           format: date-time
+
+    HostTopPortsUpdate:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [host_top_ports_update]
+        id:
+          type: string
+        channel_id:
+          type: string
+        host_ip:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        total_count:
+          type: integer
+        ports:
+          type: array
+          items:
+            $ref: '#/components/schemas/PortEntry'
+
+    PortEntry:
+      type: object
+      properties:
+        port:
+          type: integer
+        protocol:
+          type: string
+          enum: [TCP, UDP]
+        packets_per_sec:
+          type: number

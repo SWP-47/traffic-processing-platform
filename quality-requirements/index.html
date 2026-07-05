@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="SWP-47 Team">
+        <link rel="canonical" href="https://swp-47.github.io/traffic-processing-platform/quality-requirements/">
+        <link rel="shortcut icon" href="../img/favicon.ico">
+        <title>Quality Requirements - Traffic Processing Platform Documentation</title>
+        <link href="../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../css/brands.min.css" rel="stylesheet">
+        <link href="../css/solid.min.css" rel="stylesheet">
+        <link href="../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="..">Traffic Processing Platform Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href=".." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Architecture</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../architecture/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../architecture/static-view/" class="dropdown-item">Static View</a>
+</li>
+                                    
+<li>
+    <a href="../architecture/dynamic-view/" class="dropdown-item">Dynamic View</a>
+</li>
+                                    
+<li>
+    <a href="../architecture/deployment-view/" class="dropdown-item">Deployment View</a>
+</li>
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">ADRs</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../architecture/adr/adr-001-hardware-software-separation/" class="dropdown-item">ADR-001</a>
+</li>
+            
+<li>
+    <a href="../architecture/adr/adr-002-ephemeral-redis-buffering/" class="dropdown-item">ADR-002</a>
+</li>
+            
+<li>
+    <a href="../architecture/adr/adr-003-microservice-decomposition/" class="dropdown-item">ADR-003</a>
+</li>
+    </ul>
+  </li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Development</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../development-process/" class="dropdown-item">Development Process</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">Quality Requirements</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../development-process/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" class="nav-link disabled">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/SWP-47/traffic-processing-platform/edit/master/docs/quality-requirements.md" class="nav-link">Edit on SWP-47/traffic-processing-platform
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#quality-requirements" class="nav-link">Quality Requirements</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#qr-001-cnss-health-api-responsiveness" class="nav-link">QR-001: CnSS health API responsiveness</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#qr-002-cnss-access-control-confidentiality" class="nav-link">QR-002: CnSS access control confidentiality</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#qr-003-critical-module-testability-and-coverage" class="nav-link">QR-003: Critical module testability and coverage</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#architectural-decision-records-adrs" class="nav-link">Architectural Decision Records (ADRs)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#adr-index" class="nav-link">ADR Index</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="quality-requirements">Quality Requirements<a class="headerlink" href="#quality-requirements" title="Permanent link">&para;</a></h1>
+<p>This document defines the architectural quality requirements for the Traffic Processing Platform and preserves the maintained Assignment 4 quality gates for later work.</p>
+<p><em>Last updated: June 27, 2026</em></p>
+<hr />
+<h2 id="qr-001-cnss-health-api-responsiveness">QR-001: CnSS health API responsiveness<a class="headerlink" href="#qr-001-cnss-health-api-responsiveness" title="Permanent link">&para;</a></h2>
+<p><strong>ISO/IEC 25010 sub-characteristic:</strong> Time behaviour</p>
+<p><strong>Scenario:</strong> When a monitoring client requests <code>/api/v1/health</code> under a normal production-like load, the CnSS shall respond with <code>200 OK</code>, valid health metrics, and a <code>components.cnss</code> value of <code>active</code> within 1 second.</p>
+<p><strong>Why this matters:</strong> Operators and automated monitors rely on fast, reliable health checks to detect service degradation quickly. A slow or inconsistent health endpoint delays incident response and obscures whether the traffic monitoring system is available.</p>
+<p><strong>Linked quality requirement tests:</strong> <a href="../quality-requirement-tests/#qrt-001-cnss-health-api-responsiveness">QRT-001</a></p>
+<hr />
+<h2 id="qr-002-cnss-access-control-confidentiality">QR-002: CnSS access control confidentiality<a class="headerlink" href="#qr-002-cnss-access-control-confidentiality" title="Permanent link">&para;</a></h2>
+<p><strong>ISO/IEC 25010 sub-characteristic:</strong> Confidentiality</p>
+<p><strong>Scenario:</strong> When a user presents a JWT access token for <code>GET /api/v1/channels</code> or an authenticated WebSocket connection, the CnSS shall validate the token, enforce channel scope from the token, and return only authorized channel listings or fail with <code>401 Unauthorized</code> / <code>403 Forbidden</code>.</p>
+<p><strong>Why this matters:</strong> The platform carries channel-specific telemetry and network monitoring data. Unauthorized access would expose sensitive infrastructure details and violate operator trust.</p>
+<p><strong>Linked quality requirement tests:</strong> <a href="../quality-requirement-tests/#qrt-002-jwt-scope-enforcement">QRT-002</a></p>
+<hr />
+<h2 id="qr-003-critical-module-testability-and-coverage">QR-003: Critical module testability and coverage<a class="headerlink" href="#qr-003-critical-module-testability-and-coverage" title="Permanent link">&para;</a></h2>
+<p><strong>ISO/IEC 25010 sub-characteristic:</strong> Testability</p>
+<p><strong>Scenario:</strong> When a developer changes a critical backend module under the standard CI environment, the CnSS codebase shall be covered by automated tests and the backend test suite shall enforce at least 30% line coverage for the critical module surface.</p>
+<p><strong>Why this matters:</strong> Critical backend components such as authentication, telemetry ingestion, and channel state management must be directly verifiable so defects are detected before merge and deployment.</p>
+<p><strong>Linked quality requirement tests:</strong> <a href="../quality-requirement-tests/#qrt-003-critical-module-unit-coverage">QRT-003</a></p>
+<h2 id="architectural-decision-records-adrs">Architectural Decision Records (ADRs)<a class="headerlink" href="#architectural-decision-records-adrs" title="Permanent link">&para;</a></h2>
+<p>Each quality requirement is supported by specific architectural decisions documented in the ADRs below:</p>
+<h3 id="qr-001-cnss-health-api-responsiveness-time-behaviour">QR-001: CnSS Health API Responsiveness (Time Behaviour)<a class="headerlink" href="#qr-001-cnss-health-api-responsiveness-time-behaviour" title="Permanent link">&para;</a></h3>
+<p><strong>Related ADRs:</strong>
+- <a href="../architecture/adr/adr-001-hardware-software-separation/">ADR-001: Hardware-Software Separation</a> — FPGA provides wire-speed packet forwarding, ensuring monitoring doesn't introduce latency
+- <a href="../architecture/adr/adr-002-ephemeral-redis-buffering/">ADR-002: Ephemeral Redis Buffering</a> — Redis in-memory buffering minimizes ingestion latency and maximizes throughput
+- <a href="../architecture/adr/adr-003-microservice-decomposition/">ADR-003: Microservice Decomposition</a> — Independent scaling allows optimization of bottleneck components</p>
+<h3 id="qr-002-fault-tolerance">QR-002: Fault Tolerance<a class="headerlink" href="#qr-002-fault-tolerance" title="Permanent link">&para;</a></h3>
+<p><strong>Related ADRs:</strong>
+- <a href="../architecture/adr/adr-001-hardware-software-separation/">ADR-001: Hardware-Software Separation</a> — Complete fault isolation between data plane (FPGA) and control plane (software)
+- <a href="../architecture/adr/adr-002-ephemeral-redis-buffering/">ADR-002: Ephemeral Redis Buffering</a> — Capped buffers prevent OOM crashes; graceful degradation on Redis failure
+- <a href="../architecture/adr/adr-003-microservice-decomposition/">ADR-003: Microservice Decomposition</a> — Fault isolation between microservices; Docker restart policy ensures automatic recovery</p>
+<h3 id="qr-003-critical-module-testability">QR-003: Critical Module Testability<a class="headerlink" href="#qr-003-critical-module-testability" title="Permanent link">&para;</a></h3>
+<p><strong>Related ADRs:</strong>
+- <a href="../architecture/adr/adr-003-microservice-decomposition/">ADR-003: Microservice Decomposition</a> — Each microservice tested independently with mocked dependencies; ≥30% coverage enforced per critical module</p>
+<hr />
+<h2 id="adr-index">ADR Index<a class="headerlink" href="#adr-index" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>ADR ID</th>
+<th>Title</th>
+<th>Status</th>
+<th>Quality Requirements</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="../architecture/adr/adr-001-hardware-software-separation/">ADR-001</a></td>
+<td>Hardware-Software Separation for Zero-Impact Monitoring</td>
+<td>Accepted</td>
+<td>QR-001, QR-002</td>
+</tr>
+<tr>
+<td><a href="../architecture/adr/adr-002-ephemeral-redis-buffering/">ADR-002</a></td>
+<td>Ephemeral Redis Buffering for High-Performance Telemetry Ingestion</td>
+<td>Accepted</td>
+<td>QR-001, QR-002</td>
+</tr>
+<tr>
+<td><a href="../architecture/adr/adr-003-microservice-decomposition/">ADR-003</a></td>
+<td>Microservice Decomposition of CnSS Backend</td>
+<td>Accepted</td>
+<td>QR-001, QR-002, QR-003</td>
+</tr>
+</tbody>
+</table></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../js/base.js"></script>
+        <script src="../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

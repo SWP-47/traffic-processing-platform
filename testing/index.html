@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="SWP-47 Team">
+        <link rel="canonical" href="https://swp-47.github.io/traffic-processing-platform/testing/">
+        <link rel="shortcut icon" href="../img/favicon.ico">
+        <title>Testing and Quality Status - Traffic Processing Platform Documentation</title>
+        <link href="../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../css/brands.min.css" rel="stylesheet">
+        <link href="../css/solid.min.css" rel="stylesheet">
+        <link href="../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="..">Traffic Processing Platform Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href=".." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Architecture</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../architecture/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../architecture/static-view/" class="dropdown-item">Static View</a>
+</li>
+                                    
+<li>
+    <a href="../architecture/dynamic-view/" class="dropdown-item">Dynamic View</a>
+</li>
+                                    
+<li>
+    <a href="../architecture/deployment-view/" class="dropdown-item">Deployment View</a>
+</li>
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">ADRs</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../architecture/adr/adr-001-hardware-software-separation/" class="dropdown-item">ADR-001</a>
+</li>
+            
+<li>
+    <a href="../architecture/adr/adr-002-ephemeral-redis-buffering/" class="dropdown-item">ADR-002</a>
+</li>
+            
+<li>
+    <a href="../architecture/adr/adr-003-microservice-decomposition/" class="dropdown-item">ADR-003</a>
+</li>
+    </ul>
+  </li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Development</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../development-process/" class="dropdown-item">Development Process</a>
+</li>
+                                    
+<li>
+    <a href="../quality-requirements/" class="dropdown-item">Quality Requirements</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/SWP-47/traffic-processing-platform/edit/master/docs/testing.md" class="nav-link">Edit on SWP-47/traffic-processing-platform
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#testing-and-quality-status" class="nav-link">Testing and Quality Status</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#critical-modules-and-coverage" class="nav-link">Critical Modules and Coverage</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#automated-test-status" class="nav-link">Automated Test Status</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#ci-and-qa-check-status" class="nav-link">CI and QA Check Status</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#additional-qa-check-rationale" class="nav-link">Additional QA Check Rationale</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#manual-evidence-that-does-not-count-as-qrt" class="nav-link">Manual Evidence That Does Not Count as QRT</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#active-quality-gates-for-future-sprints" class="nav-link">Active Quality Gates for Future Sprints</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="testing-and-quality-status">Testing and Quality Status<a class="headerlink" href="#testing-and-quality-status" title="Permanent link">&para;</a></h1>
+<p>This document serves as the canonical testing status artifact for the Traffic Processing Platform. It details our critical modules, automated test coverage, CI/QA check status, and manual evidence.</p>
+<h2 id="critical-modules-and-coverage">Critical Modules and Coverage<a class="headerlink" href="#critical-modules-and-coverage" title="Permanent link">&para;</a></h2>
+<p>Critical modules are source files, packages, or product areas responsible for core user workflows, persistence, external integration, security, or business rules. Each critical module must maintain at least 30% automated line coverage.</p>
+<table>
+<thead>
+<tr>
+<th>Critical module</th>
+<th>Why critical</th>
+<th style="text-align: right;">Required line coverage</th>
+<th style="text-align: right;">Current line coverage</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cnss/app/</code></td>
+<td>Core telemetry ingestion (UDP server), JWT authentication, WebSocket state management, TimescaleDB persistence, and Reporting Worker. Enforces all QRs.</td>
+<td style="text-align: right;">30%</td>
+<td style="text-align: right;">≥ 30% (enforced by <code>--cov-fail-under=30</code> gate)</td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → CnSS Check → "Run coverage gate" step</a></td>
+</tr>
+<tr>
+<td><code>cnss/tests/integration/</code></td>
+<td>Validates end-to-end API contracts, WebSocket lifecycle, auth middleware, and UDP ingestion against a real TimescaleDB instance.</td>
+<td style="text-align: right;">30%</td>
+<td style="text-align: right;">≥ 30% (enforced by <code>--cov-fail-under=30</code> gate)</td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → CnSS Check → "Run coverage gate" step</a></td>
+</tr>
+<tr>
+<td><code>mui/src/services/</code></td>
+<td>Frontend API client, WebSocket telemetry service, and authentication state management. Bridges the MUI to the CnSS.</td>
+<td style="text-align: right;">30%</td>
+<td style="text-align: right;">N/A — frontend coverage gate not yet configured; type-safety enforced via <code>tsc --noEmit</code></td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → MUI Check → "Lint and type check" step</a></td>
+</tr>
+<tr>
+<td><code>traffic-processor/software-part/</code></td>
+<td>Core packet extraction logic (<code>tp_packet_counter.py</code>) that produces the telemetry consumed by every downstream component.</td>
+<td style="text-align: right;">30%</td>
+<td style="text-align: right;">N/A — unit tests exist but no coverage gate is configured yet</td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → TP Check → "Run unit tests" step</a></td>
+</tr>
+</tbody>
+</table>
+<p><em>If global repository coverage is lower than critical-module coverage, explain why here: N/A — The CnSS backend (the most critical module) is the only component with a hard coverage gate (<code>--cov-fail-under=30</code>). Frontend and TP coverage gates are deferred to a future sprint to avoid blocking MVP delivery.</em></p>
+<h2 id="automated-test-status">Automated Test Status<a class="headerlink" href="#automated-test-status" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Test type</th>
+<th>Scope</th>
+<th>Command or CI check</th>
+<th>Latest result</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unit tests</td>
+<td>Critical backend logic (auth, state store, UDP parsing, recovery)</td>
+<td><code>pytest cnss/tests/unit/ -q</code> (executed as part of the containerized integration run)</td>
+<td>Passing</td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → CnSS Check</a></td>
+</tr>
+<tr>
+<td>Unit tests</td>
+<td>Traffic Processor packet extraction logic</td>
+<td><code>pytest traffic-processor/software-part/tests/ -q</code></td>
+<td>Passing</td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → TP Check</a></td>
+</tr>
+<tr>
+<td>Integration tests</td>
+<td>CnSS REST API endpoints, WebSocket lifecycle, auth middleware, UDP ingestion, and TimescaleDB interaction</td>
+<td><code>docker compose -f cnss/docker-compose.test.yml up --build --abort-on-container-exit</code></td>
+<td>Passing</td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → CnSS Check → "Run containerized CnSS integration tests" step</a></td>
+</tr>
+<tr>
+<td>Automated QRTs</td>
+<td>QR-001 (health API responsiveness), QR-002 (JWT scope enforcement), QR-003 (critical module coverage)</td>
+<td><code>pytest --cov=app --cov-report=term-missing --cov-fail-under=30 tests/ -q</code> (coverage gate doubles as QRT-003; QRT-001 and QRT-002 are covered by the integration suite)</td>
+<td>Passing</td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → CnSS Check → "Run coverage gate" step</a></td>
+</tr>
+<tr>
+<td>Type checking</td>
+<td>MUI frontend type safety (<code>tsc --noEmit</code>) and OpenAPI schema validation</td>
+<td><code>npm run test:ts</code></td>
+<td>Passing</td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → MUI Check → "Lint and type check" step</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="ci-and-qa-check-status">CI and QA Check Status<a class="headerlink" href="#ci-and-qa-check-status" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Gate or check</th>
+<th>Required for Done?</th>
+<th>Latest protected-branch status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linting (Python: <code>black --check</code>, <code>flake8</code>)</td>
+<td>Yes</td>
+<td>Passing</td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → TP/CN/CnSS Check → "Lint code" steps</a></td>
+</tr>
+<tr>
+<td>Linting (JS/TS: <code>npm run lint</code>)</td>
+<td>Yes</td>
+<td>Passing</td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → MUI Check → "Lint and type check" step</a></td>
+</tr>
+<tr>
+<td>Type checking (<code>tsc --noEmit</code>)</td>
+<td>Yes</td>
+<td>Passing</td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → MUI Check → "Lint and type check" step</a></td>
+</tr>
+<tr>
+<td>Build / Testable snapshot (<code>npm run build</code>)</td>
+<td>Yes</td>
+<td>Passing</td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → MUI Check → "Build production bundle" step</a></td>
+</tr>
+<tr>
+<td>Coverage gate (<code>--cov-fail-under=30</code>)</td>
+<td>Yes</td>
+<td>Passing</td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → CnSS Check → "Run coverage gate" step</a></td>
+</tr>
+<tr>
+<td>Dependency audit (<code>pip-audit</code>)</td>
+<td>Yes</td>
+<td>Passing</td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → CnSS Check → "Run dependency audit" step</a></td>
+</tr>
+<tr>
+<td>Lychee Link Checking</td>
+<td>Yes</td>
+<td>Passing</td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/lychee.yml">Latest Lychee run</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Branch Protection Evidence:</strong></p>
+<p>The <code>develop</code> and <code>general</code> branches are protected. Merging requires: (1) at least one approving review from a different team member, (2) all required CI status checks passing (including Lychee), and (3) squash/rebase merging is explicitly disabled — only merge commits are permitted to preserve full history.</p>
+<h2 id="additional-qa-check-rationale">Additional QA Check Rationale<a class="headerlink" href="#additional-qa-check-rationale" title="Permanent link">&para;</a></h2>
+<p>Link checking (Lychee) does not satisfy the Assignment 4 additional QA check requirement. The following check was selected to address specific project risks.</p>
+<table>
+<thead>
+<tr>
+<th>QA objective or risk</th>
+<th>Additional QA check</th>
+<th>Scope</th>
+<th>Latest result</th>
+<th>Evidence</th>
+<th>Limitations or follow-up</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dependencies with known vulnerabilities may expose deployments to avoidable security risk, especially since the CnSS is exposed to the network and ingests untrusted UDP payloads.</td>
+<td>Automated Python dependency vulnerability scan via <code>pip-audit</code></td>
+<td>CnSS <code>requirements.txt</code> (and transitively all installed packages)</td>
+<td>Passing</td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → CnSS Check → "Run dependency audit" step</a></td>
+<td><code>pip-audit</code> only covers Python dependencies. Frontend (<code>npm audit</code>) and OS-level (<code>apt</code>) vulnerabilities are not yet scanned in CI and should be added in a future sprint. Some transitive vulnerabilities may require manual triage or delayed upstream fixes.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="manual-evidence-that-does-not-count-as-qrt">Manual Evidence That Does Not Count as QRT<a class="headerlink" href="#manual-evidence-that-does-not-count-as-qrt" title="Permanent link">&para;</a></h2>
+<p>Manual tests, observations, or exploratory checks that do not qualify as automated Quality Requirement Tests (QRTs).</p>
+<table>
+<thead>
+<tr>
+<th>Evidence</th>
+<th>Scope</th>
+<th>Result</th>
+<th>Follow-up PBI or issue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>End-to-end smoke test of the deployment (TP → CN → CnSS → MUI) on the Innopolis University testbed</td>
+<td>Full telemetry pipeline</td>
+<td>Passed — real-time packet counters and channel activity indicator update correctly</td>
+<td>[None]</td>
+</tr>
+<tr>
+<td>Manual verification of the FPGA bitstream deployment on the ARTIX-7 AX7201 board</td>
+<td>TP hardware data plane</td>
+<td>Passed — packets forwarded at wire speed with no observable latency</td>
+<td>[None]</td>
+</tr>
+<tr>
+<td>Exploratory UI check of the MUI dashboard on desktop and mobile viewports</td>
+<td>MUI Dashboard responsiveness</td>
+<td>Passed with minor feedback — customer requested higher contrast on the activity indicator</td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/issues/145">#145 — Increase contrast on StatusIndicator component</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="active-quality-gates-for-future-sprints">Active Quality Gates for Future Sprints<a class="headerlink" href="#active-quality-gates-for-future-sprints" title="Permanent link">&para;</a></h2>
+<p>The following Assignment 4 quality gates, tests, and CI checks are maintained as active repository requirements for all future project work. Later PBIs must satisfy these gates unless explicitly superseded by a documented equivalent or stronger check.</p>
+<ul>
+<li>[ ] All automated unit and integration tests must pass.</li>
+<li>[ ] Automated Quality Requirement Tests (QRT-001, QRT-002, QRT-003) must pass.</li>
+<li>[ ] Critical modules must maintain ≥ 30% line coverage.</li>
+<li>[ ] Linting, formatting, and type-checking gates must pass.</li>
+<li>[ ] Additional QA check (<code>pip-audit</code> dependency vulnerability scan) must pass.</li>
+<li>[ ] Lychee link checking must pass.</li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../js/base.js"></script>
+        <script src="../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

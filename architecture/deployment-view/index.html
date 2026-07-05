@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="SWP-47 Team">
+        <link rel="canonical" href="https://swp-47.github.io/traffic-processing-platform/architecture/deployment-view/">
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Deployment View - Traffic Processing Platform Documentation</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">Traffic Processing Platform Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="../.." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Architecture</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../static-view/" class="dropdown-item">Static View</a>
+</li>
+                                    
+<li>
+    <a href="../dynamic-view/" class="dropdown-item">Dynamic View</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">Deployment View</a>
+</li>
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">ADRs</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../adr/adr-001-hardware-software-separation/" class="dropdown-item">ADR-001</a>
+</li>
+            
+<li>
+    <a href="../adr/adr-002-ephemeral-redis-buffering/" class="dropdown-item">ADR-002</a>
+</li>
+            
+<li>
+    <a href="../adr/adr-003-microservice-decomposition/" class="dropdown-item">ADR-003</a>
+</li>
+    </ul>
+  </li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Development</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../development-process/" class="dropdown-item">Development Process</a>
+</li>
+                                    
+<li>
+    <a href="../../quality-requirements/" class="dropdown-item">Quality Requirements</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../dynamic-view/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../adr/adr-001-hardware-software-separation/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/SWP-47/traffic-processing-platform/edit/master/docs/architecture/deployment-view/README.md" class="nav-link">Edit on SWP-47/traffic-processing-platform
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#deployment-view-infrastructure-topology" class="nav-link">Deployment View — Infrastructure Topology</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#diagram" class="nav-link">Diagram</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#what-the-diagram-shows" class="nav-link">What the Diagram Shows</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#why-this-deployment-model-was-chosen" class="nav-link">Why This Deployment Model Was Chosen</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#operational-considerations" class="nav-link">Operational Considerations</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#failure-modes-and-recovery" class="nav-link">Failure Modes and Recovery</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#conclusion" class="nav-link">Conclusion</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="deployment-view-infrastructure-topology">Deployment View — Infrastructure Topology<a class="headerlink" href="#deployment-view-infrastructure-topology" title="Permanent link">&para;</a></h1>
+<h2 id="diagram">Diagram<a class="headerlink" href="#diagram" title="Permanent link">&para;</a></h2>
+<p>The deployment diagram (<a href="deployment-diagram.puml">deployment-diagram.puml</a>) illustrates the physical and logical deployment topology of the Traffic Processing Platform on a production Virtual Machine (VM) hosted at Innopolis University.</p>
+<h2 id="what-the-diagram-shows">What the Diagram Shows<a class="headerlink" href="#what-the-diagram-shows" title="Permanent link">&para;</a></h2>
+<h3 id="deployment-node">Deployment Node<a class="headerlink" href="#deployment-node" title="Permanent link">&para;</a></h3>
+<p>The entire platform is deployed on a <strong>single production VM</strong> with the following characteristics:</p>
+<ul>
+<li><strong>Public IP</strong>: <code>10.93.26.186</code> (accessible only within the Innopolis University "UniversityStudent" network)</li>
+<li><strong>Operating System</strong>: Linux (Ubuntu/Debian-based)</li>
+<li><strong>Container Runtime</strong>: Docker + Docker Compose</li>
+<li><strong>Network Mode</strong>: Mixed (bridge for CnSS/MUI, host for TP/CN)</li>
+</ul>
+<h3 id="layered-architecture">Layered Architecture<a class="headerlink" href="#layered-architecture" title="Permanent link">&para;</a></h3>
+<p>The deployment is organized into <strong>four distinct layers</strong>, each with its own Docker network and responsibilities:</p>
+<h4 id="1-infrastructure-layer-edge-nginx">1. Infrastructure Layer (Edge Nginx)<a class="headerlink" href="#1-infrastructure-layer-edge-nginx" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Component</strong>: <code>edge-nginx</code> (Nginx Alpine)</li>
+<li><strong>Ports</strong>: 80 (HTTP redirect), 443 (HTTPS/WSS)</li>
+<li><strong>Networks</strong>: <code>cnss-network</code>, <code>mui-network</code> (external)</li>
+<li><strong>Responsibilities</strong>:</li>
+<li><strong>TLS Termination</strong>: Single entry point for all encrypted traffic. Uses self-signed certificates for development (generated via <code>make certs</code>) or CA-signed certificates for production.</li>
+<li><strong>Routing</strong>: Routes <code>/</code> to MUI, <code>/api/</code> to CnSS REST API, <code>/api/v1/ws/</code> to CnSS WebSocket Service.</li>
+<li><strong>Security</strong>: Masks tokens in access logs using a custom <code>log_format</code> that logs <code>$uri</code> instead of <code>$request_uri</code>. Adds HSTS, X-Frame-Options, and X-Content-Type-Options headers.</li>
+<li><strong>Error Handling</strong>: Returns 503 with a custom JSON message if MUI or CnSS is unavailable.</li>
+</ul>
+<h4 id="2-cnss-backend-layer-cnss-network">2. CnSS Backend Layer (cnss-network)<a class="headerlink" href="#2-cnss-backend-layer-cnss-network" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Components</strong>: <code>cnss-api</code>, <code>cnss-websocket</code>, <code>cnss-ingestion</code>, <code>cnss-reporting</code>, <code>timescaledb</code>, <code>redis</code>, <code>pgadmin</code></li>
+<li><strong>Network</strong>: <code>cnss-network</code> (bridge, internal)</li>
+<li><strong>Restart Policy</strong>: <code>always</code> (Docker automatically restarts crashed containers)</li>
+</ul>
+<p><strong>Service Details</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Image</th>
+<th>Ports</th>
+<th>Volumes</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cnss-api</code></td>
+<td>Custom (FastAPI)</td>
+<td>8000 (internal)</td>
+<td>—</td>
+<td>REST API, authentication, channel discovery, history</td>
+</tr>
+<tr>
+<td><code>cnss-websocket</code></td>
+<td>Custom (websockets)</td>
+<td>8001 (internal)</td>
+<td>—</td>
+<td>WebSocket gateway, session management, subscriptions</td>
+</tr>
+<tr>
+<td><code>cnss-ingestion</code></td>
+<td>Custom (asyncio)</td>
+<td>5140/udp (host)</td>
+<td>—</td>
+<td>UDP telemetry ingestion, buffering, flushing</td>
+</tr>
+<tr>
+<td><code>cnss-reporting</code></td>
+<td>Custom (asyncio)</td>
+<td>—</td>
+<td>—</td>
+<td>1Hz polling, SQL execution, Pub/Sub publishing</td>
+</tr>
+<tr>
+<td><code>timescaledb</code></td>
+<td><code>timescale/timescaledb:latest-pg15</code></td>
+<td>5432 (internal)</td>
+<td><code>timescaledb_data</code> (persistent)</td>
+<td>Time-series database, continuous aggregates</td>
+</tr>
+<tr>
+<td><code>redis</code></td>
+<td><code>redis:7-alpine</code></td>
+<td>6379 (internal)</td>
+<td>—</td>
+<td>Ephemeral state, buffering, pub/sub (no persistence)</td>
+</tr>
+<tr>
+<td><code>pgadmin</code></td>
+<td><code>dpage/pgadmin4:latest</code></td>
+<td>5050 (internal)</td>
+<td>—</td>
+<td>Database management UI (dev/debug only)</td>
+</tr>
+</tbody>
+</table>
+<h4 id="3-mui-frontend-layer-mui-network">3. MUI Frontend Layer (mui-network)<a class="headerlink" href="#3-mui-frontend-layer-mui-network" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Component</strong>: <code>mui</code> (Nginx + React SPA)</li>
+<li><strong>Network</strong>: <code>mui-network</code> (bridge, internal)</li>
+<li><strong>Port</strong>: 80 (internal)</li>
+<li><strong>Responsibilities</strong>: Serves the React single-page application. In production, Edge Nginx handles all routing, so the MUI container only serves static files.</li>
+</ul>
+<h4 id="4-traffic-processor-communication-node-layer-host-network">4. Traffic Processor + Communication Node Layer (host network)<a class="headerlink" href="#4-traffic-processor-communication-node-layer-host-network" title="Permanent link">&para;</a></h4>
+<p>This layer implements a <strong>two-tier architecture</strong> for minimally intrusive network monitoring:</p>
+<h5 id="hardware-data-plane-fpga">Hardware Data Plane (FPGA)<a class="headerlink" href="#hardware-data-plane-fpga" title="Permanent link">&para;</a></h5>
+<ul>
+<li><strong>Component</strong>: ARTIX-7 AX7201 FPGA</li>
+<li><strong>Role</strong>: Transparent inline bridge operating at wire speed</li>
+<li><strong>Responsibilities</strong>:</li>
+<li><strong>Packet Forwarding</strong>: Receives network packets from LAN interface and forwards them to WAN interface (and vice versa) with negligible latency</li>
+<li><strong>Traffic Mirroring</strong>: Duplicates all passing packets and sends them to the software TP component for metadata extraction</li>
+<li><strong>Zero-Impact Operation</strong>: Operates independently of all software components; failure in monitoring software has <strong>no impact</strong> on core packet forwarding (US-005, US-007, US-009)</li>
+</ul>
+<h5 id="software-telemetry-plane-tp">Software Telemetry Plane (TP)<a class="headerlink" href="#software-telemetry-plane-tp" title="Permanent link">&para;</a></h5>
+<ul>
+<li><strong>Component</strong>: <code>tp</code> (Python + Scapy)</li>
+<li><strong>Network Mode</strong>: <code>host</code> (direct access to physical network interfaces)</li>
+<li><strong>Privileged</strong>: <code>true</code> (required for raw socket access and packet sniffing)</li>
+<li><strong>Responsibilities</strong>:</li>
+<li><strong>Metadata Extraction</strong>: Receives mirrored traffic from FPGA, extracts packet metadata (source/destination IPs, ports, direction)</li>
+<li><strong>Local Dispatch</strong>: Forwards extracted metadata to the Communication Node (CN) via local UDP/IPC</li>
+<li><strong>Non-Blocking</strong>: Operates asynchronously; if TP crashes, FPGA continues forwarding packets uninterrupted</li>
+</ul>
+<h5 id="communication-node-cn">Communication Node (CN)<a class="headerlink" href="#communication-node-cn" title="Permanent link">&para;</a></h5>
+<ul>
+<li><strong>Component</strong>: <code>cn</code> (Python + Scapy)</li>
+<li><strong>Network Mode</strong>: <code>host</code> (direct access to physical network interfaces)</li>
+<li><strong>Privileged</strong>: <code>true</code> (required for raw socket access)</li>
+<li><strong>Responsibilities</strong>:</li>
+<li><strong>Telemetry Batching</strong>: Receives raw packet metadata from TP and aggregates it into <code>TelemetryBatch</code> payloads</li>
+<li><strong>Window Management</strong>: Groups packets into fixed time windows (configurable via <code>TIME_WINDOW</code>, default 500ms)</li>
+<li><strong>MTU Enforcement</strong>: Ensures serialized JSON payloads do not exceed 1400 bytes to prevent IP fragmentation and silent UDP drops</li>
+<li><strong>Remote Dispatch</strong>: Sends <code>TelemetryBatch</code> to CnSS Ingestion Worker via UDP (port 5140)</li>
+<li><strong>Sequence Tracking</strong>: Maintains monotonically increasing 64-bit sequence counters per channel for drop detection</li>
+</ul>
+<h3 id="data-flow">Data Flow<a class="headerlink" href="#data-flow" title="Permanent link">&para;</a></h3>
+<pre><code>User Traffic → FPGA (Hardware Data Plane)
+                ↓ (wire-speed forwarding)
+               WAN (Internet)
+                ↓ (mirrored traffic)
+         Software TP (Metadata Extraction)
+                ↓ (raw packet metadata)
+         CN (Batching + Sequence Tracking)
+                ↓ (UDP 5140)
+         CnSS Ingestion (Redis buffer)
+                ↓ (batch flush)
+         TimescaleDB (persistent storage)
+                ↓ (1Hz polling)
+         CnSS Reporting (SQL → Pub/Sub)
+                ↓ (Redis Pub/Sub)
+         CnSS WebSocket (push to client)
+                ↓ (WSS via Nginx)
+         MUI (real-time dashboard)
+</code></pre>
+<h2 id="why-this-deployment-model-was-chosen">Why This Deployment Model Was Chosen<a class="headerlink" href="#why-this-deployment-model-was-chosen" title="Permanent link">&para;</a></h2>
+<h3 id="1-single-vm-deployment">1. Single VM Deployment<a class="headerlink" href="#1-single-vm-deployment" title="Permanent link">&para;</a></h3>
+<p><strong>Rationale</strong>: The platform is deployed on a single VM to simplify operations, reduce infrastructure costs, and meet the course requirements (Innopolis University provides a single VM for the project).</p>
+<p><strong>Trade-offs</strong>:
+- <strong>Pros</strong>: Simple to manage, low cost, easy to debug.
+- <strong>Cons</strong>: Single point of failure. If the VM crashes, the entire platform is unavailable. No horizontal scaling across multiple nodes.</p>
+<p><strong>Mitigation</strong>: Docker's <code>restart: always</code> policy ensures that individual containers are automatically restarted if they crash. TimescaleDB data is persisted on a Docker volume, so it survives container restarts. The FPGA hardware data plane operates independently, so even if all software components fail, user internet connectivity remains unaffected.</p>
+<h3 id="2-two-tier-tp-architecture-hardware-software">2. Two-Tier TP Architecture (Hardware + Software)<a class="headerlink" href="#2-two-tier-tp-architecture-hardware-software" title="Permanent link">&para;</a></h3>
+<p><strong>Rationale</strong>: The separation of the Traffic Processor into hardware (FPGA) and software (Python + Scapy) components is the foundational architectural decision that enables <strong>zero-impact monitoring</strong>.</p>
+<p><strong>Trade-offs</strong>:
+- <strong>Pros</strong>: 
+  - Wire-speed packet forwarding with negligible latency
+  - Complete fault isolation: software failures cannot disrupt user traffic
+  - Hardware-accelerated processing for high-throughput scenarios
+- <strong>Cons</strong>: 
+  - Requires specialized FPGA hardware (ARTIX-7 AX7201)
+  - More complex deployment and debugging (hardware + software stack)
+  - Limited flexibility compared to pure software solutions (FPGA logic is harder to modify)</p>
+<p><strong>Mitigation</strong>: The software TP component is designed to be stateless and restartable. If it crashes, the FPGA continues forwarding packets, and the TP can be restarted without any manual intervention. The CN component handles sequence tracking to detect and report any telemetry gaps.</p>
+<h3 id="3-docker-compose-orchestration">3. Docker Compose Orchestration<a class="headerlink" href="#3-docker-compose-orchestration" title="Permanent link">&para;</a></h3>
+<p><strong>Rationale</strong>: Docker Compose provides a declarative way to define and manage multi-container applications. It simplifies deployment, ensures reproducibility, and enables easy rollback.</p>
+<p><strong>Trade-offs</strong>:
+- <strong>Pros</strong>: Easy to deploy, version-controlled configuration, automatic dependency management.
+- <strong>Cons</strong>: Not suitable for large-scale production deployments (Kubernetes would be better for that). Limited orchestration capabilities (no auto-scaling, no service mesh).</p>
+<h3 id="4-separate-docker-networks">4. Separate Docker Networks<a class="headerlink" href="#4-separate-docker-networks" title="Permanent link">&para;</a></h3>
+<p><strong>Rationale</strong>: The CnSS and MUI services are deployed on separate Docker networks (<code>cnss-network</code> and <code>mui-network</code>) to enforce network isolation. Edge Nginx connects to both networks, acting as the only bridge between them.</p>
+<p><strong>Trade-offs</strong>:
+- <strong>Pros</strong>: Enhanced security (MUI cannot directly access CnSS internal services), clear separation of concerns.
+- <strong>Cons</strong>: Slightly more complex networking setup. Requires careful management of network dependencies.</p>
+<h3 id="5-host-network-mode-for-tpcn">5. Host Network Mode for TP/CN<a class="headerlink" href="#5-host-network-mode-for-tpcn" title="Permanent link">&para;</a></h3>
+<p><strong>Rationale</strong>: The Traffic Processor and Communication Node require direct access to physical network interfaces for packet sniffing and forwarding. Docker's bridge network mode would add unnecessary overhead and complexity.</p>
+<p><strong>Trade-offs</strong>:
+- <strong>Pros</strong>: Zero network overhead, direct access to physical interfaces, simplified configuration.
+- <strong>Cons</strong>: Less isolation (TP/CN share the host's network stack), potential security risks if TP/CN are compromised.</p>
+<p><strong>Mitigation</strong>: TP and CN run in privileged containers with minimal attack surface. They only expose local UDP/IPC interfaces and do not listen on external ports. Network-level ACLs should restrict access to the VM.</p>
+<h3 id="6-ephemeral-redis">6. Ephemeral Redis<a class="headerlink" href="#6-ephemeral-redis" title="Permanent link">&para;</a></h3>
+<p><strong>Rationale</strong>: Redis is explicitly configured without persistence (no RDB snapshots, no AOF) to maximize IOPS and prevent disk-write bottlenecks. TimescaleDB is the single source of truth for persistent data.</p>
+<p><strong>Trade-offs</strong>:
+- <strong>Pros</strong>: Maximum performance, no disk I/O overhead, simple configuration.
+- <strong>Cons</strong>: If Redis restarts, unflushed UDP buffers and sequence states are lost. This is an accepted trade-off for performance.</p>
+<p><strong>Mitigation</strong>: The Ingestion Worker uses capped Redis lists (<code>LTRIM</code> at 100,000 items) to prevent OOM crashes. Sequence tracking is designed to gracefully handle resets (CN reboot detection when <code>last_sequence - incoming_sequence &gt; 1,000,000</code>).</p>
+<h2 id="operational-considerations">Operational Considerations<a class="headerlink" href="#operational-considerations" title="Permanent link">&para;</a></h2>
+<h3 id="1-fpga-hardware-management">1. FPGA Hardware Management<a class="headerlink" href="#1-fpga-hardware-management" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Firmware Updates</strong>: FPGA firmware updates require careful planning and testing. Always have a rollback plan.</li>
+<li><strong>Hardware Monitoring</strong>: Monitor FPGA temperature, power consumption, and error rates via hardware-specific tools.</li>
+<li><strong>Traffic Mirroring</strong>: Ensure the FPGA is correctly configured to mirror all traffic (both directions) to the software TP. Misconfiguration can lead to incomplete telemetry data.</li>
+</ul>
+<h3 id="2-tls-certificate-management">2. TLS Certificate Management<a class="headerlink" href="#2-tls-certificate-management" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Development</strong>: Self-signed certificates are generated via <code>make certs</code> and distributed to LAN clients via <code>make serve-certs</code>. Clients must install the certificate into their system's trust store to avoid browser security warnings.</li>
+<li><strong>Production</strong>: Certificates from a trusted Certificate Authority (e.g., Let's Encrypt, internal corporate CA) must be used. Self-signed certificates are <strong>never</strong> acceptable in production.</li>
+</ul>
+<h3 id="3-database-growth-monitoring">3. Database Growth Monitoring<a class="headerlink" href="#3-database-growth-monitoring" title="Permanent link">&para;</a></h3>
+<ul>
+<li>TimescaleDB data is automatically retained for 7 days (configurable via <code>RETENTION_DAYS</code> in <code>.env</code>).</li>
+<li>The customer advised monitoring Docker volume statistics to build intuition about disk usage (e.g., how many megabytes 100k+ rows consume).</li>
+<li><strong>Action</strong>: Regularly check <code>docker volume ls</code> and <code>docker system df</code> to monitor storage consumption.</li>
+</ul>
+<h3 id="4-redis-memory-management">4. Redis Memory Management<a class="headerlink" href="#4-redis-memory-management" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Redis is configured with <code>maxmemory 2gb</code> and <code>maxmemory-policy noeviction</code>.</li>
+<li>The Ingestion Worker explicitly caps the UDP buffer lists using <code>LTRIM</code> (max 100,000 items per channel).</li>
+<li>If Redis reaches the memory limit, new writes will fail with an OOM error. The Ingestion Worker will log the error and drop new packets.</li>
+<li><strong>Action</strong>: Monitor Redis memory usage via <code>redis-cli INFO memory</code> and adjust <code>maxmemory</code> if necessary.</li>
+</ul>
+<h3 id="5-container-health-checks">5. Container Health Checks<a class="headerlink" href="#5-container-health-checks" title="Permanent link">&para;</a></h3>
+<ul>
+<li>TimescaleDB and Redis have Docker health checks configured to ensure they are ready before dependent services start.</li>
+<li><strong>Action</strong>: Use <code>docker-compose ps</code> to verify that all containers are healthy before accessing the platform.</li>
+</ul>
+<h3 id="6-log-management">6. Log Management<a class="headerlink" href="#6-log-management" title="Permanent link">&para;</a></h3>
+<ul>
+<li>All containers log to stdout/stderr, which Docker captures and makes available via <code>docker-compose logs</code>.</li>
+<li>Edge Nginx uses a custom <code>log_format</code> that masks tokens in access logs.</li>
+<li>CnSS services use a custom <code>TokenMaskingFilter</code> to redact tokens in application logs.</li>
+<li><strong>Action</strong>: Regularly review logs for errors, warnings, and security incidents. Consider integrating with a log aggregation system (e.g., ELK Stack, Grafana Loki) for production deployments.</li>
+</ul>
+<h3 id="7-backup-and-recovery">7. Backup and Recovery<a class="headerlink" href="#7-backup-and-recovery" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>TimescaleDB</strong>: The <code>timescaledb_data</code> volume is persistent and survives container restarts. However, it is not automatically backed up.</li>
+<li><strong>Action</strong>: Implement a backup strategy (e.g., <code>pg_dump</code> cron job, TimescaleDB continuous backups) to prevent data loss in case of VM failure.</li>
+<li><strong>Redis</strong>: No backup is needed, as Redis is ephemeral. If Redis restarts, the system gracefully resets sequence baselines and resumes ingestion.</li>
+<li><strong>FPGA Configuration</strong>: Document FPGA firmware version and configuration settings. Maintain a backup of the FPGA bitstream for quick recovery.</li>
+</ul>
+<h3 id="8-scaling-considerations">8. Scaling Considerations<a class="headerlink" href="#8-scaling-considerations" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Current Limitation</strong>: The single-VM deployment does not support horizontal scaling. If the CnSS becomes a bottleneck, the only option is to vertically scale the VM (add more CPU/RAM).</li>
+<li><strong>Future Improvement</strong>: Migrate to Kubernetes or Docker Swarm to enable horizontal scaling of CnSS microservices. Use a load balancer (e.g., HAProxy, AWS ALB) to distribute WebSocket connections across multiple WebSocket Service instances.</li>
+<li><strong>FPGA Scaling</strong>: If traffic volume exceeds FPGA capacity, consider deploying multiple FPGA instances with load balancing at the network level.</li>
+</ul>
+<h3 id="9-security-hardening">9. Security Hardening<a class="headerlink" href="#9-security-hardening" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Firewall</strong>: Restrict access to port 443 (HTTPS/WSS) and port 5140/udp (CN → CnSS) to known IP addresses.</li>
+<li><strong>SSH Access</strong>: Disable password-based SSH authentication. Use SSH keys only.</li>
+<li><strong>Docker Security</strong>: Run containers as non-root users where possible. Use Docker's <code>--read-only</code> flag for containers that don't need to write to the filesystem.</li>
+<li><strong>Secrets Management</strong>: Move sensitive configuration (e.g., <code>JWT_SECRET_KEY</code>, database passwords) to a secrets manager (e.g., HashiCorp Vault, AWS Secrets Manager) instead of <code>.env</code> files.</li>
+<li><strong>FPGA Access</strong>: Restrict physical and logical access to the FPGA hardware. Use hardware security modules (HSM) for firmware signing if available.</li>
+</ul>
+<h3 id="10-network-performance-monitoring">10. Network Performance Monitoring<a class="headerlink" href="#10-network-performance-monitoring" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>FPGA Throughput</strong>: Monitor the FPGA's packet forwarding rate and latency. Ensure it meets wire-speed requirements for the deployed network.</li>
+<li><strong>TP Extraction Rate</strong>: Monitor the software TP's metadata extraction rate. If it falls behind the FPGA's forwarding rate, telemetry data will be incomplete.</li>
+<li><strong>CN Batching Efficiency</strong>: Monitor the CN's batching window (<code>TIME_WINDOW</code>) and payload size. Adjust the window size to balance between latency and payload efficiency.</li>
+<li><strong>UDP Packet Loss</strong>: Monitor the <code>dropped_batches</code> metric in <code>telemetry_update</code> payloads to detect UDP datagram losses between CN and CnSS.</li>
+</ul>
+<h2 id="failure-modes-and-recovery">Failure Modes and Recovery<a class="headerlink" href="#failure-modes-and-recovery" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Failure Mode</th>
+<th>Impact</th>
+<th>Recovery Mechanism</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>FPGA hardware failure</strong></td>
+<td>Complete network disruption</td>
+<td>Hardware replacement required; FPGA should be configured with redundant power supplies and monitoring</td>
+</tr>
+<tr>
+<td><strong>FPGA firmware crash</strong></td>
+<td>Network disruption until reboot</td>
+<td>Automatic hardware watchdog should reboot FPGA; manual intervention may be required</td>
+</tr>
+<tr>
+<td><strong>TP software crash</strong></td>
+<td>Telemetry stops; traffic continues</td>
+<td>FPGA continues forwarding; Docker restart policy restarts TP container; CN detects sequence gap</td>
+</tr>
+<tr>
+<td><strong>CN crash</strong></td>
+<td>Telemetry stops for that channel</td>
+<td>Reporting Worker detects 5s timeout, broadcasts <code>is_active: false</code>; Docker restarts CN; CnSS detects sequence reset on recovery</td>
+</tr>
+<tr>
+<td><strong>CnSS Ingestion crash</strong></td>
+<td>UDP packets dropped</td>
+<td>Docker <code>restart: always</code>; Redis buffers persist (if Redis is up); CN continues sending, packets silently lost during downtime</td>
+</tr>
+<tr>
+<td><strong>Redis crash</strong></td>
+<td>All buffering, state, Pub/Sub lost</td>
+<td>Redis restarts; sequence baselines reset; Ingestion resumes; accepted trade-off for performance</td>
+</tr>
+<tr>
+<td><strong>TimescaleDB crash</strong></td>
+<td>Persistence and aggregation fail</td>
+<td>Ingestion continues buffering in Redis (capped at 100k); Reporting Worker skips SQL queries; WebSocket pushes last known state</td>
+</tr>
+<tr>
+<td><strong>WebSocket Service crash</strong></td>
+<td>Active connections dropped</td>
+<td>Session keys expire (TTL 10s); Ghost Cleaner removes stale listeners; clients reconnect and re-subscribe</td>
+</tr>
+<tr>
+<td><strong>Reporting Worker crash</strong></td>
+<td>No real-time updates for 1s intervals</td>
+<td>Docker restart policy; clients continue receiving last known state; MUI fallback timeout triggers <code>is_active: false</code></td>
+</tr>
+<tr>
+<td><strong>Network partition (CN → CnSS)</strong></td>
+<td>UDP packets lost</td>
+<td>Sequence tracking makes losses visible via <code>dropped_batches</code> metric; no retry mechanism (fire-and-forget design)</td>
+</tr>
+<tr>
+<td><strong>MUI browser crash</strong></td>
+<td>Client disconnects</td>
+<td>WebSocket session expires via TTL; Garbage Collector cleans up subscriptions; no server-side state leak</td>
+</tr>
+</tbody>
+</table>
+<h2 id="conclusion">Conclusion<a class="headerlink" href="#conclusion" title="Permanent link">&para;</a></h2>
+<p>This deployment topology demonstrates how the Traffic Processing Platform achieves its core design goals through a carefully orchestrated combination of hardware and software components:</p>
+<ul>
+<li><strong>Zero-Impact Monitoring</strong>: The FPGA hardware data plane ensures that user traffic flows uninterrupted, even if all software monitoring components fail.</li>
+<li><strong>High-Performance Telemetry</strong>: The two-tier TP architecture (FPGA + software) enables wire-speed packet forwarding while extracting detailed metadata for analysis.</li>
+<li><strong>Scalable Backend</strong>: The CnSS microservices architecture, backed by Redis and TimescaleDB, provides high-throughput ingestion and real-time aggregation.</li>
+<li><strong>Operational Resilience</strong>: Docker's restart policies, TTL-based session management, and sequence tracking ensure graceful degradation under failure conditions.</li>
+<li><strong>Security by Design</strong>: JWT authentication, scope-based authorization, TLS termination, and log sanitization protect sensitive data and prevent unauthorized access.</li>
+</ul>
+<p>The single-VM deployment model is appropriate for the current scale and course requirements, but the architecture is designed to support future scaling through container orchestration and horizontal expansion of CnSS microservices.</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

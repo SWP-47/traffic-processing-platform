@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="SWP-47 Team">
+        <link rel="canonical" href="https://swp-47.github.io/traffic-processing-platform/architecture/adr/adr-002-ephemeral-redis-buffering/">
+        <link rel="shortcut icon" href="../../../img/favicon.ico">
+        <title>ADR-002 - Traffic Processing Platform Documentation</title>
+        <link href="../../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../../css/brands.min.css" rel="stylesheet">
+        <link href="../../../css/solid.min.css" rel="stylesheet">
+        <link href="../../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../../..">Traffic Processing Platform Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="../../.." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Architecture</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../static-view/" class="dropdown-item">Static View</a>
+</li>
+                                    
+<li>
+    <a href="../../dynamic-view/" class="dropdown-item">Dynamic View</a>
+</li>
+                                    
+<li>
+    <a href="../../deployment-view/" class="dropdown-item">Deployment View</a>
+</li>
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">ADRs</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../adr-001-hardware-software-separation/" class="dropdown-item">ADR-001</a>
+</li>
+            
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">ADR-002</a>
+</li>
+            
+<li>
+    <a href="../adr-003-microservice-decomposition/" class="dropdown-item">ADR-003</a>
+</li>
+    </ul>
+  </li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Development</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../development-process/" class="dropdown-item">Development Process</a>
+</li>
+                                    
+<li>
+    <a href="../../../quality-requirements/" class="dropdown-item">Quality Requirements</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../adr-001-hardware-software-separation/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../adr-003-microservice-decomposition/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/SWP-47/traffic-processing-platform/edit/master/docs/architecture/adr/adr-002-ephemeral-redis-buffering.md" class="nav-link">Edit on SWP-47/traffic-processing-platform
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#adr-002-ephemeral-redis-buffering-for-high-performance-telemetry-ingestion" class="nav-link">ADR-002: Ephemeral Redis Buffering for High-Performance Telemetry Ingestion</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#status" class="nav-link">Status</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#context" class="nav-link">Context</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#decision" class="nav-link">Decision</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#consequences" class="nav-link">Consequences</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#quality-requirements-traceability" class="nav-link">Quality Requirements Traceability</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#alternatives-considered" class="nav-link">Alternatives Considered</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#references" class="nav-link">References</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="adr-002-ephemeral-redis-buffering-for-high-performance-telemetry-ingestion">ADR-002: Ephemeral Redis Buffering for High-Performance Telemetry Ingestion<a class="headerlink" href="#adr-002-ephemeral-redis-buffering-for-high-performance-telemetry-ingestion" title="Permanent link">&para;</a></h1>
+<h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
+<p><strong>Accepted</strong> — Implemented in MVP v2 and validated under production load.</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>The CnSS Ingestion Worker must handle high-frequency telemetry data from multiple Communication Nodes (CNs) via UDP. The system must:
+- Ingest telemetry batches at high throughput (1000+ batches/second)
+- Buffer data temporarily before persisting to TimescaleDB
+- Handle traffic spikes without losing data or crashing
+- Minimize latency between data reception and persistence</p>
+<p><strong>Key constraints:</strong>
+- UDP is inherently unreliable (no delivery guarantees)
+- TimescaleDB batch inserts are slower than UDP reception rate
+- System must prevent Out-Of-Memory (OOM) crashes during traffic spikes
+- Sequence tracking must survive container restarts</p>
+<p><strong>Quality Requirements addressed:</strong>
+- <strong>QR-001 (Time Behaviour)</strong>: Minimize ingestion latency and maximize throughput
+- <strong>QR-002 (Fault Tolerance)</strong>: Handle traffic spikes and component failures gracefully</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p>We use Redis as an ephemeral, in-memory buffer with the following configuration:</p>
+<h3 id="redis-configuration">Redis Configuration<a class="headerlink" href="#redis-configuration" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Persistence</strong>: Explicitly disabled (<code>save ""</code>, <code>appendonly no</code>)</li>
+<li><strong>Memory Limit</strong>: 2GB (<code>maxmemory 2gb</code>)</li>
+<li><strong>Eviction Policy</strong>: <code>noeviction</code> (reject writes when full)</li>
+<li><strong>Network</strong>: Docker bridge network, internal only</li>
+</ul>
+<h3 id="buffering-strategy">Buffering Strategy<a class="headerlink" href="#buffering-strategy" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Capped Lists</strong>: Each channel has a Redis list (<code>udp:buffer:{channel_id}</code>) capped at 100,000 items via <code>LTRIM</code></li>
+<li><strong>Atomic Operations</strong>: Background flusher uses Lua scripts for atomic <code>LPOP</code> operations</li>
+<li><strong>Sequence Tracking</strong>: Per-channel sequence numbers stored in Redis (<code>channel:seq:{channel_id}</code>)</li>
+<li><strong>State Management</strong>: Channel activity state with 6-second TTL (<code>channel:state:{channel_id}</code>)</li>
+</ol>
+<h3 id="data-flow">Data Flow<a class="headerlink" href="#data-flow" title="Permanent link">&para;</a></h3>
+<pre><code>CN → UDP → Ingestion Worker → Redis Buffer (capped list) → Background Flusher → TimescaleDB
+</code></pre>
+<h3 id="failure-handling">Failure Handling<a class="headerlink" href="#failure-handling" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Buffer Full</strong>: New packets are dropped (logged) rather than causing OOM</li>
+<li><strong>Redis Crash</strong>: Unflushed buffers lost, sequence baselines reset, system resumes gracefully</li>
+<li><strong>TimescaleDB Down</strong>: Ingestion continues buffering in Redis (up to cap), flusher retries</li>
+</ul>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<h3 id="positive">Positive<a class="headerlink" href="#positive" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>High Throughput</strong>: Redis in-memory operations provide sub-millisecond buffering latency</li>
+<li><strong>No Disk I/O</strong>: Ephemeral mode eliminates disk-write bottlenecks, maximizing IOPS</li>
+<li><strong>OOM Protection</strong>: Capped lists prevent unbounded memory growth during traffic spikes</li>
+<li><strong>Atomic Operations</strong>: Lua scripts ensure consistent state during concurrent access</li>
+<li><strong>Simple Recovery</strong>: Redis restart is non-catastrophic; system resets and resumes</li>
+<li><strong>Sequence Tracking</strong>: Survives container restarts (unlike in-memory state)</li>
+</ul>
+<h3 id="negative">Negative<a class="headerlink" href="#negative" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Data Loss on Redis Restart</strong>: Unflushed buffers and sequence states are lost</li>
+<li><strong>No Persistence</strong>: Cannot recover buffered data after Redis failure</li>
+<li><strong>Memory Limit</strong>: 2GB cap may be insufficient for very high-throughput scenarios</li>
+<li><strong>Single Point of Coordination</strong>: All CnSS microservices depend on Redis availability</li>
+<li><strong>Noeviction Policy</strong>: Writes fail when memory limit reached (must monitor closely)</li>
+</ul>
+<h3 id="risks">Risks<a class="headerlink" href="#risks" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Redis OOM</strong>: If cap is reached, new telemetry is dropped until flusher catches up</li>
+<li><strong>Redis Crash</strong>: Temporary loss of buffering capacity; system degrades but doesn't fail</li>
+<li><strong>Network Partition</strong>: If Redis becomes unreachable, ingestion stalls completely</li>
+</ul>
+<h2 id="quality-requirements-traceability">Quality Requirements Traceability<a class="headerlink" href="#quality-requirements-traceability" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Quality Requirement</th>
+<th>How This Decision Addresses It</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>QR-001 (Time Behaviour)</strong></td>
+<td>Redis in-memory buffering provides sub-millisecond latency. Ephemeral mode (no persistence) maximizes IOPS. Capped lists prevent OOM-induced latency spikes.</td>
+</tr>
+<tr>
+<td><strong>QR-002 (Fault Tolerance)</strong></td>
+<td>Capped buffers prevent OOM crashes. Graceful degradation on Redis failure (system resets and resumes). Sequence tracking survives container restarts.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="alternatives-considered">Alternatives Considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
+<h3 id="alternative-1-direct-timescaledb-insert">Alternative 1: Direct TimescaleDB Insert<a class="headerlink" href="#alternative-1-direct-timescaledb-insert" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Pros</strong>: No buffering layer, simpler architecture</li>
+<li><strong>Cons</strong>: UDP reception rate exceeds DB insert rate, causes backpressure and packet loss</li>
+<li><strong>Rejected because</strong>: Cannot handle traffic spikes, higher latency</li>
+</ul>
+<h3 id="alternative-2-persistent-redis-rdbaof">Alternative 2: Persistent Redis (RDB/AOF)<a class="headerlink" href="#alternative-2-persistent-redis-rdbaof" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Pros</strong>: Data survives Redis restart</li>
+<li><strong>Cons</strong>: Disk I/O reduces throughput, increases latency, complex recovery</li>
+<li><strong>Rejected because</strong>: Performance trade-off unacceptable for real-time telemetry</li>
+</ul>
+<h3 id="alternative-3-apache-kafka-message-queue">Alternative 3: Apache Kafka / Message Queue<a class="headerlink" href="#alternative-3-apache-kafka-message-queue" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Pros</strong>: Durable, high-throughput, distributed</li>
+<li><strong>Cons</strong>: Overkill for single-VM deployment, higher operational complexity, more resources</li>
+<li><strong>Rejected because</strong>: Project scope and infrastructure constraints (single VM)</li>
+</ul>
+<h3 id="alternative-4-in-memory-buffer-python-dictlist">Alternative 4: In-Memory Buffer (Python dict/list)<a class="headerlink" href="#alternative-4-in-memory-buffer-python-dictlist" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Pros</strong>: Simple, no external dependency</li>
+<li><strong>Cons</strong>: Lost on container restart, no sequence tracking persistence, harder to share across services</li>
+<li><strong>Rejected because</strong>: Cannot survive container restarts, limits microservice decomposition</li>
+</ul>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>System Architecture</strong>: <a href="../../../system-documentation/">docs/system-documentation.md</a> §2.3.1 Ingestion Worker</li>
+<li><strong>Redis Configuration</strong>: <a href="../../../cnss/docker-compose.yml">cnss/docker-compose.yml</a></li>
+<li><strong>Lua Scripts</strong>: <a href="../../../cnss/core/redis/lua/">cnss/core/redis/lua/</a></li>
+<li><strong>User Stories</strong>: US-002 (Basic Network Usage Statistics)</li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../../js/base.js"></script>
+        <script src="../../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="SWP-47 Team">
+        <link rel="canonical" href="https://swp-47.github.io/traffic-processing-platform/process-requirements/">
+        <link rel="shortcut icon" href="../img/favicon.ico">
+        <title>Process Requirements - Traffic Processing Platform Documentation</title>
+        <link href="../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../css/brands.min.css" rel="stylesheet">
+        <link href="../css/solid.min.css" rel="stylesheet">
+        <link href="../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="..">Traffic Processing Platform Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href=".." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Architecture</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../architecture/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../architecture/static-view/" class="dropdown-item">Static View</a>
+</li>
+                                    
+<li>
+    <a href="../architecture/dynamic-view/" class="dropdown-item">Dynamic View</a>
+</li>
+                                    
+<li>
+    <a href="../architecture/deployment-view/" class="dropdown-item">Deployment View</a>
+</li>
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">ADRs</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../architecture/adr/adr-001-hardware-software-separation/" class="dropdown-item">ADR-001</a>
+</li>
+            
+<li>
+    <a href="../architecture/adr/adr-002-ephemeral-redis-buffering/" class="dropdown-item">ADR-002</a>
+</li>
+            
+<li>
+    <a href="../architecture/adr/adr-003-microservice-decomposition/" class="dropdown-item">ADR-003</a>
+</li>
+    </ul>
+  </li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Development</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../development-process/" class="dropdown-item">Development Process</a>
+</li>
+                                    
+<li>
+    <a href="../quality-requirements/" class="dropdown-item">Quality Requirements</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/SWP-47/traffic-processing-platform/edit/master/docs/process-requirements.md" class="nav-link">Edit on SWP-47/traffic-processing-platform
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#process-requirements" class="nav-link">Process Requirements</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#product-backlog-items-and-scope" class="nav-link">Product Backlog Items and Scope</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#product-goal-and-product-backlog-management" class="nav-link">Product Goal and Product Backlog Management</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#user-stories-requirement-status-and-decomposition" class="nav-link">User Stories, Requirement Status, and Decomposition</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#acceptance-criteria" class="nav-link">Acceptance Criteria</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#traceability-and-user-story-index" class="nav-link">Traceability and User-Story Index</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#sprint-cadence-and-scrum-events" class="nav-link">Sprint Cadence and Scrum Events</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#sprint-planning-readiness-and-estimation" class="nav-link">Sprint Planning, Readiness, and Estimation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#sprint-roles-and-evidence" class="nav-link">Sprint Roles and Evidence</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#work-status" class="nav-link">Work Status</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#definition-of-done" class="nav-link">Definition of Done</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#roadmap" class="nav-link">Roadmap</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="process-requirements">Process Requirements<a class="headerlink" href="#process-requirements" title="Permanent link">&para;</a></h1>
+<p>These requirements define the reusable Scrum, workflow, and product-management expectations used across the course. Assignment documents may add stricter or more specific requirements for a particular week, but they must not redefine the same shared terms differently.</p>
+<h2 id="product-backlog-items-and-scope">Product Backlog Items and Scope<a class="headerlink" href="#product-backlog-items-and-scope" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p>A Product Backlog item (PBI) is an issue or equivalent tracked item representing product work that improves the product.</p>
+</li>
+<li>
+<p>PBIs may include user stories, bugs, technical work, infrastructure work, research, design, testing, deployment, and maintained product documentation or maintained workflow documentation that improves the product repository.</p>
+</li>
+<li>
+<p>A Course Task is tracked work whose primary purpose is course reporting, grading evidence, submission packaging, or course administration rather than improving the product.</p>
+</li>
+<li>
+<p>Course Tasks are not PBIs even if the team tracks them in the same platform.</p>
+</li>
+<li>
+<p>By default, artifacts under <code>reports/</code> are Course Task artifacts.</p>
+</li>
+<li>
+<p>Maintained artifacts such as <code>docs/user-stories.md</code>, <code>docs/roadmap.md</code>, <code>docs/definition-of-done.md</code>, root setup documentation, deployment/run instructions, interface specifications, and <code>CHANGELOG.md</code> are not Course Tasks when they improve the maintained product repository.</p>
+</li>
+</ol>
+<h2 id="product-goal-and-product-backlog-management">Product Goal and Product Backlog Management<a class="headerlink" href="#product-goal-and-product-backlog-management" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p>Maintain a Product Goal as the longer-lived target for the product. The Product Backlog should evolve toward that goal.</p>
+</li>
+<li>
+<p>Maintain one current Product Backlog that acts as the single ordered source of product work for the team.</p>
+</li>
+<li>
+<p>Product Backlog refinement is an ongoing recurring activity. Refine the backlog throughout the Sprint instead of postponing all clarification until Sprint Planning.</p>
+</li>
+<li>
+<p>The Product Backlog must satisfy <strong>DEEP</strong>:</p>
+</li>
+<li>
+<p><strong>Detailed appropriately:</strong> near-term and high-priority PBIs are more detailed than distant PBIs.</p>
+</li>
+<li><strong>Emergent:</strong> add, remove, split, merge, clarify, and reorder PBIs as the team learns.</li>
+<li><strong>Estimated:</strong> sufficiently understood PBIs are estimated before the team commits to them in a Sprint.</li>
+<li>
+<p><strong>Prioritized:</strong> the backlog is ordered so the most valuable or important work is considered first.</p>
+</li>
+<li>
+<p>Keep enough refined backlog near the top that the next Sprint can be planned without major preventable ambiguity.</p>
+</li>
+</ol>
+<h2 id="user-stories-requirement-status-and-decomposition">User Stories, Requirement Status, and Decomposition<a class="headerlink" href="#user-stories-requirement-status-and-decomposition" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p>A user-story issue must contain:</p>
+</li>
+<li>
+<p>The stable user-story ID where applicable</p>
+</li>
+<li>The user-story statement</li>
+<li>Relevant notes, constraints, assumptions, or open questions</li>
+<li>
+<p>Acceptance criteria</p>
+</li>
+<li>
+<p>Use stable user-story IDs consistently once assigned. Do not change, reuse, or reassign them.</p>
+</li>
+<li>
+<p>Requirement status for a user story is one of:</p>
+</li>
+<li>
+<p><code>Active</code> - an accepted, current product requirement</p>
+</li>
+<li>
+<p><code>Removed</code> - no longer considered a current product requirement</p>
+</li>
+<li>
+<p>Preserve the stable IDs and history of removed stories. Explain why they were removed instead of deleting the requirement history.</p>
+</li>
+<li>
+<p>Do not use a user-story issue as the main container for implementation subtasks.</p>
+</li>
+<li>
+<p>When implementation, design, testing, deployment, or other supporting work needs to be tracked explicitly, create separate linked PBIs.</p>
+</li>
+<li>
+<p>A separate linked PBI is required when the work needs its own implementer responsibility, review, acceptance criteria, estimation, or verification evidence.</p>
+</li>
+<li>
+<p>User stories selected for a Sprint must be small enough to be completed within that Sprint. If a story is too large or unclear, split or refine it before Sprint Planning while preserving traceability.</p>
+</li>
+<li>
+<p>A user story is completed only when all linked supporting PBIs required to satisfy its acceptance criteria are completed. A user-story issue does not require its own dedicated implementation PR/MR.</p>
+</li>
+</ol>
+<h2 id="acceptance-criteria">Acceptance Criteria<a class="headerlink" href="#acceptance-criteria" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p>Use <code>acceptance criteria</code> terminology for PBIs.</p>
+</li>
+<li>
+<p>Acceptance criteria must be specific, observable, and testable.</p>
+</li>
+<li>
+<p>Given/When/Then (<a href="https://cucumber.io/docs/gherkin/reference/">Gherkin</a>) is recommended for behavioral scenarios, but any clear and testable format is acceptable.</p>
+</li>
+<li>
+<p>A PBI that is expected to be implemented, reviewed, or verified must not be treated as ready for execution without acceptance criteria appropriate to that work.</p>
+</li>
+</ol>
+<h2 id="traceability-and-user-story-index">Traceability and User-Story Index<a class="headerlink" href="#traceability-and-user-story-index" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p>Traceability means preserving the links between a requirement or user story and the downstream work and evidence that implement and verify it.</p>
+</li>
+<li>
+<p>At minimum, maintain traceability between:</p>
+</li>
+<li>
+<p>Stable user-story IDs</p>
+</li>
+<li>User-story issues</li>
+<li>Linked supporting PBIs where applicable</li>
+<li>Sprint assignment where applicable</li>
+<li>Related PRs/MRs</li>
+<li>
+<p>Verification evidence</p>
+</li>
+<li>
+<p>When a story is removed, split, superseded, or replaced, preserve its history and explain the change instead of deleting it.</p>
+</li>
+<li>
+<p>When a team maintains a current user-story index such as <code>docs/user-stories.md</code>, that index is the authoritative registry of stable user-story IDs and current user-story membership, while the issue tracker remains the authoritative source for live issue details and execution state.</p>
+</li>
+<li>
+<p>A current user-story index should mirror enough live issue metadata for quick traceability, such as the issue link, requirement status, current Work Status, and Sprint assignment where applicable.</p>
+</li>
+</ol>
+<h2 id="sprint-cadence-and-scrum-events">Sprint Cadence and Scrum Events<a class="headerlink" href="#sprint-cadence-and-scrum-events" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p>Use Sprints as the recurring container for development work, inspection, and adaptation.</p>
+</li>
+<li>
+<p>Unless a TA explicitly approves another cadence, a Sprint runs from Monday to Sunday.</p>
+</li>
+<li>
+<p>Each Sprint must have a Sprint Goal: a short value-focused statement describing what the team intends to deliver and why that Sprint is worthwhile.</p>
+</li>
+<li>
+<p>Sprint Planning must produce:</p>
+</li>
+<li>
+<p>A Sprint Goal</p>
+</li>
+<li>The selected Sprint PBIs</li>
+<li>
+<p>A workable plan to deliver them</p>
+</li>
+<li>
+<p>The Sprint Backlog is the set of Sprint-selected PBIs plus the current delivery plan needed to achieve the Sprint Goal.</p>
+</li>
+<li>
+<p>Use the Sprint milestone or equivalent Sprint container consistently so the Sprint Backlog remains inspectable.</p>
+</li>
+<li>
+<p>Hold a Daily Scrum or equivalent daily developer coordination event during the Sprint to inspect progress toward the Sprint Goal and adapt the plan for the next day of work.</p>
+</li>
+<li>
+<p>Conduct a Sprint Review with relevant stakeholders to inspect the delivered outcome, discuss what changed, collect feedback, and adapt the Product Backlog as needed.</p>
+</li>
+<li>
+<p>Conduct a Sprint Retrospective after the Sprint Review and before the next Sprint Planning. Identify concrete improvements to quality, collaboration, tools, or process, and carry the most useful improvements into the next Sprint.</p>
+</li>
+</ol>
+<h2 id="sprint-planning-readiness-and-estimation">Sprint Planning, Readiness, and Estimation<a class="headerlink" href="#sprint-planning-readiness-and-estimation" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Estimate PBIs using Story Points and the Modified Fibonacci scale:</li>
+</ol>
+<p><code>text
+   1, 2, 3, 5, 8, 13, 20, 40, 100</code></p>
+<ol>
+<li>
+<p>Estimation must be collaborative. Planning Poker is recommended, but another collaborative relative-estimation process is acceptable.</p>
+</li>
+<li>
+<p>If the team cannot estimate a PBI confidently, split or clarify it before committing to it in a Sprint.</p>
+</li>
+<li>
+<p>A Sprint-selected PBI must be sufficiently ready to start. At minimum, it must have:</p>
+</li>
+<li>
+<p>A clear expected outcome</p>
+</li>
+<li>The required description and context</li>
+<li>Acceptance criteria</li>
+<li>An estimate</li>
+<li>An implementer</li>
+<li>
+<p>A different reviewer</p>
+</li>
+<li>
+<p>A Sprint-selected user story may require additional linked supporting PBIs before it is ready for execution.</p>
+</li>
+<li>
+<p>A Sprint Goal should be a short value-focused statement that makes it possible to judge at the end of the Sprint whether the intended outcome was achieved.</p>
+</li>
+</ol>
+<h2 id="sprint-roles-and-evidence">Sprint Roles and Evidence<a class="headerlink" href="#sprint-roles-and-evidence" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p>Each Sprint-tracked PBI must name:</p>
+</li>
+<li>
+<p>One implementer responsible for doing the work</p>
+</li>
+<li>
+<p>One different reviewer responsible for reviewing the work and confirming it is ready for completion</p>
+</li>
+<li>
+<p>If the selected platform does not provide a suitable native field for the reviewer, record that role in the issue template or issue body.</p>
+</li>
+<li>
+<p>Each issue must describe the expected outcome clearly.</p>
+</li>
+<li>
+<p>A linked PR/MR is the default implementation evidence for a change.</p>
+</li>
+<li>
+<p>Explicit named deliverables are required only when the expected evidence is not obvious from a normal linked PR/MR, such as a design artifact, API specification, deployment artifact, or documentation artifact.</p>
+</li>
+<li>
+<p>Implementation PRs/MRs normally link to the supporting PBIs that do the work. They do not need to link directly to the parent user-story issue when traceability is preserved through linked supporting PBIs, related PRs/MRs, and verification evidence.</p>
+</li>
+</ol>
+<h2 id="work-status">Work Status<a class="headerlink" href="#work-status" title="Permanent link">&para;</a></h2>
+<p>Use the following Work Status values consistently wherever the course requires issue status tracking:</p>
+<ul>
+<li><code>To Do</code> - the PBI remains in the Product Backlog and is not currently ready to start</li>
+<li><code>Ready</code> - the PBI is selected for the current Sprint, assigned, estimated, has the required description and acceptance criteria, and can be started without major unanswered questions</li>
+<li><code>In Progress</code> - work has started on the PBI</li>
+<li><code>Review</code> - the current implementation is ready for review, and the issue-linked PR/MR is open or the review is actively happening</li>
+<li><code>Done</code> - for a supporting or implementation PBI, the issue acceptance criteria are satisfied, the team Definition of Done is satisfied, the issue-linked PR/MR is merged into the protected default branch, and the PBI is complete for the Sprint; for a user-story issue, the story acceptance criteria are satisfied, the team Definition of Done is satisfied, and all linked supporting PBIs required to satisfy the story's acceptance criteria are reviewed, merged, verified, and marked <code>Done</code></li>
+</ul>
+<h2 id="definition-of-done">Definition of Done<a class="headerlink" href="#definition-of-done" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Every team must maintain a team-specific Definition of Done in:</li>
+</ol>
+<p><code>text
+   docs/definition-of-done.md</code></p>
+<ol>
+<li>
+<p>The team Definition of Done defines the shared minimum completion standard for work in that repository.</p>
+</li>
+<li>
+<p>A PBI may be marked <code>Done</code> only when both:</p>
+</li>
+<li>
+<p>Its issue-specific acceptance criteria are satisfied</p>
+</li>
+<li>
+<p>The team Definition of Done is satisfied</p>
+</li>
+<li>
+<p>The team Definition of Done should, at minimum, require:</p>
+</li>
+<li>
+<p>All issue acceptance criteria are satisfied</p>
+</li>
+<li>The work is reviewed by another team member</li>
+<li>For user stories, the linked supporting PBIs provide the required implementation, review, and verification evidence</li>
+<li>Required tests or checks pass</li>
+<li>
+<p>Verification evidence is preserved in the normal workflow artifacts</p>
+</li>
+<li>
+<p>For supporting or implementation PBIs, <code>Done</code> normally also means the issue-linked PR/MR is merged into the protected default branch.</p>
+</li>
+</ol>
+<h2 id="roadmap">Roadmap<a class="headerlink" href="#roadmap" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Every team must maintain a current roadmap in:</li>
+</ol>
+<p><code>text
+   docs/roadmap.md</code></p>
+<ol>
+<li>
+<p><code>docs/roadmap.md</code> is the Sprint-by-Sprint delivery plan. It must not duplicate the full user-story index or repeat full mutable issue content that already lives in the issue tracker.</p>
+</li>
+<li>
+<p>Structure the roadmap as a list of Sprints. For each Sprint, include:</p>
+</li>
+<li>
+<p>Sprint name or number</p>
+</li>
+<li>Link to the corresponding Sprint milestone</li>
+<li>Sprint start and finish dates</li>
+<li>Sprint Goal</li>
+<li>Short focus or expected outcome statement</li>
+<li>
+<p>Linked planned items for that Sprint, such as user stories and supporting PBIs</p>
+</li>
+<li>
+<p>Keep the roadmap lightweight and traceable:</p>
+</li>
+<li>
+<p>Use links to issues or other tracked PBIs instead of copying their full descriptions.</p>
+</li>
+<li>
+<p>Summarize the intended Sprint outcome briefly instead of restating backlog metadata such as MoSCoW priority, Requirement status, Work Status, or full acceptance criteria.</p>
+</li>
+<li>
+<p>Update the roadmap as the product direction and Product Backlog evolve.</p>
+</li>
+</ol></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../js/base.js"></script>
+        <script src="../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

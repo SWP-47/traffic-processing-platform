@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="SWP-47 Team">
+        <link rel="canonical" href="https://swp-47.github.io/traffic-processing-platform/system-documentation/">
+        <link rel="shortcut icon" href="../img/favicon.ico">
+        <title>System Architecture &amp; Data Flow Specification (MVP v2) - Traffic Processing Platform Documentation</title>
+        <link href="../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../css/brands.min.css" rel="stylesheet">
+        <link href="../css/solid.min.css" rel="stylesheet">
+        <link href="../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="..">Traffic Processing Platform Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href=".." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Architecture</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../architecture/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../architecture/static-view/" class="dropdown-item">Static View</a>
+</li>
+                                    
+<li>
+    <a href="../architecture/dynamic-view/" class="dropdown-item">Dynamic View</a>
+</li>
+                                    
+<li>
+    <a href="../architecture/deployment-view/" class="dropdown-item">Deployment View</a>
+</li>
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">ADRs</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../architecture/adr/adr-001-hardware-software-separation/" class="dropdown-item">ADR-001</a>
+</li>
+            
+<li>
+    <a href="../architecture/adr/adr-002-ephemeral-redis-buffering/" class="dropdown-item">ADR-002</a>
+</li>
+            
+<li>
+    <a href="../architecture/adr/adr-003-microservice-decomposition/" class="dropdown-item">ADR-003</a>
+</li>
+    </ul>
+  </li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Development</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../development-process/" class="dropdown-item">Development Process</a>
+</li>
+                                    
+<li>
+    <a href="../quality-requirements/" class="dropdown-item">Quality Requirements</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/SWP-47/traffic-processing-platform/edit/master/docs/system-documentation.md" class="nav-link">Edit on SWP-47/traffic-processing-platform
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#system-architecture-data-flow-specification-mvp-v2" class="nav-link">System Architecture &amp; Data Flow Specification (MVP v2)</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#1-overview" class="nav-link">1. Overview</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#2-component-architecture-conceptual-responsibilities" class="nav-link">2. Component Architecture &amp; Conceptual Responsibilities</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#3-data-flow-sequence-diagrams" class="nav-link">3. Data Flow &amp; Sequence Diagrams</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#4-protocol-specifications" class="nav-link">4. Protocol Specifications</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#5-database-schema-timescaledb" class="nav-link">5. Database Schema (TimescaleDB)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#6-reliability-edge-cases" class="nav-link">6. Reliability &amp; Edge Cases</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#7-security-access-control-us-012-us-014" class="nav-link">7. Security &amp; Access Control (US-012, US-014)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#8-rest-api-endpoints" class="nav-link">8. REST API Endpoints</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#9-redis-architecture-state-management" class="nav-link">9. Redis Architecture &amp; State Management</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="system-architecture-data-flow-specification-mvp-v2">System Architecture &amp; Data Flow Specification (MVP v2)<a class="headerlink" href="#system-architecture-data-flow-specification-mvp-v2" title="Permanent link">&para;</a></h1>
+<h2 id="1-overview">1. Overview<a class="headerlink" href="#1-overview" title="Permanent link">&para;</a></h2>
+<p>The architecture is strictly decoupled into a hardware-accelerated data plane (for packet forwarding) and a software-defined telemetry side-channel (for monitoring). Failure in monitoring components must not impact the core packet forwarding (US-005, US-007, US-009).</p>
+<p>The system supports multiple Communication Nodes (CNs) feeding a single Control and Status Server (CnSS), and multiple Management User Interfaces (MUIs) consuming data from the same CnSS.</p>
+<p>The CnSS persists <strong>raw packet metadata</strong> (IPs, ports, directions) into a Time-Series Database (TimescaleDB). Real-time metrics for the MUI are aggregated via periodic SQL queries. This provides historical data, prevents memory leaks during traffic spikes, and allows for flexible future reporting.</p>
+<p>To ensure horizontal scalability, fault isolation, and high-performance telemetry ingestion, the CnSS is strictly decoupled into isolated, containerized Docker microservices. <strong>Redis</strong> acts as the central nervous system for ephemeral buffering, state synchronization, and Pub/Sub messaging, operating without persistence (no RDB/AOF) to maximize IOPS. TimescaleDB remains the single source of truth for persistent data.</p>
+<h2 id="2-component-architecture-conceptual-responsibilities">2. Component Architecture &amp; Conceptual Responsibilities<a class="headerlink" href="#2-component-architecture-conceptual-responsibilities" title="Permanent link">&para;</a></h2>
+<h3 id="21-traffic-processor-tp">2.1. Traffic Processor (TP)<a class="headerlink" href="#21-traffic-processor-tp" title="Permanent link">&para;</a></h3>
+<p><strong>Role:</strong> Core packet forwarding and telemetry extraction engine.</p>
+<p><strong>Responsibilities:</strong></p>
+<ul>
+<li><strong>Data Plane (Passthrough):</strong> Operates as a transparent inline bridge, passing network packets in both directions at wire speed with negligible latency.</li>
+<li><strong>Telemetry Plane (Extraction):</strong> Independently observes the passing traffic, extracts packet metadata, and generates a high-frequency stream of raw telemetry.</li>
+<li><strong>Local Dispatch:</strong> Pushes the raw telemetry stream to the local Communication Node (CN) for further processing.</li>
+</ul>
+<h3 id="22-communication-node-cn">2.2. Communication Node (CN)<a class="headerlink" href="#22-communication-node-cn" title="Permanent link">&para;</a></h3>
+<p><strong>Role:</strong> Local telemetry batching and forwarding node.</p>
+<p><strong>Responsibilities:</strong></p>
+<ul>
+<li><strong>Ingestion:</strong> Receives the high-frequency stream of raw telemetry from the local TP.</li>
+<li><strong>Buffering &amp; Batching:</strong> Buffers incoming raw packet metadata and groups them into fixed, small time windows (e.g., <code>window_ms: 50</code>).</li>
+<li><strong>Remote Dispatch:</strong> Transforms the batch into a <code>TelemetryBatch</code> payload and forwards it to the remote CnSS via UDP.</li>
+<li><strong>UDP MTU Constraint:</strong> CN is strictly responsible for ensuring the serialized JSON payload does not exceed the network MTU (recommended <code>&lt; 1400 bytes</code>). CN must dynamically or statically adjust <code>window_ms</code> to prevent IP fragmentation and silent UDP drops.</li>
+<li><strong>Channel Identity:</strong> Each CN is configured with a unique <code>channel_id</code>, which is included in every batch.</li>
+</ul>
+<h3 id="23-control-and-status-server-cnss">2.3. Control and Status Server (CnSS)<a class="headerlink" href="#23-control-and-status-server-cnss" title="Permanent link">&para;</a></h3>
+<p>The CnSS is deployed as a set of Docker containers. If any container crashes, Docker's <code>restart: always</code> policy ensures immediate recovery without affecting the core network forwarding plane.</p>
+<h4 id="231-ingestion-worker-udp-listener-buffer-manager">2.3.1. Ingestion Worker (UDP Listener &amp; Buffer Manager)<a class="headerlink" href="#231-ingestion-worker-udp-listener-buffer-manager" title="Permanent link">&para;</a></h4>
+<p><strong>Role</strong>: High-performance telemetry ingestion, sequence tracking, and database buffering.</p>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li><strong>UDP Reception</strong>: Listens for <code>TelemetryBatch</code> JSON payloads. Enforces MTU constraints (&lt; 1400 bytes).</li>
+<li><strong>Sequence Tracking</strong>: Maintains <code>last_sequence</code> per <code>channel_id</code> in <strong>Redis</strong> (<code>channel:seq:{channel_id}</code>). If <code>incoming_sequence &lt;= last_sequence</code>, it ignores (handles out-of-order). If <code>last_sequence - incoming_sequence &gt; 1,000,000</code>, it treats it as a CN reboot/reset and forcefully updates the baseline.</li>
+<li><strong>Redis State Buffering</strong>: Updates <code>HSET channel:state:{channel_id}</code> (TTL 6s) <strong>ONLY IF</strong> <code>len(packets) &gt; 0</code>. Accumulates drops via <code>HINCRBY ... dropped_delta</code>.</li>
+<li><strong>Capped List Buffering</strong>: Pushes raw metadata into Redis List (<code>udp:buffer:{channel_id}</code>). Uses <code>LTRIM</code> to cap the list (e.g., 100,000 items) to prevent OOM crashes.</li>
+<li><strong>Background Flush</strong>: Periodically flushes the Redis buffer into the <code>packet_flows</code> TimescaleDB hypertable using batch <code>INSERT</code> operations.</li>
+</ul>
+<h4 id="232-reporting-worker-background-aggregator">2.3.2. Reporting Worker (Background Aggregator)<a class="headerlink" href="#232-reporting-worker-background-aggregator" title="Permanent link">&para;</a></h4>
+<p><strong>Role</strong>: Periodic metric aggregation and real-time event publishing.</p>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li><strong>Subscription Polling</strong>: Every 1 second, reads active subscription hashes from Redis Set (<code>sub:active_hashes</code>).</li>
+<li><strong>Optimization</strong>: Checks <code>sub:listeners:{query_hash}</code>. If no WebSocket clients are listening, the SQL query is skipped.</li>
+<li><strong>Dynamic SQL &amp; Pub/Sub</strong>: Generates safe, parameterized SQL (using strict whitelists for <code>sort_by</code>/<code>sort_order</code> to prevent injection), executes it, and publishes results to Redis Pub/Sub (<code>ws:push:{query_hash}</code>).</li>
+<li><strong>Atomic Flush &amp; Timeout</strong>: Uses a Lua script to atomically read/reset <code>dropped_delta</code> from Redis. Executes a single SQL query to mass-update inactive channels: <code>UPDATE channels SET is_active = FALSE WHERE last_activity_at &lt; NOW() - INTERVAL '5 seconds'</code>.</li>
+</ul>
+<h4 id="233-websocket-service-client-gateway">2.3.3. WebSocket Service (Client Gateway)<a class="headerlink" href="#233-websocket-service-client-gateway" title="Permanent link">&para;</a></h4>
+<p><strong>Role</strong>: Persistent client connection management and subscription routing.</p>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li><strong>Connection Lifecycle</strong>: Validates JWT, checks <code>jti</code> against Redis revocation set (<code>jwt:revoked</code>), and verifies channel scope. Returns specific close codes (<code>4001</code>-<code>4004</code>) on failure.</li>
+<li><strong>Subscription Management</strong>: Receives JSON control messages, generates a deterministic <code>query_hash</code> (SHA256), and registers it in Redis (<code>sub:registry:{hash}</code>).</li>
+<li><strong>Initial Snapshot</strong>: Executes an immediate read-only query against TimescaleDB to provide data without waiting for the 1s Reporting Worker tick.</li>
+<li><strong>Session Heartbeat</strong>: Refreshes TTL (10s) for <code>ws:session:{ws_client_id}</code> every 5 seconds to prevent orphaned subscriptions.</li>
+<li><strong>Scope Validation</strong>: Rejects subscriptions if the <code>channel_id</code> in the control message differs from the URL <code>channel_id</code> (Close code 4003).</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Reason</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>4001</code></td>
+<td><code>invalid_token</code></td>
+<td>Token is missing, malformed, expired, or has invalid signature.</td>
+</tr>
+<tr>
+<td><code>4002</code></td>
+<td><code>missing_channel</code></td>
+<td>The <code>channel_id</code> query parameter is entirely absent from the WebSocket request URL.</td>
+</tr>
+<tr>
+<td><code>4003</code></td>
+<td><code>channel_forbidden</code></td>
+<td>Token is valid, but the user does not have access to the requested channel.</td>
+</tr>
+<tr>
+<td><code>4004</code></td>
+<td><code>channel_not_found</code> or <code>target_not_found</code></td>
+<td>The <code>channel_id</code> query parameter is present, but its value does not match any known or active channel in the CnSS registry. Or the value of target dois not match any known subscribtions in the CnSS</td>
+</tr>
+<tr>
+<td><code>1011</code></td>
+<td><code>internal_error</code></td>
+<td>Unexpected server error.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="234-rest-api-auth-service">2.3.4. REST API &amp; Auth Service<a class="headerlink" href="#234-rest-api-auth-service" title="Permanent link">&para;</a></h4>
+<p><strong>Role</strong>: HTTP gateway, identity management, and historical data retrieval.</p>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li><strong>Authentication</strong>: Validates credentials using <strong>Argon2id</strong> password hashes. Issues JWTs containing <code>role</code>, <code>scope</code>, and <code>jti</code>.</li>
+<li><strong>Zero-Latency Status</strong>: Serves <code>/channels</code> and <code>/status</code> by reading directly from the persistent <code>channels</code> table, avoiding heavy <code>MAX(time)</code> queries.</li>
+<li><strong>History API</strong>: Calculates optimal <code>time_bucket</code> intervals for historical line chart data.</li>
+</ul>
+<h3 id="24-management-user-interface-mui">2.4. Management User Interface (MUI)<a class="headerlink" href="#24-management-user-interface-mui" title="Permanent link">&para;</a></h3>
+<p><strong>Role:</strong> Frontend dashboard for real-time visualization.</p>
+<p><strong>Responsibilities:</strong></p>
+<ul>
+<li><strong>Authentication &amp; Discovery:</strong> Prompts for credentials, fetches accessible channels.</li>
+<li><strong>WebSocket Connection:</strong> Establishes a persistent WebSocket connection scoped to the selected <code>channel_id</code>.</li>
+<li><strong>Visualization:</strong> Reactively renders binary channel activity indicators and bidirectional packet volume graphs.</li>
+</ul>
+<h2 id="3-data-flow-sequence-diagrams">3. Data Flow &amp; Sequence Diagrams<a class="headerlink" href="#3-data-flow-sequence-diagrams" title="Permanent link">&para;</a></h2>
+<h3 id="31-authentication-channel-selection-flow">3.1. Authentication &amp; Channel Selection Flow<a class="headerlink" href="#31-authentication-channel-selection-flow" title="Permanent link">&para;</a></h3>
+<p>This diagram illustrates the authentication process and how MUI discovers and selects a channel to monitor.</p>
+<pre><code class="language-mermaid">sequenceDiagram
+    autonumber
+    actor Admin as System Administrator
+    participant MUI as Management UI (MUI)
+    participant CnSS as Control &amp; Status Server (CnSS)
+    participant Redis as Redis
+    participant DB as TimescaleDB
+    participant WS as WebSocket Service
+    participant Report as Reporting Worker
+
+    Admin-&gt;&gt;MUI: Enter username and password
+    MUI-&gt;&gt;CnSS: POST /api/v1/auth/login
+    CnSS-&gt;&gt;CnSS: Validate credentials (Argon2id)
+    CnSS--&gt;MUI: 200 OK { &quot;access_token&quot;: &quot;eyJ...&quot; }
+
+    Note over MUI,CnSS: --- Channel Discovery (REST) ---
+    MUI-&gt;&gt;CnSS: GET /api/v1/channels (Bearer token)
+    CnSS-&gt;&gt;Redis: CHECK jti IN jwt:revoked
+    Redis--&gt;&gt;CnSS: Not found (Valid)
+    CnSS-&gt;&gt;DB: SELECT channels (filtered by scope)
+    DB--&gt;&gt;CnSS: Channel list
+    CnSS--&gt;MUI: 200 OK { &quot;channels&quot;: [...] }
+
+    Admin-&gt;&gt;MUI: Select channel &quot;bridge-berlin&quot;
+
+    Note over MUI,WS: --- WebSocket Connection &amp; Subscription ---
+    MUI-&gt;&gt;WS: WS connect wss://.../telemetry?token=...&amp;channel_id=bridge-berlin
+    WS-&gt;&gt;Redis: CHECK jti IN jwt:revoked &amp; Validate Scope
+    WS--&gt;&gt;MUI: 101 Switching Protocols
+
+    MUI-&gt;&gt;WS: WS Send: { &quot;action&quot;: &quot;subscribe&quot;, &quot;target&quot;: &quot;telemetry&quot;, &quot;params&quot;: {} }
+    WS-&gt;&gt;WS: Compute query_hash (SHA256)
+    WS-&gt;&gt;Redis: SET sub:registry:{hash} (No TTL)
+    WS-&gt;&gt;Redis: SADD sub:listeners:{hash} {client_id}
+    WS-&gt;&gt;Redis: SADD sub:active_hashes {hash}
+    WS-&gt;&gt;Redis: SADD channel:subs:bridge-berlin {hash}
+
+    Note over WS,DB: Initial Snapshot (Race-condition safe)
+    WS-&gt;&gt;Redis: SUBSCRIBE ws:push:{hash}
+    WS-&gt;&gt;DB: SELECT aggregated metrics (from Continuous Aggregate)
+    DB--&gt;&gt;WS: Telemetry data
+    WS--&gt;&gt;MUI: WS Push: telemetry_update (Initial Snapshot)
+</code></pre>
+<h3 id="32-multi-channel-end-to-end-telemetry-pipeline-happy-path">3.2. Multi-Channel End-to-End Telemetry Pipeline (Happy Path)<a class="headerlink" href="#32-multi-channel-end-to-end-telemetry-pipeline-happy-path" title="Permanent link">&para;</a></h3>
+<p>This diagram illustrates the new flow: raw data ingestion to DB, and periodic aggregation to WS.</p>
+<pre><code class="language-mermaid">sequenceDiagram
+    autonumber
+    participant CN as Communication Node
+    participant Ingest as CnSS Ingestion Worker
+    participant Flusher as Ingest Background Flusher
+    participant Redis as Redis (Ephemeral Buffer)
+    participant DB as TimescaleDB
+    participant Report as CnSS Reporting Worker
+    participant WS as CnSS WebSocket Service
+    participant MUI as MUI
+
+    CN-&gt;&gt;Ingest: UDP TelemetryBatch
+    Ingest-&gt;&gt;Redis: Update channel:seq &amp; channel:state
+    Ingest-&gt;&gt;Redis: LPUSH udp:buffer:{channel_id} (LTRIM if &gt; 100k)
+    alt Drops detected
+        Ingest-&gt;&gt;Redis: LPUSH udp:drops:{channel_id} &lt;dropped_count&gt;
+    end
+
+    Note over Flusher,DB: Background Flushing (Async)
+    Flusher-&gt;&gt;Redis: LRANGE/LPOP udp:buffer:{channel_id}
+    Flusher-&gt;&gt;DB: Batch INSERT into packet_flows
+
+    Note over Report: Reporting Worker ticks (1Hz)
+    Report-&gt;&gt;Redis: SMEMBERS sub:active_hashes
+    Report-&gt;&gt;Redis: Validate listeners (EXISTS ws:session:{id})
+    Report-&gt;&gt;Redis: LRANGE udp:drops:{channel_id} 0 -1
+    Report-&gt;&gt;DB: UPDATE channels (is_active=TRUE, dropped=sum)
+    DB--&gt;&gt;Report: Commit OK
+    Report-&gt;&gt;Redis: LTRIM/DEL udp:drops:{channel_id}
+
+    Report-&gt;&gt;DB: SELECT from telemetry_1s (Continuous Aggregate)
+    Report-&gt;&gt;Redis: PUBLISH ws:push:{query_hash}
+    Redis--&gt;&gt;WS: Pub/Sub Message
+    WS-&gt;&gt;MUI: WS Push telemetry_update
+</code></pre>
+<h3 id="33-channel-timeout-fallback-mechanism-per-channel">3.3. Channel Timeout &amp; Fallback Mechanism (Per-Channel)<a class="headerlink" href="#33-channel-timeout-fallback-mechanism-per-channel" title="Permanent link">&para;</a></h3>
+<pre><code class="language-mermaid">sequenceDiagram
+    participant Report as CnSS Reporting Worker
+    participant DB as TimescaleDB
+    participant Redis as Redis
+    participant WS as CnSS WebSocket Service
+    participant MUI as MUI
+
+    Note over Report: Timeout Check (Every 1s)
+    Report-&gt;&gt;DB: UPDATE channels SET is_active = FALSE WHERE last_activity_at &lt; NOW() - 5s
+    DB--&gt;&gt;Report: Updated rows (List of timed-out channel_ids)
+
+    loop For each timed-out channel_id
+        Report-&gt;&gt;Redis: SMEMBERS channel:subs:{channel_id}
+        Redis--&gt;&gt;Report: List of affected query_hashes
+
+        loop For each query_hash
+            Report-&gt;&gt;Redis: PUBLISH ws:push:{hash} (is_active: false)
+            Redis--&gt;&gt;WS: Pub/Sub Message
+            WS-&gt;&gt;MUI: WS Push: { &quot;is_active&quot;: false }
+        end
+    end
+</code></pre>
+<h3 id="34-line-chart-history-retrieval-rest">3.4. Line Chart History Retrieval (REST)<a class="headerlink" href="#34-line-chart-history-retrieval-rest" title="Permanent link">&para;</a></h3>
+<p>This diagram illustrates how MUI lazy-loads historical data for the Line Chart.</p>
+<pre><code class="language-mermaid">sequenceDiagram
+    autonumber
+    actor Admin as System Administrator
+    participant MUI as Management UI (MUI)
+    participant CnSS as Control &amp; Status Server (CnSS)
+    participant DB as TimescaleDB
+
+    Admin-&gt;&gt;MUI: Select time period (e.g., &quot;24h&quot;)
+    MUI-&gt;&gt;CnSS: GET /api/v1/channel/{channel_id}/history?period=24h &lt;br/&gt; Authorization: Bearer ...
+    CnSS-&gt;&gt;CnSS: Calculate optimal time_bucket interval (e.g., 1m)
+    CnSS-&gt;&gt;DB: SELECT time_bucket(...), SUM(direction=0), SUM(direction=1) ...
+    DB--&gt;&gt;CnSS: Aggregated buckets
+    CnSS--&gt;&gt;MUI: 200 OK { points: [{timestamp, packets_in_per_sec, packets_out_per_sec, is_active}] }
+</code></pre>
+<h3 id="35-websocket-subscription-for-host-tables-lanwan">3.5. WebSocket Subscription for Host Tables (LAN/WAN)<a class="headerlink" href="#35-websocket-subscription-for-host-tables-lanwan" title="Permanent link">&para;</a></h3>
+<p>This diagram illustrates the "Initial Snapshot on Subscribe" pattern for real-time host tables.</p>
+<pre><code class="language-mermaid">sequenceDiagram
+    autonumber
+    participant MUI as Management UI
+    participant WS as CnSS WebSocket Service
+    participant Redis as Redis
+    participant DB as TimescaleDB
+    participant Report as CnSS Reporting Worker
+
+    MUI-&gt;&gt;WS: WS Send: { &quot;action&quot;: &quot;subscribe&quot;, &quot;target&quot;: &quot;lan_hosts&quot;, &quot;params&quot;: {...} }
+    WS-&gt;&gt;WS: Compute query_hash (SHA256)
+    WS-&gt;&gt;Redis: SET sub:registry:{hash}
+    WS-&gt;&gt;Redis: SADD sub:listeners:{hash} {client_id}
+    WS-&gt;&gt;Redis: SADD sub:active_hashes {hash}
+
+    Note over WS,DB: Initial Snapshot (Race-condition safe order)
+    WS-&gt;&gt;Redis: SUBSCRIBE ws:push:{hash}
+    WS-&gt;&gt;DB: SELECT Top LAN Hosts (from Continuous Aggregate)
+    DB--&gt;&gt;WS: Top Hosts data
+    WS--&gt;&gt;MUI: WS Push: hosts_update (Initial Snapshot)
+
+    Note over Report: Reporting Worker ticks (1s later)
+    Report-&gt;&gt;Redis: SMEMBERS sub:active_hashes
+    Report-&gt;&gt;Redis: Validate listeners
+    Report-&gt;&gt;DB: SELECT Top LAN Hosts
+    Report-&gt;&gt;Redis: PUBLISH ws:push:{hash}
+    Redis--&gt;&gt;WS: Pub/Sub Message
+    WS-&gt;&gt;MUI: WS Push: hosts_update (Update)
+</code></pre>
+<h2 id="4-protocol-specifications">4. Protocol Specifications<a class="headerlink" href="#4-protocol-specifications" title="Permanent link">&para;</a></h2>
+<h3 id="41-tp-to-cn-local-telemetry-stream">4.1. TP to CN (Local Telemetry Stream)<a class="headerlink" href="#41-tp-to-cn-local-telemetry-stream" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Transport:</strong> Local network (UDP or IPC).</li>
+<li><strong>Direction:</strong> TP to CN (unidirectional).</li>
+<li><strong>Payload:</strong> Per-event metadata JSON.</li>
+</ul>
+<h3 id="42-cn-to-cnss-remote-aggregation">4.2. CN to CnSS (Remote Aggregation)<a class="headerlink" href="#42-cn-to-cnss-remote-aggregation" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Transport:</strong> UDP</li>
+<li><strong>Endpoint:</strong> <code>{{cnss_host}}:{{cnss_udp_port}}</code> (Default: <code>5140</code>).</li>
+<li><strong>UDP Size Constraint:</strong> CN must ensure the serialized JSON payload does not exceed the network MTU (recommended <code>&lt; 1400 bytes</code>). CN must adjust <code>window_ms</code> to prevent IP fragmentation.</li>
+<li><strong>Payload Schema (<code>TelemetryBatch</code>):</strong></li>
+</ul>
+<pre><code class="language-json">{
+  &quot;channel_id&quot;: &quot;main_tp_dev&quot;,
+  &quot;timestamp&quot;: 1718625600,
+  &quot;sequence&quot;: 1,
+  &quot;window_ms&quot;: 50,
+  &quot;packets&quot;: [
+    {
+      &quot;direction&quot;: 0,
+      &quot;src_ip&quot;: &quot;192.168.1.100&quot;,
+      &quot;dst_ip&quot;: &quot;8.8.8.8&quot;,
+      &quot;src_port&quot;: 12345,
+      &quot;dst_port&quot;: 53
+    },
+    {
+      &quot;direction&quot;: 1,
+      &quot;src_ip&quot;: &quot;8.8.8.8&quot;,
+      &quot;dst_ip&quot;: &quot;192.168.1.100&quot;,
+      &quot;src_port&quot;: 53,
+      &quot;dst_port&quot;: 12345
+
+    }
+  ]
+}
+</code></pre>
+<p><strong>Fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>channel_id</td>
+<td>string</td>
+<td>Identifier of the monitored channel/bridge.</td>
+</tr>
+<tr>
+<td>timestamp</td>
+<td>integer</td>
+<td>Unix timestamp (seconds) of the window start.</td>
+</tr>
+<tr>
+<td>sequence</td>
+<td>integer (64-bit)</td>
+<td>Monotonically increasing 64-bit sequence number per channel. MUST be 64-bit to prevent wrap-around issues.</td>
+</tr>
+<tr>
+<td>window_ms</td>
+<td>integer</td>
+<td>Duration of the batching window in milliseconds.</td>
+</tr>
+<tr>
+<td>packets</td>
+<td>array</td>
+<td>Array of raw packet metadata objects.</td>
+</tr>
+<tr>
+<td>packets[].direction</td>
+<td>integer</td>
+<td><code>0</code> for IN, <code>1</code> for OUT.</td>
+</tr>
+<tr>
+<td>packets[].src_ip</td>
+<td>string</td>
+<td>Source IP address (IPv4/IPv6).</td>
+</tr>
+<tr>
+<td>packets[].dst_ip</td>
+<td>string</td>
+<td>Destination IP address (IPv4/IPv6).</td>
+</tr>
+<tr>
+<td>packets[].src_port</td>
+<td>integer</td>
+<td>Source port.</td>
+</tr>
+<tr>
+<td>packets[].dst_port</td>
+<td>integer</td>
+<td>Destination port.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="43-cnss-to-mui-websocket-real-time-push">4.3. CnSS to MUI (WebSocket Real-time Push)<a class="headerlink" href="#43-cnss-to-mui-websocket-real-time-push" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Transport:</strong> WebSocket (WSS recommended).</li>
+<li><strong>Endpoint:</strong> <code>wss://{{cnss_host}}:{{cnss_ws_port}}/api/v1/ws/telemetry?token={{access_token}}&amp;channel_id={{channel_id}}</code></li>
+<li><strong>Payload Schema (<code>telemetry_update</code>):</strong></li>
+</ul>
+<pre><code class="language-json">{
+   &quot;type&quot;: &quot;telemetry_update&quot;,
+   &quot;channel_id&quot;: &quot;bridge-berlin-01&quot;,
+   &quot;is_active&quot;: true,
+   &quot;window_ms&quot;: int(reporting_window_sec*1000),
+   &quot;dropped_batches&quot;: 0,
+   &quot;metrics&quot;: {
+     &quot;direction_out&quot;: { &quot;packets_per_sec&quot;: 300.0, &quot;packets&quot;: 15 },
+     &quot;direction_in&quot;: { &quot;packets_per_sec&quot;: 280.0, &quot;packets&quot;: 14 }
+  },
+   &quot;timestamp&quot;: &quot;2026-06-17T12:00:00Z&quot;,
+   &quot;received_at&quot;: &quot;2026-06-17T12:00:00.050Z&quot;
+}
+</code></pre>
+<h3 id="44-mui-to-cnss-websocket-control-messages">4.4. MUI to CnSS (WebSocket Control Messages)<a class="headerlink" href="#44-mui-to-cnss-websocket-control-messages" title="Permanent link">&para;</a></h3>
+<p>Transport: WebSocket (Text frames).</p>
+<p>Direction: MUI to CnSS.</p>
+<p>Purpose: Manage real-time subscriptions. <strong>Note:</strong> The core <code>telemetry_update</code> stream is now unified under this mechanic. The client MUST send a subscription for telemetry upon connecting.</p>
+<p>Payload Schema (Subscribe):</p>
+<pre><code class="language-json">{
+     &quot;action&quot;: &quot;subscribe&quot;,
+     &quot;channel_id&quot;: &quot;bridge-berlin-01&quot;,
+     &quot;target&quot;: &quot;lan_hosts&quot;, 
+     &quot;params&quot;: {
+        &quot;ip_subnet&quot;: &quot;192.168.1.0/24&quot;,
+        &quot;sort_by&quot;: &quot;received&quot;,
+        &quot;sort_order&quot;: &quot;desc&quot;,
+        &quot;limit&quot;: 50,
+        &quot;window_sec&quot;: 5.0
+     }
+}
+</code></pre>
+<p>Payload Schema (Unsubscribe):</p>
+<pre><code class="language-json">{
+    &quot;action&quot;: &quot;unsubscribe&quot;,
+    &quot;channel_id&quot;: &quot;bridge-berlin-01&quot;,
+    &quot;target&quot;: &quot;lan_hosts&quot;
+}
+</code></pre>
+<p><strong>Payload Schema (Telemetry Subscription):</strong></p>
+<pre><code class="language-json">{
+     &quot;action&quot;: &quot;subscribe&quot;,
+     &quot;channel_id&quot;: &quot;bridge-berlin-01&quot;,
+     &quot;target&quot;: &quot;telemetry&quot;, 
+     &quot;params&quot;: {}
+}
+</code></pre>
+<p><strong>Important:</strong> After establishing a WebSocket connection, the client <strong>MUST</strong> send this subscription message to receive <code>telemetry</code> events. The telemetry stream is no longer pushed automatically upon connection.</p>
+<h3 id="45-cnss-to-mui-websocket-host-updates">4.5. CnSS to MUI (WebSocket Host Updates)<a class="headerlink" href="#45-cnss-to-mui-websocket-host-updates" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Transport</strong>: WebSocket (Text frames).</li>
+<li><strong>Direction</strong>: CnSS to MUI.</li>
+<li><strong>Purpose</strong>: Push real-time updates for LAN/WAN host tables. Sent immediately upon subscription (Initial Snapshot) and then periodically (1 Hz) by the <strong>Reporting</strong> Worker.</li>
+</ul>
+<p>Payload Schema (<code>hosts_update</code>):</p>
+<pre><code class="language-json">{
+    &quot;type&quot;: &quot;hosts_update&quot;,
+    &quot;target&quot;: &quot;lan_hosts&quot;,
+    &quot;channel_id&quot;: &quot;bridge-berlin-01&quot;,
+    &quot;timestamp&quot;: &quot;2026-06-17T12:00:05Z&quot;,
+    &quot;hosts&quot;: [
+        {
+            &quot;ip&quot;: &quot;192.168.1.100&quot;,
+            &quot;sent_per_sec&quot;: 15.5,
+            &quot;received_per_sec&quot;: 120.0,
+            &quot;last_seen&quot;: &quot;2026-06-17T12:00:04Z&quot;
+        }
+    ]
+}
+</code></pre>
+<h2 id="5-database-schema-timescaledb">5. Database Schema (TimescaleDB)<a class="headerlink" href="#5-database-schema-timescaledb" title="Permanent link">&para;</a></h2>
+<p>CnSS utilizes TimescaleDB (an extension of PostgreSQL) for persistent, high-performance time-series storage.</p>
+<h3 id="51-packet_flows-hypertable">5.1. <code>packet_flows</code> Hypertable<a class="headerlink" href="#51-packet_flows-hypertable" title="Permanent link">&para;</a></h3>
+<p>Stores every individual packet's metadata.</p>
+<pre><code class="language-sql">-- Creation of the table with auto-incrementing BIGSERIAL
+CREATE TABLE packet_flows (
+    id BIGSERIAL,
+    time TIMESTAMPTZ NOT NULL,
+    channel_id TEXT NOT NULL,
+    direction SMALLINT NOT NULL, -- 0 = IN, 1 = OUT
+    src_ip INET NOT NULL,
+    dst_ip INET NOT NULL,
+    src_port INTEGER NOT NULL,
+    dst_port INTEGER NOT NULL,
+
+    -- Composite Primary Key (TimescaleDB requirement for hypertables)
+    PRIMARY KEY (id, time) 
+);
+
+-- Convert to hypertable partitioned by time
+SELECT create_hypertable('packet_flows', 'time');
+
+-- Index for fast aggregation by channel and time
+CREATE INDEX idx_channel_time ON packet_flows (channel_id, time DESC);
+</code></pre>
+<h3 id="52-data-retention">5.2. Data Retention<a class="headerlink" href="#52-data-retention" title="Permanent link">&para;</a></h3>
+<p>To prevent infinite disk growth, CnSS (or a cronjob) should configure a retention policy:</p>
+<pre><code class="language-sql">-- Example: Automatically drop chunks older than 7 days
+SELECT add_retention_policy('packet_flows', INTERVAL '7 days');
+</code></pre>
+<h3 id="53-data-aggregation-strategies-timescaledb">5.3. Data Aggregation Strategies (TimescaleDB)<a class="headerlink" href="#53-data-aggregation-strategies-timescaledb" title="Permanent link">&para;</a></h3>
+<p>To support the Line Chart and Host Tables without degrading performance, CnSS uses specific TimescaleDB features:</p>
+<ol>
+<li>Line Chart (History): Uses <code>time_bucket()</code> to group raw packet flows into fixed time intervals based on the requested period (e.g., 1h -&gt; 1s buckets, 24h -&gt; 1m buckets).</li>
+<li>Host Tables (LAN/WAN):</li>
+<li>LAN Sent: <code>COUNT(*)</code> where <code>direction = 1</code> (OUT), grouped by <code>src_ip</code>.</li>
+<li>LAN Received: <code>COUNT(*)</code> where <code>direction = 0</code> (IN), grouped by <code>dst_ip</code>.</li>
+<li>WAN Sent: <code>COUNT(*)</code> where <code>direction = 0</code> (IN), grouped by <code>src_ip</code>.</li>
+<li>WAN Received: <code>COUNT(*)</code> where <code>direction = 1</code> (OUT), grouped by <code>dst_ip</code>.</li>
+<li>The results are combined using <code>UNION ALL</code> and grouped by IP to calculate <code>packets_per_sec</code> (count / window_sec).</li>
+</ol>
+<h3 id="54-persistent-registry-identity-tables">5.4. Persistent Registry &amp; Identity Tables<a class="headerlink" href="#54-persistent-registry-identity-tables" title="Permanent link">&para;</a></h3>
+<p>Alongside the time-series data, CnSS utilizes standard PostgreSQL tables for relational state and access control.</p>
+<h4 id="channels-persistent-registry"><strong><code>channels</code> (Persistent Registry)</strong><a class="headerlink" href="#channels-persistent-registry" title="Permanent link">&para;</a></h4>
+<p>Acts as the persistent "cold" registry. Updated every 1s by the Reporting Worker to maintain historical records and state recovery.</p>
+<pre><code class="language-sql">CREATE TABLE channels (
+    channel_id TEXT PRIMARY KEY,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    last_activity_at TIMESTAMPTZ,
+    dropped INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT FALSE
+);
+</code></pre>
+<h4 id="users-user_channel_scopes-identity-access"><strong><code>users</code> &amp; <code>user_channel_scopes</code> (Identity &amp; Access)</strong><a class="headerlink" href="#users-user_channel_scopes-identity-access" title="Permanent link">&para;</a></h4>
+<pre><code class="language-sql">CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL, -- Argon2id via passlib
+    role VARCHAR(20) NOT NULL CHECK (role IN ('admin', 'viewer')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE user_channel_scopes (
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    channel_id TEXT NOT NULL,
+    PRIMARY KEY (user_id, channel_id)
+);
+</code></pre>
+<h2 id="6-reliability-edge-cases">6. Reliability &amp; Edge Cases<a class="headerlink" href="#6-reliability-edge-cases" title="Permanent link">&para;</a></h2>
+<h3 id="61-uninterrupted-traffic-flow-us-005-us-007-us-009">6.1. Uninterrupted Traffic Flow (US-005, US-007, US-009)<a class="headerlink" href="#61-uninterrupted-traffic-flow-us-005-us-007-us-009" title="Permanent link">&para;</a></h3>
+<p>The TP's Data Plane operates independently. If CN crashes or CnSS/DB is unreachable, TP continues forwarding packets at wire speed.</p>
+<h3 id="62-udp-sequence-tracking-reset-detection">6.2. UDP Sequence Tracking &amp; Reset Detection<a class="headerlink" href="#62-udp-sequence-tracking-reset-detection" title="Permanent link">&para;</a></h3>
+<p>Sequence tracking is performed per channel using <strong>Redis</strong> (<code>channel:seq:{channel_id}</code>) to survive container restarts.</p>
+<ul>
+<li>If <code>incoming_sequence &gt; last_sequence + 1</code>: Calculates drops.</li>
+<li>If <code>incoming_sequence &lt;= last_sequence</code>: Ignores (handles out-of-order gracefully).</li>
+<li><strong>Sequence Reset Detection</strong>: If <code>last_sequence - incoming_sequence &gt; 1,000,000</code>, the worker treats it as a CN reboot, forcefully updates <code>last_sequence</code>, and resets the drop counter for this batch.</li>
+<li><strong>Constraint</strong>: CN <strong>must</strong> use 64-bit integers for sequence numbers to prevent wrap-around issues.</li>
+</ul>
+<h3 id="63-database-memory-redis-persistence">6.3. Database, Memory &amp; Redis Persistence<a class="headerlink" href="#63-database-memory-redis-persistence" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Redis Buffer Protection</strong>: The Ingestion Worker uses <code>LTRIM</code> to cap the <code>udp:buffer:{channel_id}</code> list (e.g., at 100,000 items), preventing Out-Of-Memory (OOM) crashes if the DB flusher lags.</li>
+<li><strong>Session GC</strong>: WebSocket sessions rely on Redis TTLs (<code>ws:session:{client_id}</code> set to 10s, refreshed every 5s). If the WS container crashes, keys automatically expire, preventing orphaned subscriptions.</li>
+<li><strong>Redis Persistence Trade-off</strong>: Redis is explicitly configured to run <strong>without persistence</strong> (no RDB/AOF). It operates purely as an ephemeral buffer. If Redis restarts, unflushed UDP buffers and sequence states are lost. This is an accepted trade-off to maximize IOPS. Upon restart, the system gracefully resets sequence baselines and resumes ingestion.</li>
+</ul>
+<h3 id="64-mui-client-side-timeout-fallback">6.4. MUI Client-Side Timeout Fallback<a class="headerlink" href="#64-mui-client-side-timeout-fallback" title="Permanent link">&para;</a></h3>
+<p>If MUI connects to WS but receives no <code>telemetry_update</code> within 6000ms, it locally assumes <code>is_active = false</code>.</p>
+<h2 id="7-security-access-control-us-012-us-014">7. Security &amp; Access Control (US-012, US-014)<a class="headerlink" href="#7-security-access-control-us-012-us-014" title="Permanent link">&para;</a></h2>
+<h3 id="71-authentication">7.1. Authentication<a class="headerlink" href="#71-authentication" title="Permanent link">&para;</a></h3>
+<p>All REST and WebSocket endpoints require a valid <code>{{access_token}}</code> (JWT). The JWT is issued via <code>POST /api/v1/auth/login</code> after successful credential validation. Unlike WebSocket connections which are persistent, REST API endpoints are stateless. However, to support immediate session termination (logout/compromise), the REST API middleware <strong>MUST</strong> extract the <code>jti</code> (JWT ID) from the Bearer token on <em>every single request</em> and verify it against the <code>jwt:revoked</code> Redis Set. If the <code>jti</code> exists, the API must return <code>401 Unauthorized</code> immediately, bypassing further route execution. The JWT payload contains:</p>
+<pre><code class="language-json">{
+  &quot;sub&quot;: &quot;admin_01&quot;,
+  &quot;iat&quot;: 1750248000,
+  &quot;exp&quot;: 1750334400,
+  &quot;role&quot;: &quot;admin&quot;,
+  &quot;scope&quot;: [&quot;bridge-berlin-01&quot;, &quot;bridge-prague-01&quot;]
+}
+</code></pre>
+<p>Password validation uses <strong>Argon2id</strong> via the <code>passlib</code> library</p>
+<table>
+<thead>
+<tr>
+<th>Claim</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sub</code></td>
+<td>string</td>
+<td>User identifier.</td>
+</tr>
+<tr>
+<td><code>iat</code></td>
+<td>integer</td>
+<td>Issued-at timestamp (Unix).</td>
+</tr>
+<tr>
+<td><code>exp</code></td>
+<td>integer</td>
+<td>Expiration timestamp (Unix). Default: 24 hours from issuance.</td>
+</tr>
+<tr>
+<td><code>role</code></td>
+<td>string</td>
+<td><code>admin</code> or <code>viewer</code>.</td>
+</tr>
+<tr>
+<td><code>scope</code></td>
+<td>array[string]</td>
+<td>List of <code>channel_id</code> the user may access. <code>role=admin</code> means unrestricted access, List of all channels.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="72-authorization-matrix">7.2. Authorization Matrix<a class="headerlink" href="#72-authorization-matrix" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th><code>scope</code></th>
+<th>Access</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>admin</code></td>
+<td>missing or any value</td>
+<td>All channels (including dynamically added ones)</td>
+</tr>
+<tr>
+<td><code>viewer</code></td>
+<td>specified</td>
+<td>Only channels listed in the scope array.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="73-transport-security">7.3. Transport Security<a class="headerlink" href="#73-transport-security" title="Permanent link">&para;</a></h3>
+<p>WebSocket connections should use <code>wss://</code> (TLS) to protect telemetry data and tokens in transit, especially for remote MUI access (US-014). In MVP v1, HTTP is permitted as a conscious trade-off for simplicity, but this introduces risks (token interception via MITM).</p>
+<h3 id="74-logging">7.4. Logging<a class="headerlink" href="#74-logging" title="Permanent link">&para;</a></h3>
+<p>CnSS must sanitize logs. Query parameters containing tokens must be masked or omitted from access logs (e.g., replace <code>?token=eyJhbG...</code> with <code>?token=[REDACTED]</code>).</p>
+<h3 id="75-cn-trust-model-mvp-v1">7.5. CN Trust Model (MVP v1)<a class="headerlink" href="#75-cn-trust-model-mvp-v1" title="Permanent link">&para;</a></h3>
+<p>CNs are <strong>not authenticated</strong> — the <code>channel_id</code> is a trusted assertion. CnSS accepts UDP datagrams from any source. Mitigations:</p>
+<ul>
+<li>Network-level ACLs: CnSS should only accept UDP from known CN IP addresses.</li>
+<li>Future versions: mTLS / DTLS with client certificates, with <code>channel_id</code> embedded in the certificate's Subject Alternative Name.</li>
+</ul>
+<h3 id="76-token-storage-mui">7.6. Token Storage (MUI)<a class="headerlink" href="#76-token-storage-mui" title="Permanent link">&para;</a></h3>
+<p>The MUI must store the JWT token <strong>exclusively in memory</strong> (JavaScript variable). Do not use <code>localStorage</code> or <code>sessionStorage</code> — these are vulnerable to XSS attacks. On page reload, the user must re-authenticate.</p>
+<h3 id="77-token-revocation">7.7. Token Revocation<a class="headerlink" href="#77-token-revocation" title="Permanent link">&para;</a></h3>
+<p>To support immediate session termination (e.g., on logout or compromise), the Auth Service adds the token's <code>jti</code> (JWT ID) to a Redis Set (<code>jwt:revoked</code>). The WebSocket Service checks this set upon connection and periodically during the session. If a revoked <code>jti</code> is detected, the connection is immediately closed with code <code>4001</code>.</p>
+<h2 id="8-rest-api-endpoints">8. REST API Endpoints<a class="headerlink" href="#8-rest-api-endpoints" title="Permanent link">&para;</a></h2>
+<h3 id="81-post-apiv1authlogin">8.1. <code>POST /api/v1/auth/login</code><a class="headerlink" href="#81-post-apiv1authlogin" title="Permanent link">&para;</a></h3>
+<p><strong>Purpose:</strong> Authenticate user and issue JWT token.<br />
+<strong>Auth:</strong> None (public endpoint).<br />
+<strong>Request Body:</strong></p>
+<pre><code class="language-json">{
+  &quot;username&quot;: &quot;admin&quot;,
+  &quot;password&quot;: &quot;secretpassword&quot;
+}
+</code></pre>
+<p><strong>Response 200:</strong></p>
+<pre><code class="language-json">{
+  &quot;access_token&quot;: &quot;eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...&quot;,
+  &quot;token_type&quot;: &quot;Bearer&quot;,
+  &quot;expires_in&quot;: 86400,
+  &quot;issued_at&quot;: &quot;2026-06-18T12:00:00Z&quot;,
+  &quot;role&quot;: &quot;admin&quot;,
+  &quot;scope&quot;: [&quot;bridge-berlin-01&quot;, &quot;bridge-prague-01&quot;]
+}
+</code></pre>
+<p><strong>Response 401:</strong></p>
+<pre><code class="language-json">{
+  &quot;error&quot;: &quot;invalid_credentials&quot;,
+  &quot;message&quot;: &quot;Invalid username or password.&quot;
+}
+</code></pre>
+<h3 id="82-get-apiv1channels">8.2. <code>GET /api/v1/channels</code><a class="headerlink" href="#82-get-apiv1channels" title="Permanent link">&para;</a></h3>
+<p><strong>Purpose:</strong> List all channels accessible to the authenticated user. For <code>viewer</code>, the list is filtered by JWT scope. For <code>admin</code>, all known channels are returned.
+<strong>Auth:</strong> <code>Authorization: Bearer {{access_token}}</code><br />
+<strong>Response 200:</strong></p>
+<pre><code class="language-json">{
+  &quot;channels&quot;: [
+    {
+      &quot;channel_id&quot;: &quot;bridge-berlin-01&quot;,
+      &quot;is_active&quot;: true,
+      &quot;last_activity_timestamp&quot;: &quot;2026-06-17T12:00:00Z&quot;
+    },
+    {
+      &quot;channel_id&quot;: &quot;bridge-prague-01&quot;,
+      &quot;is_active&quot;: false,
+      &quot;last_activity_timestamp&quot;: &quot;2026-06-17T11:55:00Z&quot;
+    }
+  ],
+  &quot;total&quot;: 2
+}
+</code></pre>
+<h3 id="83-get-apiv1channelchannel_idstatus">8.3. <code>GET /api/v1/channel/{channel_id}/status</code><a class="headerlink" href="#83-get-apiv1channelchannel_idstatus" title="Permanent link">&para;</a></h3>
+<p><strong>Purpose:</strong> REST fallback for a specific channel's activity indicator.<br />
+<strong>Auth:</strong> <code>Authorization: Bearer {{access_token}}</code><br />
+<strong>Response 200:</strong></p>
+<pre><code class="language-json">{
+  &quot;channel_id&quot;: &quot;{{channel_id}}&quot;,
+  &quot;is_active&quot;: true,
+  &quot;last_activity_timestamp&quot;: &quot;2026-06-17T12:00:00Z&quot;
+}
+</code></pre>
+<p><strong>Response 403:</strong></p>
+<pre><code class="language-json">{
+  &quot;error&quot;: &quot;forbidden&quot;,
+  &quot;message&quot;: &quot;You do not have access to this channel.&quot;
+}
+</code></pre>
+<p><strong>Response 404:</strong></p>
+<pre><code class="language-json">{
+  &quot;error&quot;: &quot;not_found&quot;,
+  &quot;message&quot;: &quot;Channel not found.&quot;
+}
+</code></pre>
+<h3 id="84-get-apiv1health">8.4. <code>GET /api/v1/health</code><a class="headerlink" href="#84-get-apiv1health" title="Permanent link">&para;</a></h3>
+<p><strong>Purpose:</strong> Verify operational status of the CnSS itself.<br />
+<strong>Auth:</strong> <code>Authorization: Bearer {{access_token}}</code><br />
+<strong>Response 200:</strong></p>
+<pre><code class="language-json">{
+  &quot;status&quot;: &quot;healthy&quot;,
+  &quot;components&quot;: {
+    &quot;cnss&quot;: &quot;active&quot;
+  },
+  &quot;channels_active&quot;: 3,
+  &quot;channels_total&quot;: 4,
+  &quot;timestamp&quot;: &quot;2026-06-17T12:00:00Z&quot;
+}
+</code></pre>
+<h3 id="85-get-apiv1channelchannel_idhistory">8.5. <code>GET /api/v1/channel/{channel_id}/history</code><a class="headerlink" href="#85-get-apiv1channelchannel_idhistory" title="Permanent link">&para;</a></h3>
+<p><strong>Purpose</strong>: Lazy-load historical telemetry data for the Line Chart. CnSS dynamically calculates the optimal <code>time_bucket</code> interval based on the requested period to return a reasonable number of points.
+<strong>Auth</strong>: <code>Authorization: Bearer {{access_token}}</code></p>
+<p>Path Parameters:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>channel_id</td>
+<td>string</td>
+<td>Identifier of the channel to query.</td>
+</tr>
+</tbody>
+</table>
+<p>Query Parameters:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>period</td>
+<td>string</td>
+<td>Time period to query. Enum: <code>1h</code>, <code>24h</code>, <code>7d</code>, <code>30d</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Response 200:</p>
+<pre><code class="language-json">{
+    &quot;channel_id&quot;: &quot;bridge-berlin-01&quot;,
+    &quot;period&quot;: &quot;24h&quot;,
+    &quot;interval_sec&quot;: 60,
+    &quot;points&quot;: [
+        {
+            &quot;timestamp&quot;: &quot;2026-06-17T12:00:00Z&quot;,
+            &quot;packets_in_per_sec&quot;: 280.5,
+            &quot;packets_out_per_sec&quot;: 300.0,
+            &quot;is_active&quot;: true
+        }
+    ]
+}
+</code></pre>
+<p>Response 403:</p>
+<pre><code class="language-json">{
+  &quot;error&quot;: &quot;forbidden&quot;,
+  &quot;message&quot;: &quot;You do not have access to this channel.&quot;
+}
+</code></pre>
+<p>Response 404:</p>
+<pre><code class="language-json">{
+  &quot;error&quot;: &quot;not_found&quot;,
+  &quot;message&quot;: &quot;Channel not found.&quot;
+}
+</code></pre>
+<h2 id="9-redis-architecture-state-management">9. Redis Architecture &amp; State Management<a class="headerlink" href="#9-redis-architecture-state-management" title="Permanent link">&para;</a></h2>
+<p>Redis serves as the central nervous system, handling buffering, state synchronization, and pub/sub messaging. It is strictly configured as an <strong>ephemeral, in-memory store</strong> (no RDB/AOF persistence).</p>
+<h3 id="91-key-structure">9.1. Key Structure<a class="headerlink" href="#91-key-structure" title="Permanent link">&para;</a></h3>
+<p><strong>Subscription Registry:</strong></p>
+<ul>
+<li><code>sub:registry:{query_hash}</code> (String, TTL 1 hour): Stores the JSON definition of the subscription.</li>
+<li><code>sub:listeners:{query_hash}</code> (Set): Stores the IDs of connected WebSocket clients requesting this data.</li>
+<li><code>sub:active_hashes</code> (Set): Fast-lookup index of all active <code>query_hash</code> values, replacing blocking <code>KEYS</code> commands.</li>
+</ul>
+<p><strong>Session &amp; Buffer Management:</strong></p>
+<ul>
+<li><code>ws:session:{ws_client_id}</code> (Hash): Tracks active subscriptions for rapid cleanup on disconnect. TTL 10s.</li>
+<li><code>udp:buffer:{channel_id}</code> (List): High-speed buffer for raw packet metadata. Capped via <code>LTRIM</code>.</li>
+<li><code>channel:seq:{channel_id}</code> (String): Stores the <code>last_sequence</code> integer per channel.</li>
+<li><code>channel:state:{channel_id}</code> (Hash): Stores <code>last_activity_at</code> and <code>dropped_delta</code>. TTL 6s.</li>
+</ul>
+<p><strong>Security:</strong></p>
+<ul>
+<li><code>jwt:revoked</code> (Set): Stores the <code>jti</code> of revoked tokens for immediate session termination.</li>
+</ul>
+<h3 id="92-pubsub-channels">9.2. Pub/Sub Channels<a class="headerlink" href="#92-pubsub-channels" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>ws:push:{query_hash}</code>: The Reporting Worker publishes aggregated JSON payloads here. The WebSocket Service subscribes to these channels based on active client requests.</li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../js/base.js"></script>
+        <script src="../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

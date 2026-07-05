@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="SWP-47 Team">
+        <link rel="canonical" href="https://swp-47.github.io/traffic-processing-platform/architecture/static-view/">
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Static View - Traffic Processing Platform Documentation</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">Traffic Processing Platform Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="../.." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Architecture</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">Static View</a>
+</li>
+                                    
+<li>
+    <a href="../dynamic-view/" class="dropdown-item">Dynamic View</a>
+</li>
+                                    
+<li>
+    <a href="../deployment-view/" class="dropdown-item">Deployment View</a>
+</li>
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">ADRs</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../adr/adr-001-hardware-software-separation/" class="dropdown-item">ADR-001</a>
+</li>
+            
+<li>
+    <a href="../adr/adr-002-ephemeral-redis-buffering/" class="dropdown-item">ADR-002</a>
+</li>
+            
+<li>
+    <a href="../adr/adr-003-microservice-decomposition/" class="dropdown-item">ADR-003</a>
+</li>
+    </ul>
+  </li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Development</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../development-process/" class="dropdown-item">Development Process</a>
+</li>
+                                    
+<li>
+    <a href="../../quality-requirements/" class="dropdown-item">Quality Requirements</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../dynamic-view/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/SWP-47/traffic-processing-platform/edit/master/docs/architecture/static-view/README.md" class="nav-link">Edit on SWP-47/traffic-processing-platform
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#static-view-component-architecture" class="nav-link">Static View — Component Architecture</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#diagram" class="nav-link">Diagram</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#what-the-diagram-shows" class="nav-link">What the Diagram Shows</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#coupling-and-cohesion-analysis" class="nav-link">Coupling and Cohesion Analysis</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#impact-on-maintainability" class="nav-link">Impact on Maintainability</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#quality-requirements-supported-or-constrained" class="nav-link">Quality Requirements Supported or Constrained</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="static-view-component-architecture">Static View — Component Architecture<a class="headerlink" href="#static-view-component-architecture" title="Permanent link">&para;</a></h1>
+<h2 id="diagram">Diagram<a class="headerlink" href="#diagram" title="Permanent link">&para;</a></h2>
+<p>The component diagram (<a href="component-diagram.puml">component-diagram.puml</a>) illustrates the internal structure of the Traffic Processing Platform, showing all major components, their responsibilities, interfaces, protocols, and data flows.</p>
+<h2 id="what-the-diagram-shows">What the Diagram Shows<a class="headerlink" href="#what-the-diagram-shows" title="Permanent link">&para;</a></h2>
+<h3 id="component-hierarchy">Component Hierarchy<a class="headerlink" href="#component-hierarchy" title="Permanent link">&para;</a></h3>
+<p>The platform is organized into <strong>four primary subsystems</strong>, each encapsulated in its own package:</p>
+<ol>
+<li><strong>Traffic Processor (TP)</strong>: Split into two planes:</li>
+<li><strong>FPGA Data Plane</strong>: Handles wire-speed packet forwarding using SystemVerilog on an ARTIX-7 FPGA. This is the critical path — any failure here would disrupt user internet access.</li>
+<li>
+<p><strong>Software Telemetry Plane</strong>: Runs alongside the FPGA, extracting packet metadata (IPs, ports, direction) using Python/Scapy and forwarding it to the Communication Node.</p>
+</li>
+<li>
+<p><strong>Communication Node (CN)</strong>: Acts as a local batching agent. It receives raw packet metadata from the TP, aggregates it into time-windowed <code>TelemetryBatch</code> payloads, and forwards them to the CnSS over UDP.</p>
+</li>
+<li>
+<p><strong>Control and Status Server (CnSS)</strong>: The backend core, decomposed into <strong>four independent microservices</strong>:</p>
+</li>
+<li><strong>Ingestion Worker</strong>: Receives UDP datagrams, tracks sequences, buffers raw metadata in Redis, and periodically flushes to TimescaleDB.</li>
+<li><strong>Reporting Worker</strong>: Runs a 1Hz polling loop, discovers active subscriptions, executes SQL queries, and publishes aggregated results to Redis Pub/Sub.</li>
+<li><strong>WebSocket Service</strong>: Manages persistent client connections, handles JWT authentication, subscription lifecycle, and routes Pub/Sub messages to connected clients.</li>
+<li>
+<p><strong>REST API &amp; Auth Service</strong>: Provides HTTP endpoints for login, channel discovery, and historical data retrieval.</p>
+</li>
+<li>
+<p><strong>Management User Interface (MUI)</strong>: A React/TypeScript single-page application that connects to the CnSS via REST (for discovery and history) and WebSocket (for real-time telemetry).</p>
+</li>
+</ol>
+<h3 id="data-stores">Data Stores<a class="headerlink" href="#data-stores" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>TimescaleDB</strong> (Persistent): Stores raw <code>packet_flows</code>, continuous aggregates (<code>telemetry_1s</code>), channel registry, and user/scope data.</li>
+<li><strong>Redis</strong> (Ephemeral): Provides high-speed buffering (<code>udp:buffer</code>), state tracking (<code>channel:state</code>), sequence tracking (<code>channel:seq</code>), subscription management (<code>sub:*</code>), session management (<code>ws:session</code>), and token revocation (<code>jwt:revoked</code>).</li>
+</ul>
+<h3 id="infrastructure">Infrastructure<a class="headerlink" href="#infrastructure" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Edge Nginx</strong>: Serves as the single TLS termination point, routing HTTPS traffic to MUI and CnSS REST API, and WSS traffic to the WebSocket Service.</li>
+</ul>
+<h3 id="protocols-and-data-flows">Protocols and Data Flows<a class="headerlink" href="#protocols-and-data-flows" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Flow</th>
+<th>Protocol</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>User ↔ TP</td>
+<td>Ethernet/IP</td>
+<td>Transparent packet forwarding (data plane)</td>
+</tr>
+<tr>
+<td>TP → CN</td>
+<td>Local UDP/IPC</td>
+<td>Raw packet metadata transfer</td>
+</tr>
+<tr>
+<td>CN → CnSS</td>
+<td>UDP (port 5140)</td>
+<td><code>TelemetryBatch</code> JSON payloads</td>
+</tr>
+<tr>
+<td>CnSS ↔ Redis</td>
+<td>RESP (async)</td>
+<td>State, buffering, pub/sub</td>
+</tr>
+<tr>
+<td>CnSS ↔ TimescaleDB</td>
+<td>PostgreSQL (asyncpg)</td>
+<td>Batch inserts, time-series queries</td>
+</tr>
+<tr>
+<td>MUI → CnSS</td>
+<td>HTTPS (REST)</td>
+<td>Authentication, channel discovery, history</td>
+</tr>
+<tr>
+<td>MUI ↔ CnSS</td>
+<td>WSS (WebSocket)</td>
+<td>Real-time telemetry and subscription control</td>
+</tr>
+<tr>
+<td>Admin → MUI</td>
+<td>HTTPS</td>
+<td>Browser-based dashboard access</td>
+</tr>
+</tbody>
+</table>
+<h2 id="coupling-and-cohesion-analysis">Coupling and Cohesion Analysis<a class="headerlink" href="#coupling-and-cohesion-analysis" title="Permanent link">&para;</a></h2>
+<h3 id="coupling">Coupling<a class="headerlink" href="#coupling" title="Permanent link">&para;</a></h3>
+<p>The architecture exhibits <strong>low coupling</strong> between major subsystems:</p>
+<ul>
+<li><strong>TP ↔ CN</strong>: Communicates via a simple local UDP/IPC protocol with a well-defined JSON schema (<code>PacketMeta</code>). The TP has no knowledge of the CN's internal batching logic.</li>
+<li><strong>CN ↔ CnSS</strong>: Communicates via UDP with a single payload type (<code>TelemetryBatch</code>). The CN does not need to know about CnSS's database schema, WebSocket protocol, or authentication mechanism.</li>
+<li><strong>CnSS ↔ MUI</strong>: Communicates via REST (stateless) and WebSocket (stateful but protocol-defined). The MUI has no direct access to TimescaleDB or Redis.</li>
+<li><strong>CnSS Internal Services</strong>: The four microservices communicate exclusively through Redis (Pub/Sub, shared state) and TimescaleDB. There are no direct service-to-service HTTP calls.</li>
+</ul>
+<p><strong>Inter-service coupling within CnSS</strong> is mediated by Redis and TimescaleDB, which act as shared communication channels. This is a deliberate architectural choice that enables:</p>
+<ul>
+<li>Independent deployment and scaling of each microservice.</li>
+<li>Fault isolation — if the WebSocket Service crashes, the Ingestion Worker continues buffering data.</li>
+</ul>
+<h3 id="cohesion">Cohesion<a class="headerlink" href="#cohesion" title="Permanent link">&para;</a></h3>
+<p>Each component demonstrates <strong>high functional cohesion</strong>:</p>
+<ul>
+<li><strong>Ingestion Worker</strong>: All its responsibilities (UDP reception, sequence tracking, buffering, flushing) are tightly related to the single concern of "receiving and persisting telemetry."</li>
+<li><strong>Reporting Worker</strong>: All its responsibilities (polling, SQL execution, pub/sub publishing, ghost cleanup) revolve around "aggregating and distributing data to subscribers."</li>
+<li><strong>WebSocket Service</strong>: Focused entirely on "managing client connections and subscription lifecycle."</li>
+<li><strong>REST API</strong>: Focused on "authentication and data retrieval over HTTP."</li>
+</ul>
+<h2 id="impact-on-maintainability">Impact on Maintainability<a class="headerlink" href="#impact-on-maintainability" title="Permanent link">&para;</a></h2>
+<h3 id="positive-impacts">Positive Impacts<a class="headerlink" href="#positive-impacts" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Independent Deployment</strong>: Each microservice can be updated, restarted, or scaled without affecting others. For example, adding a new subscription target (e.g., <code>host_top_ports</code>) only requires changes to the Reporting Worker's handler registry — no changes to the WebSocket Service or Ingestion Worker.</p>
+</li>
+<li>
+<p><strong>Technology Isolation</strong>: The FPGA code (SystemVerilog), TP software (Python), CN (Python), CnSS (Python/FastAPI), and MUI (TypeScript/React) are fully isolated. Teams can work on different components without merge conflicts.</p>
+</li>
+<li>
+<p><strong>Testability</strong>: Each microservice can be tested independently. The Ingestion Worker can be tested with mock UDP packets, the WebSocket Service with mock Redis, and the REST API with <code>httpx</code> test clients.</p>
+</li>
+<li>
+<p><strong>Clear Boundaries</strong>: The use of Redis as a communication bus means that service interfaces are implicitly defined by Redis key structures and Pub/Sub channels, which are documented in <code>architecture.md</code>.</p>
+</li>
+</ol>
+<h3 id="challenges">Challenges<a class="headerlink" href="#challenges" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Redis as Single Point of Coordination</strong>: All four CnSS microservices depend on Redis. If Redis becomes unavailable, the entire CnSS pipeline stalls (Ingestion can't buffer, Reporting can't poll, WebSocket can't authenticate). This is an accepted trade-off for performance, but it means Redis must be highly available.</p>
+</li>
+<li>
+<p><strong>Schema Evolution</strong>: Changes to the <code>TelemetryBatch</code> schema require coordinated updates across TP, CN, and CnSS Ingestion. The monorepo structure helps here, as all code is in one repository and can be updated atomically.</p>
+</li>
+<li>
+<p><strong>Distributed Debugging</strong>: When a telemetry update is delayed, the root cause could be in any of the four microservices, Redis, or TimescaleDB. Comprehensive logging and structured tracing are essential.</p>
+</li>
+</ol>
+<h2 id="quality-requirements-supported-or-constrained">Quality Requirements Supported or Constrained<a class="headerlink" href="#quality-requirements-supported-or-constrained" title="Permanent link">&para;</a></h2>
+<h3 id="supported">Supported<a class="headerlink" href="#supported" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Quality Requirement</th>
+<th>How the Architecture Supports It</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Performance (Time Behaviour)</strong></td>
+<td>The separation of Ingestion (write-heavy) and Reporting (read-heavy) allows independent scaling. Redis buffering decouples UDP ingestion speed from database write speed. Continuous aggregates in TimescaleDB pre-compute metrics, avoiding heavy <code>GROUP BY</code> queries at runtime.</td>
+</tr>
+<tr>
+<td><strong>Reliability (Fault Tolerance)</strong></td>
+<td>If the WebSocket Service crashes, active sessions expire via Redis TTL (10s), and the Ghost Cleaner removes stale listeners. If the Ingestion Worker crashes, Redis buffers persist until it restarts. If TimescaleDB is temporarily unavailable, the Ingestion Worker continues buffering in Redis (capped at 100k items).</td>
+</tr>
+<tr>
+<td><strong>Security (Confidentiality)</strong></td>
+<td>JWT authentication is enforced at the WebSocket and REST layers. Scope-based authorization restricts viewers to specific channels. Token revocation via Redis (<code>jwt:revoked</code>) enables immediate session termination. Edge Nginx centralizes TLS termination, ensuring all external traffic is encrypted.</td>
+</tr>
+<tr>
+<td><strong>Maintainability (Testability)</strong></td>
+<td>High cohesion and low coupling make each component independently testable. The CI pipeline enforces ≥30% coverage on critical CnSS modules.</td>
+</tr>
+<tr>
+<td><strong>Scalability</strong></td>
+<td>The microservice decomposition allows horizontal scaling. For example, if WebSocket connections become the bottleneck, multiple WebSocket Service instances can be deployed behind a load balancer, all sharing the same Redis Pub/Sub channels.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="constrained">Constrained<a class="headerlink" href="#constrained" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Constraint</th>
+<th>Explanation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>UDP Reliability</strong></td>
+<td>The CN → CnSS communication uses UDP, which is inherently unreliable. Packet loss is accepted for monitoring purposes, but it means the system cannot guarantee 100% telemetry delivery. Sequence tracking and <code>dropped_batches</code> metrics mitigate this by making losses visible.</td>
+</tr>
+<tr>
+<td><strong>Redis Persistence</strong></td>
+<td>Redis is explicitly configured without persistence (no RDB/AOF) to maximize IOPS. If Redis restarts, unflushed buffers and sequence states are lost. This is an accepted trade-off, but it means the system cannot guarantee zero data loss during Redis failures.</td>
+</tr>
+<tr>
+<td><strong>Single TimescaleDB Instance</strong></td>
+<td>The current deployment uses a single TimescaleDB instance. If it becomes unavailable, all persistent data operations fail. Future versions may consider TimescaleDB clustering or read replicas for high availability.</td>
+</tr>
+<tr>
+<td><strong>Monorepo Coordination</strong></td>
+<td>While the monorepo simplifies atomic updates, it also means that all components share the same CI/CD pipeline. A breaking change in one component (e.g., <code>TelemetryBatch</code> schema) requires coordinated updates across multiple services.</td>
+</tr>
+</tbody>
+</table></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

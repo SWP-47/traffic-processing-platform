@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="SWP-47 Team">
+        <link rel="canonical" href="https://swp-47.github.io/traffic-processing-platform/architecture/adr/adr-003-microservice-decomposition/">
+        <link rel="shortcut icon" href="../../../img/favicon.ico">
+        <title>ADR-003 - Traffic Processing Platform Documentation</title>
+        <link href="../../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../../css/brands.min.css" rel="stylesheet">
+        <link href="../../../css/solid.min.css" rel="stylesheet">
+        <link href="../../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../../..">Traffic Processing Platform Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="../../.." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Architecture</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../static-view/" class="dropdown-item">Static View</a>
+</li>
+                                    
+<li>
+    <a href="../../dynamic-view/" class="dropdown-item">Dynamic View</a>
+</li>
+                                    
+<li>
+    <a href="../../deployment-view/" class="dropdown-item">Deployment View</a>
+</li>
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">ADRs</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../adr-001-hardware-software-separation/" class="dropdown-item">ADR-001</a>
+</li>
+            
+<li>
+    <a href="../adr-002-ephemeral-redis-buffering/" class="dropdown-item">ADR-002</a>
+</li>
+            
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">ADR-003</a>
+</li>
+    </ul>
+  </li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Development</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../development-process/" class="dropdown-item">Development Process</a>
+</li>
+                                    
+<li>
+    <a href="../../../quality-requirements/" class="dropdown-item">Quality Requirements</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../adr-002-ephemeral-redis-buffering/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../../../development-process/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/SWP-47/traffic-processing-platform/edit/master/docs/architecture/adr/adr-003-microservice-decomposition.md" class="nav-link">Edit on SWP-47/traffic-processing-platform
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#adr-003-microservice-decomposition-of-cnss-backend" class="nav-link">ADR-003: Microservice Decomposition of CnSS Backend</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#status" class="nav-link">Status</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#context" class="nav-link">Context</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#decision" class="nav-link">Decision</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#consequences" class="nav-link">Consequences</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#quality-requirements-traceability" class="nav-link">Quality Requirements Traceability</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#alternatives-considered" class="nav-link">Alternatives Considered</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#references" class="nav-link">References</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="adr-003-microservice-decomposition-of-cnss-backend">ADR-003: Microservice Decomposition of CnSS Backend<a class="headerlink" href="#adr-003-microservice-decomposition-of-cnss-backend" title="Permanent link">&para;</a></h1>
+<h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
+<p><strong>Accepted</strong> — Implemented in MVP v2 with 4 isolated Docker microservices.</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>The Control and Status Server (CnSS) must handle multiple concurrent responsibilities:
+- High-frequency UDP telemetry ingestion
+- Real-time WebSocket client connections
+- Periodic metric aggregation and SQL execution
+- REST API for authentication and historical data
+- Session management and subscription lifecycle</p>
+<p><strong>Key constraints:</strong>
+- Each responsibility has different performance characteristics (CPU, I/O, network)
+- Failures in one area must not cascade to others
+- System must support horizontal scaling in future versions
+- Development teams work on different components concurrently
+- CI/CD pipeline must support independent testing and deployment</p>
+<p><strong>Quality Requirements addressed:</strong>
+- <strong>QR-003 (Testability)</strong>: Enable independent testing of each component
+- <strong>QR-002 (Fault Tolerance)</strong>: Isolate failures to prevent cascading
+- <strong>QR-001 (Time Behaviour)</strong>: Allow independent scaling of bottleneck components</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p>We decompose CnSS into 4 isolated Docker microservices communicating via Redis and TimescaleDB:</p>
+<h3 id="1-ingestion-worker-cnss-ingestion">1. Ingestion Worker (<code>cnss-ingestion</code>)<a class="headerlink" href="#1-ingestion-worker-cnss-ingestion" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Responsibility</strong>: UDP reception, sequence tracking, Redis buffering, batch flush to TimescaleDB</li>
+<li><strong>Ports</strong>: 5140/UDP (exposed to host)</li>
+<li><strong>Dependencies</strong>: Redis, TimescaleDB</li>
+<li><strong>Failure Impact</strong>: Telemetry ingestion stops; existing buffers persist in Redis</li>
+</ul>
+<h3 id="2-reporting-worker-cnss-reporting">2. Reporting Worker (<code>cnss-reporting</code>)<a class="headerlink" href="#2-reporting-worker-cnss-reporting" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Responsibility</strong>: 1Hz polling loop, SQL aggregation, Pub/Sub publishing, channel state sync</li>
+<li><strong>Ports</strong>: None (internal only)</li>
+<li><strong>Dependencies</strong>: Redis, TimescaleDB</li>
+<li><strong>Failure Impact</strong>: Real-time updates stop; last known state persists</li>
+</ul>
+<h3 id="3-websocket-service-cnss-websocket">3. WebSocket Service (<code>cnss-websocket</code>)<a class="headerlink" href="#3-websocket-service-cnss-websocket" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Responsibility</strong>: Client connection management, JWT validation, subscription lifecycle, Pub/Sub consumer</li>
+<li><strong>Ports</strong>: 8001 (internal, proxied by Nginx)</li>
+<li><strong>Dependencies</strong>: Redis, TimescaleDB</li>
+<li><strong>Failure Impact</strong>: Active connections dropped; clients reconnect automatically</li>
+</ul>
+<h3 id="4-rest-api-auth-service-cnss-api">4. REST API &amp; Auth Service (<code>cnss-api</code>)<a class="headerlink" href="#4-rest-api-auth-service-cnss-api" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Responsibility</strong>: HTTP gateway, authentication, channel discovery, historical data retrieval</li>
+<li><strong>Ports</strong>: 8000 (internal, proxied by Nginx)</li>
+<li><strong>Dependencies</strong>: Redis, TimescaleDB</li>
+<li><strong>Failure Impact</strong>: REST endpoints unavailable; WebSocket continues functioning</li>
+</ul>
+<h3 id="communication-pattern">Communication Pattern<a class="headerlink" href="#communication-pattern" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Redis</strong>: Pub/Sub for real-time updates, shared state for sessions/subscriptions</li>
+<li><strong>TimescaleDB</strong>: Persistent storage, continuous aggregates for aggregation</li>
+<li><strong>No Direct Service-to-Service Calls</strong>: All communication mediated by Redis/DB</li>
+</ul>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<h3 id="positive">Positive<a class="headerlink" href="#positive" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Fault Isolation</strong>: Crash in one service doesn't affect others (e.g., WebSocket crash doesn't stop ingestion)</li>
+<li><strong>Independent Scaling</strong>: Each service can be scaled independently based on load (future improvement)</li>
+<li><strong>Technology Isolation</strong>: Each service can use different libraries/versions without conflicts</li>
+<li><strong>Parallel Development</strong>: Teams work on different services without merge conflicts</li>
+<li><strong>Independent Testing</strong>: Each service tested in isolation with mocked dependencies</li>
+<li><strong>Clear Boundaries</strong>: Service interfaces defined by Redis key structures and DB schema</li>
+<li><strong>Docker Restart Policy</strong>: <code>restart: always</code> ensures automatic recovery from crashes</li>
+</ul>
+<h3 id="negative">Negative<a class="headerlink" href="#negative" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Operational Complexity</strong>: 4 containers to manage, monitor, and debug instead of 1</li>
+<li><strong>Network Overhead</strong>: Inter-service communication via Redis adds latency (minimal)</li>
+<li><strong>Distributed Debugging</strong>: Tracing issues across services requires comprehensive logging</li>
+<li><strong>Redis Dependency</strong>: All services depend on Redis; if Redis fails, entire CnSS degrades</li>
+<li><strong>Schema Coordination</strong>: Changes to shared data structures (Redis keys, DB schema) require coordinated updates</li>
+<li><strong>Resource Overhead</strong>: Each container has its own memory/CPU footprint</li>
+</ul>
+<h3 id="risks">Risks<a class="headerlink" href="#risks" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Redis as Single Point of Failure</strong>: If Redis crashes, all services lose coordination</li>
+<li><strong>Distributed Deadlocks</strong>: Unlikely but possible with complex Redis operations</li>
+<li><strong>Version Incompatibility</strong>: Services may drift in dependency versions over time</li>
+</ul>
+<h2 id="quality-requirements-traceability">Quality Requirements Traceability<a class="headerlink" href="#quality-requirements-traceability" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Quality Requirement</th>
+<th>How This Decision Addresses It</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>QR-003 (Testability)</strong></td>
+<td>Each microservice tested independently with mocked Redis/DB. CI pipeline runs separate test suites per service. ≥30% coverage enforced per critical module.</td>
+</tr>
+<tr>
+<td><strong>QR-002 (Fault Tolerance)</strong></td>
+<td>Complete fault isolation between services. Docker <code>restart: always</code> policy ensures automatic recovery. TTL-based session cleanup prevents orphaned state.</td>
+</tr>
+<tr>
+<td><strong>QR-001 (Time Behaviour)</strong></td>
+<td>Independent scaling allows bottleneck components to be optimized separately. Redis Pub/Sub provides low-latency inter-service communication.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="alternatives-considered">Alternatives Considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
+<h3 id="alternative-1-monolithic-application">Alternative 1: Monolithic Application<a class="headerlink" href="#alternative-1-monolithic-application" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Pros</strong>: Simpler deployment, easier debugging, no network overhead</li>
+<li><strong>Cons</strong>: Single point of failure, cannot scale components independently, harder to test in isolation</li>
+<li><strong>Rejected because</strong>: Cannot meet fault tolerance requirements; one crash brings down entire system</li>
+</ul>
+<h3 id="alternative-2-thread-based-concurrency-single-process">Alternative 2: Thread-Based Concurrency (Single Process)<a class="headerlink" href="#alternative-2-thread-based-concurrency-single-process" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Pros</strong>: Shared memory, simpler communication, lower resource usage</li>
+<li><strong>Cons</strong>: GIL limits parallelism in Python, harder to isolate failures, complex thread management</li>
+<li><strong>Rejected because</strong>: Python GIL prevents true parallelism; fault isolation impossible</li>
+</ul>
+<h3 id="alternative-3-kubernetes-with-service-mesh">Alternative 3: Kubernetes with Service Mesh<a class="headerlink" href="#alternative-3-kubernetes-with-service-mesh" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Pros</strong>: Advanced orchestration, auto-scaling, service discovery, observability</li>
+<li><strong>Cons</strong>: Overkill for single-VM deployment, steep learning curve, higher operational cost</li>
+<li><strong>Rejected because</strong>: Project scope and infrastructure constraints (single VM, course project)</li>
+</ul>
+<h3 id="alternative-4-serverless-aws-lambda-azure-functions">Alternative 4: Serverless (AWS Lambda / Azure Functions)<a class="headerlink" href="#alternative-4-serverless-aws-lambda-azure-functions" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Pros</strong>: Auto-scaling, pay-per-use, no server management</li>
+<li><strong>Cons</strong>: Cold start latency, limited execution time, vendor lock-in, complex state management</li>
+<li><strong>Rejected because</strong>: Real-time WebSocket connections and persistent state don't fit serverless model</li>
+</ul>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>System Architecture</strong>: <a href="../../../system-documentation/">docs/system-documentation.md</a> §2.3 Control and Status Server</li>
+<li><strong>Docker Compose</strong>: <a href="../../../cnss/docker-compose.yml">cnss/docker-compose.yml</a></li>
+<li><strong>Service Dockerfiles</strong>: <a href="../../../cnss/docker/">cnss/docker/</a></li>
+<li><strong>Quality Requirements</strong>: <a href="../../../quality-requirements/">docs/quality-requirements.md</a></li>
+<li><strong>User Stories</strong>: US-014 (Remote MUI Access), US-015 (Real-time Dashboard Updates)</li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../../js/base.js"></script>
+        <script src="../../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

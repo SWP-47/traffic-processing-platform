@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="SWP-47 Team">
+        <link rel="canonical" href="https://swp-47.github.io/traffic-processing-platform/architecture/dynamic-view/">
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Dynamic View - Traffic Processing Platform Documentation</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">Traffic Processing Platform Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="../.." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Architecture</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../static-view/" class="dropdown-item">Static View</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">Dynamic View</a>
+</li>
+                                    
+<li>
+    <a href="../deployment-view/" class="dropdown-item">Deployment View</a>
+</li>
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">ADRs</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../adr/adr-001-hardware-software-separation/" class="dropdown-item">ADR-001</a>
+</li>
+            
+<li>
+    <a href="../adr/adr-002-ephemeral-redis-buffering/" class="dropdown-item">ADR-002</a>
+</li>
+            
+<li>
+    <a href="../adr/adr-003-microservice-decomposition/" class="dropdown-item">ADR-003</a>
+</li>
+    </ul>
+  </li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Development</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../development-process/" class="dropdown-item">Development Process</a>
+</li>
+                                    
+<li>
+    <a href="../../quality-requirements/" class="dropdown-item">Quality Requirements</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../static-view/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../deployment-view/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/SWP-47/traffic-processing-platform/edit/master/docs/architecture/dynamic-view/README.md" class="nav-link">Edit on SWP-47/traffic-processing-platform
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#dynamic-view-end-to-end-telemetry-pipeline" class="nav-link">Dynamic View — End-to-End Telemetry Pipeline</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#diagram" class="nav-link">Diagram</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#scenario-description" class="nav-link">Scenario Description</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#why-this-scenario-is-important" class="nav-link">Why This Scenario Is Important</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#integration-boundaries-crossed" class="nav-link">Integration Boundaries Crossed</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#failure-modes-and-recovery" class="nav-link">Failure Modes and Recovery</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#observability-points" class="nav-link">Observability Points</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#conclusion" class="nav-link">Conclusion</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="dynamic-view-end-to-end-telemetry-pipeline">Dynamic View — End-to-End Telemetry Pipeline<a class="headerlink" href="#dynamic-view-end-to-end-telemetry-pipeline" title="Permanent link">&para;</a></h1>
+<h2 id="diagram">Diagram<a class="headerlink" href="#diagram" title="Permanent link">&para;</a></h2>
+<p>The sequence diagram (<a href="end-to-end-telemetry.puml">end-to-end-telemetry.puml</a>) illustrates the <strong>complete lifecycle of telemetry data</strong> flowing through the entire Traffic Processing Platform — from physical network packets traversing the hardware data plane, through batching, ingestion, persistence, aggregation, and finally real-time delivery to the administrator's dashboard.</p>
+<h2 id="scenario-description">Scenario Description<a class="headerlink" href="#scenario-description" title="Permanent link">&para;</a></h2>
+<p>This scenario captures a <strong>full system workflow</strong> involving <strong>all 10 major components</strong> of the platform and crossing <strong>multiple integration boundaries</strong>:</p>
+<ol>
+<li><strong>System Administrator</strong> authenticates and discovers accessible channels via the REST API.</li>
+<li><strong>Management UI (MUI)</strong> establishes a persistent WebSocket connection scoped to a specific channel and subscribes to real-time telemetry.</li>
+<li><strong>Traffic Processor (TP)</strong> operates as a transparent inline bridge, forwarding user traffic at wire speed on the FPGA data plane while independently extracting packet metadata on the software telemetry plane.</li>
+<li><strong>Communication Node (CN)</strong> batches raw metadata into time-windowed <code>TelemetryBatch</code> payloads, enforcing strict UDP MTU constraints (&lt; 1400 bytes).</li>
+<li><strong>CnSS Ingestion Worker</strong> receives UDP datagrams, tracks 64-bit sequences per channel (with CN reboot detection), and buffers raw metadata in Redis capped lists (preventing OOM).</li>
+<li><strong>Background Flusher</strong> atomically drains the Redis buffer and batch-inserts raw packet flows into the TimescaleDB hypertable.</li>
+<li><strong>CnSS Reporting Worker</strong> runs a 1Hz polling loop, discovers active subscriptions, executes parameterized SQL against continuous aggregates, and publishes results to Redis Pub/Sub.</li>
+<li><strong>CnSS WebSocket Service</strong> consumes Pub/Sub messages, injects client-specific subscription IDs, and pushes <code>telemetry_update</code> payloads to connected MUI clients.</li>
+<li><strong>Channel Timeout Mechanism</strong>: When telemetry stops flowing, the Reporting Worker detects inactivity (5-second threshold) and broadcasts <code>is_active: false</code> to all subscribers.</li>
+<li><strong>Session Heartbeat</strong>: The WebSocket Service refreshes Redis session TTLs every 5 seconds, ensuring orphaned subscriptions are automatically cleaned up if a client disconnects abruptly.</li>
+</ol>
+<h2 id="why-this-scenario-is-important">Why This Scenario Is Important<a class="headerlink" href="#why-this-scenario-is-important" title="Permanent link">&para;</a></h2>
+<h3 id="product-significance">Product Significance<a class="headerlink" href="#product-significance" title="Permanent link">&para;</a></h3>
+<p>This end-to-end flow directly fulfills the platform's core value proposition and supports the following user stories:</p>
+<ul>
+<li><strong>US-001 (Channel Activity Indicator)</strong>: The <code>is_active</code> boolean in <code>telemetry_update</code> payloads drives the binary Red/Green visual cue on the MUI dashboard.</li>
+<li><strong>US-002 (Basic Network Usage Statistics)</strong>: The <code>metrics.direction_in</code> and <code>metrics.direction_out</code> fields provide real-time bidirectional packet rates for the line chart.</li>
+<li><strong>US-005, US-007, US-009 (Uninterrupted Traffic Flow)</strong>: The strict decoupling of the FPGA data plane from the software telemetry plane ensures that any failure in monitoring components (CN crash, CnSS outage, Redis failure) has <strong>zero impact</strong> on user internet connectivity.</li>
+<li><strong>US-014 (Remote MUI Access)</strong>: JWT-based authentication and scope-based authorization ensure that only authorized administrators can access specific channels from remote locations.</li>
+<li><strong>US-015 (Real-time Dashboard Updates)</strong>: The 1Hz aggregation loop combined with Redis Pub/Sub ensures the dashboard updates continuously without manual refreshes.</li>
+</ul>
+<h3 id="architectural-decisions-illustrated">Architectural Decisions Illustrated<a class="headerlink" href="#architectural-decisions-illustrated" title="Permanent link">&para;</a></h3>
+<p>This scenario highlights several critical architectural decisions that shape the entire platform:</p>
+<h4 id="1-strict-data-plane-control-plane-decoupling">1. Strict Data Plane / Control Plane Decoupling<a class="headerlink" href="#1-strict-data-plane-control-plane-decoupling" title="Permanent link">&para;</a></h4>
+<p>The TP's FPGA forwards packets at wire speed <strong>independently</strong> of the telemetry extraction software. Even if the CN crashes, the CnSS is unreachable, or TimescaleDB is down, user traffic continues to flow uninterrupted. This is the foundational non-functional requirement of the entire system.</p>
+<h4 id="2-race-condition-safe-initial-snapshot">2. Race-Condition-Safe Initial Snapshot<a class="headerlink" href="#2-race-condition-safe-initial-snapshot" title="Permanent link">&para;</a></h4>
+<p>When a client subscribes, the WebSocket Service follows a <strong>strict ordering</strong>:
+1. <strong>SUBSCRIBE</strong> to Redis Pub/Sub channel <code>ws:push:{hash}</code> first.
+2. <strong>THEN</strong> query TimescaleDB for the current aggregated state.
+3. <strong>THEN</strong> push the snapshot to the client.</p>
+<p>This prevents the client from missing any updates that might be published between the DB query and the Pub/Sub subscription. The client must be designed to handle and deduplicate minor timestamp overlaps.</p>
+<h4 id="3-deterministic-query-hash-for-deduplication">3. Deterministic Query Hash for Deduplication<a class="headerlink" href="#3-deterministic-query-hash-for-deduplication" title="Permanent link">&para;</a></h4>
+<p>The WebSocket Service computes a <code>query_hash</code> (SHA-256, truncated to 16 chars) based on <code>channel_id</code>, <code>target</code>, and <code>params</code>. The client-provided subscription <code>id</code> is <strong>explicitly excluded</strong> from the hash. This means:
+- Multiple clients subscribing to identical telemetry streams share the same <code>query_hash</code>.
+- The Reporting Worker executes the expensive SQL query <strong>only once per hash</strong>.
+- Results are broadcast to all listeners via a single Redis Pub/Sub publish.</p>
+<p>This prevents redundant database queries and ensures data consistency across clients.</p>
+<h4 id="4-redis-as-ephemeral-nervous-system-no-persistence">4. Redis as Ephemeral Nervous System (No Persistence)<a class="headerlink" href="#4-redis-as-ephemeral-nervous-system-no-persistence" title="Permanent link">&para;</a></h4>
+<p>Redis is explicitly configured <strong>without RDB/AOF persistence</strong> to maximize IOPS. It serves as:
+- A high-speed buffer for UDP ingestion (<code>udp:buffer:{channel_id}</code>)
+- A state tracker for sequences and activity (<code>channel:seq</code>, <code>channel:state</code>)
+- A Pub/Sub message bus for real-time delivery (<code>ws:push:{hash}</code>)
+- A session registry with TTL-based auto-expiry (<code>ws:session:{client_id}</code>)</p>
+<p><strong>Trade-off</strong>: If Redis restarts, unflushed UDP buffers and sequence baselines are lost. The system gracefully resets and resumes — an accepted trade-off for performance.</p>
+<h4 id="5-udp-mtu-constraint-enforcement">5. UDP MTU Constraint Enforcement<a class="headerlink" href="#5-udp-mtu-constraint-enforcement" title="Permanent link">&para;</a></h4>
+<p>The CN is strictly responsible for ensuring serialized <code>TelemetryBatch</code> payloads do not exceed 1400 bytes. It dynamically adjusts the <code>window_ms</code> batching window to prevent IP fragmentation and silent UDP drops, which would otherwise cause invisible telemetry loss.</p>
+<h4 id="6-64-bit-sequence-tracking-with-reboot-detection">6. 64-bit Sequence Tracking with Reboot Detection<a class="headerlink" href="#6-64-bit-sequence-tracking-with-reboot-detection" title="Permanent link">&para;</a></h4>
+<p>Each CN maintains a monotonically increasing 64-bit sequence counter per channel. The Ingestion Worker:
+- Calculates <code>dropped_batches</code> when <code>incoming &gt; last + 1</code>
+- Gracefully ignores out-of-order packets (<code>incoming &lt;= last</code>)
+- Detects CN reboots when <code>last - incoming &gt; 1,000,000</code> and force-resets the baseline</p>
+<p>This provides end-to-end visibility into UDP datagram loss without requiring TCP's reliability overhead.</p>
+<h4 id="7-capped-redis-buffers-oom-protection">7. Capped Redis Buffers (OOM Protection)<a class="headerlink" href="#7-capped-redis-buffers-oom-protection" title="Permanent link">&para;</a></h4>
+<p>The Ingestion Worker uses <code>LTRIM</code> to cap <code>udp:buffer:{channel_id}</code> lists at 100,000 items. If the background flusher lags behind a traffic spike, new packets are dropped rather than allowing Redis to consume unbounded memory and trigger an OOM kill.</p>
+<h4 id="8-lazy-sql-execution-via-active-hash-index">8. Lazy SQL Execution via Active Hash Index<a class="headerlink" href="#8-lazy-sql-execution-via-active-hash-index" title="Permanent link">&para;</a></h4>
+<p>The Reporting Worker checks <code>sub:active_hashes</code> every second. If a hash has no listeners (SCARD == 0), the SQL query is <strong>skipped entirely</strong>. This is a form of lazy evaluation — the system only computes data that someone is actively observing, saving database resources when dashboards are closed.</p>
+<h4 id="9-dual-path-timeout-detection">9. Dual-Path Timeout Detection<a class="headerlink" href="#9-dual-path-timeout-detection" title="Permanent link">&para;</a></h4>
+<p>Channel inactivity is detected through two complementary mechanisms:
+- <strong>Server-side</strong>: The Reporting Worker runs <code>UPDATE channels SET is_active = FALSE WHERE last_activity_at &lt; NOW() - 5s</code> every second and broadcasts the state change via Pub/Sub.
+- <strong>Client-side fallback</strong>: If MUI receives no <code>telemetry_update</code> within 6000ms, it locally assumes <code>is_active = false</code> as a defensive measure against network partitions.</p>
+<h4 id="10-session-ttl-based-garbage-collection">10. Session TTL-Based Garbage Collection<a class="headerlink" href="#10-session-ttl-based-garbage-collection" title="Permanent link">&para;</a></h4>
+<p>WebSocket sessions are tracked in Redis with a 10-second TTL, refreshed every 5 seconds via heartbeat. If the WebSocket Service crashes:
+- Session keys auto-expire after 10 seconds.
+- The Ghost Cleaner (in Reporting Worker) detects stale listeners via <code>EXISTS ws:session:{client_id}</code> and removes them.
+- Clients reconnect and re-subscribe, with no manual intervention required.</p>
+<h2 id="integration-boundaries-crossed">Integration Boundaries Crossed<a class="headerlink" href="#integration-boundaries-crossed" title="Permanent link">&para;</a></h2>
+<p>This scenario crosses the following integration boundaries, each with distinct protocols and failure modes:</p>
+<table>
+<thead>
+<tr>
+<th>Boundary</th>
+<th>Protocol</th>
+<th>Direction</th>
+<th>Failure Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>User Network ↔ TP</td>
+<td>Ethernet/IP</td>
+<td>Bidirectional</td>
+<td>None (data plane independent)</td>
+</tr>
+<tr>
+<td>TP ↔ CN</td>
+<td>Local UDP/IPC</td>
+<td>Unidirectional</td>
+<td>Telemetry loss only, traffic unaffected</td>
+</tr>
+<tr>
+<td>CN ↔ CnSS Ingestion</td>
+<td>UDP (port 5140)</td>
+<td>Unidirectional</td>
+<td>Telemetry loss tracked via sequence gaps</td>
+</tr>
+<tr>
+<td>CnSS ↔ Redis</td>
+<td>RESP (async)</td>
+<td>Bidirectional</td>
+<td>Ingestion buffering stalls, Pub/Sub stops</td>
+</tr>
+<tr>
+<td>CnSS ↔ TimescaleDB</td>
+<td>PostgreSQL (asyncpg)</td>
+<td>Bidirectional</td>
+<td>Persistence fails, but Redis buffering continues</td>
+</tr>
+<tr>
+<td>MUI ↔ CnSS REST</td>
+<td>HTTPS</td>
+<td>Bidirectional</td>
+<td>Authentication/discovery fails</td>
+</tr>
+<tr>
+<td>MUI ↔ CnSS WebSocket</td>
+<td>WSS</td>
+<td>Bidirectional</td>
+<td>Real-time updates stop, fallback timeout kicks in</td>
+</tr>
+</tbody>
+</table>
+<h2 id="failure-modes-and-recovery">Failure Modes and Recovery<a class="headerlink" href="#failure-modes-and-recovery" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Failure Mode</th>
+<th>Impact</th>
+<th>Recovery Mechanism</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>TP software crash</strong></td>
+<td>Telemetry stops; traffic continues</td>
+<td>FPGA continues forwarding; Docker restart policy restarts TP container</td>
+</tr>
+<tr>
+<td><strong>CN crash</strong></td>
+<td>Telemetry stops for that channel</td>
+<td>Reporting Worker detects 5s timeout, broadcasts <code>is_active: false</code>; Docker restarts CN; Ingestion detects sequence reset on recovery</td>
+</tr>
+<tr>
+<td><strong>CnSS Ingestion crash</strong></td>
+<td>UDP packets dropped</td>
+<td>Docker <code>restart: always</code>; Redis buffers persist (if Redis is up); CN continues sending, packets silently lost during downtime</td>
+</tr>
+<tr>
+<td><strong>Redis crash</strong></td>
+<td>All buffering, state, Pub/Sub lost</td>
+<td>Redis restarts; sequence baselines reset; Ingestion resumes; accepted trade-off for performance</td>
+</tr>
+<tr>
+<td><strong>TimescaleDB crash</strong></td>
+<td>Persistence and aggregation fail</td>
+<td>Ingestion continues buffering in Redis (capped at 100k); Reporting Worker skips SQL queries; WebSocket pushes last known state</td>
+</tr>
+<tr>
+<td><strong>WebSocket Service crash</strong></td>
+<td>Active connections dropped</td>
+<td>Session keys expire (TTL 10s); Ghost Cleaner removes stale listeners; clients reconnect and re-subscribe</td>
+</tr>
+<tr>
+<td><strong>Reporting Worker crash</strong></td>
+<td>No real-time updates for 1s intervals</td>
+<td>Docker restart policy; clients continue receiving last known state; MUI fallback timeout triggers <code>is_active: false</code></td>
+</tr>
+<tr>
+<td><strong>Network partition (CN → CnSS)</strong></td>
+<td>UDP packets lost</td>
+<td>Sequence tracking makes losses visible via <code>dropped_batches</code> metric; no retry mechanism (fire-and-forget design)</td>
+</tr>
+<tr>
+<td><strong>MUI browser crash</strong></td>
+<td>Client disconnects</td>
+<td>WebSocket session expires via TTL; Garbage Collector cleans up subscriptions; no server-side state leak</td>
+</tr>
+</tbody>
+</table>
+<h2 id="observability-points">Observability Points<a class="headerlink" href="#observability-points" title="Permanent link">&para;</a></h2>
+<p>The architecture exposes several key observability signals along this pipeline:</p>
+<ul>
+<li><strong><code>dropped_batches</code></strong>: Counter in <code>telemetry_update</code> payload showing UDP datagram losses between CN and CnSS.</li>
+<li><strong><code>is_active</code></strong>: Boolean flag derived from 5-second inactivity threshold, propagated to MUI in real-time.</li>
+<li><strong><code>last_activity_at</code></strong>: Persisted in <code>channels</code> table, updated every second by Reporting Worker.</li>
+<li><strong>Redis memory usage</strong>: Must be monitored to prevent OOM (configured <code>maxmemory 2gb</code>, <code>noeviction</code> policy).</li>
+<li><strong>TimescaleDB chunk count</strong>: Retention policy (7 days) must be verified to prevent unbounded disk growth.</li>
+<li><strong>WebSocket connection count</strong>: Tracked via <code>ws:session:*</code> keys; sudden spikes may indicate DDoS or client bugs.</li>
+</ul>
+<h2 id="conclusion">Conclusion<a class="headerlink" href="#conclusion" title="Permanent link">&para;</a></h2>
+<p>This end-to-end dynamic view demonstrates how the Traffic Processing Platform achieves its core design goals: <strong>zero-impact monitoring</strong> (data plane independence), <strong>high-performance telemetry ingestion</strong> (Redis buffering + batched DB writes), <strong>real-time visualization</strong> (1Hz aggregation + Pub/Sub push), and <strong>operational resilience</strong> (TTL-based cleanup, sequence tracking, dual-path timeout detection). Each component plays a specific, well-bounded role, and the system gracefully degrades under failure rather than catastrophically collapsing.</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

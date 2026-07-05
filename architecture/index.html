@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="SWP-47 Team">
+        <link rel="canonical" href="https://swp-47.github.io/traffic-processing-platform/architecture/">
+        <link rel="shortcut icon" href="../img/favicon.ico">
+        <title>Overview - Traffic Processing Platform Documentation</title>
+        <link href="../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../css/brands.min.css" rel="stylesheet">
+        <link href="../css/solid.min.css" rel="stylesheet">
+        <link href="../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="..">Traffic Processing Platform Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href=".." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Architecture</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">Overview</a>
+</li>
+                                    
+<li>
+    <a href="static-view/" class="dropdown-item">Static View</a>
+</li>
+                                    
+<li>
+    <a href="dynamic-view/" class="dropdown-item">Dynamic View</a>
+</li>
+                                    
+<li>
+    <a href="deployment-view/" class="dropdown-item">Deployment View</a>
+</li>
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">ADRs</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="adr/adr-001-hardware-software-separation/" class="dropdown-item">ADR-001</a>
+</li>
+            
+<li>
+    <a href="adr/adr-002-ephemeral-redis-buffering/" class="dropdown-item">ADR-002</a>
+</li>
+            
+<li>
+    <a href="adr/adr-003-microservice-decomposition/" class="dropdown-item">ADR-003</a>
+</li>
+    </ul>
+  </li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Development</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../development-process/" class="dropdown-item">Development Process</a>
+</li>
+                                    
+<li>
+    <a href="../quality-requirements/" class="dropdown-item">Quality Requirements</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href=".." class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="static-view/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/SWP-47/traffic-processing-platform/edit/master/docs/architecture/README.md" class="nav-link">Edit on SWP-47/traffic-processing-platform
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#architecture-documentation" class="nav-link">Architecture Documentation</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#table-of-contents" class="nav-link">Table of Contents</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#how-to-render-diagrams" class="nav-link">How to Render Diagrams</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#architecture-principles" class="nav-link">Architecture Principles</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#architectural-decision-records-adrs" class="nav-link">Architectural Decision Records (ADRs)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="architecture-documentation">Architecture Documentation<a class="headerlink" href="#architecture-documentation" title="Permanent link">&para;</a></h1>
+<p>This directory contains the architectural documentation for the Traffic Processing Platform, following a <strong>diagrams-as-code</strong> approach using PlantUML. All diagrams are stored as source files within the repository to ensure they evolve alongside the codebase.</p>
+<h2 id="table-of-contents">Table of Contents<a class="headerlink" href="#table-of-contents" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="static-view/">Static View</a> — Component structure, interfaces, and data flows</li>
+<li><a href="dynamic-view/">Dynamic View</a> — Runtime behavior and interaction sequences</li>
+<li><a href="deployment-view/">Deployment View</a> — Infrastructure topology and deployment topology</li>
+</ol>
+<h2 id="how-to-render-diagrams">How to Render Diagrams<a class="headerlink" href="#how-to-render-diagrams" title="Permanent link">&para;</a></h2>
+<p>All diagrams are stored as <code>.puml</code> (PlantUML) source files. You can render them using:</p>
+<ul>
+<li><strong>VS Code Extension</strong>: <a href="https://marketplace.visualstudio.com/items?itemName=jebbs.plantuml">PlantUML</a></li>
+</ul>
+<p>Pre-rendered PNG/SVG versions are also provided alongside the source files for convenience.</p>
+<h2 id="architecture-principles">Architecture Principles<a class="headerlink" href="#architecture-principles" title="Permanent link">&para;</a></h2>
+<p>The platform is built on the following core principles:</p>
+<ol>
+<li><strong>Separation of Data Plane and Control Plane</strong>: The Traffic Processor forwards packets at wire speed (data plane) while independently extracting telemetry (control plane). Failure in monitoring must never disrupt traffic flow.</li>
+<li><strong>Modular Monorepo</strong>: Four loosely coupled components (<code>traffic-processor</code>, <code>communication-node</code>, <code>cnss</code>, <code>mui</code>) communicate via well-defined protocols (UDP, WebSocket, REST).</li>
+<li><strong>Ephemeral State, Persistent Storage</strong>: Redis handles high-speed ephemeral buffering and state tracking; TimescaleDB serves as the single source of truth for persistent time-series data.</li>
+<li><strong>Horizontal Scalability</strong>: The CnSS is decomposed into four independent microservices that can be scaled independently based on load.</li>
+<li><strong>Security by Design</strong>: JWT-based authentication, scope-based authorization, centralized TLS termination, and token masking in logs.</li>
+</ol>
+<h2 id="architectural-decision-records-adrs">Architectural Decision Records (ADRs)<a class="headerlink" href="#architectural-decision-records-adrs" title="Permanent link">&para;</a></h2>
+<p>The architecture of the Traffic Processing Platform is shaped by a series of explicit architectural decisions, each documented as an <strong>Architectural Decision Record (ADR)</strong>. These ADRs capture the context, rationale, and trade-offs behind key design choices, and explicitly link to the quality requirements they address.</p>
+<h3 id="adr-index">ADR Index<a class="headerlink" href="#adr-index" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>ADR ID</th>
+<th>Title</th>
+<th>Quality Requirements</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="adr/adr-001-hardware-software-separation/">ADR-001</a></td>
+<td>Hardware-Software Separation for Zero-Impact Monitoring</td>
+<td>QR-001, QR-002</td>
+</tr>
+<tr>
+<td><a href="adr/adr-002-ephemeral-redis-buffering/">ADR-002</a></td>
+<td>Ephemeral Redis Buffering for High-Performance Telemetry Ingestion</td>
+<td>QR-001, QR-002</td>
+</tr>
+<tr>
+<td><a href="adr/adr-003-microservice-decomposition/">ADR-003</a></td>
+<td>Microservice Decomposition of CnSS Backend</td>
+<td>QR-001, QR-002, QR-003</td>
+</tr>
+</tbody>
+</table>
+<h3 id="how-architecture-and-decisions-fit-together">How Architecture and Decisions Fit Together<a class="headerlink" href="#how-architecture-and-decisions-fit-together" title="Permanent link">&para;</a></h3>
+<p>The documented architecture and ADRs form a cohesive narrative that explains <strong>why</strong> the system is designed the way it is:</p>
+<h4 id="1-foundation-zero-impact-monitoring-adr-001">1. Foundation: Zero-Impact Monitoring (ADR-001)<a class="headerlink" href="#1-foundation-zero-impact-monitoring-adr-001" title="Permanent link">&para;</a></h4>
+<p>The <strong>Static View</strong> component diagram shows the Traffic Processor split into FPGA (hardware data plane) and Software Telemetry Plane. This separation is not arbitrary — it's a deliberate architectural decision (ADR-001) to ensure that monitoring failures never disrupt user internet connectivity. This directly addresses <strong>QR-002 (Fault Tolerance)</strong> by providing complete fault isolation between the critical data plane and the monitoring control plane.</p>
+<h4 id="2-performance-high-throughput-ingestion-adr-002">2. Performance: High-Throughput Ingestion (ADR-002)<a class="headerlink" href="#2-performance-high-throughput-ingestion-adr-002" title="Permanent link">&para;</a></h4>
+<p>The <strong>Dynamic View</strong> sequence diagram illustrates the telemetry pipeline: CN → UDP → Ingestion Worker → Redis Buffer → TimescaleDB. The use of Redis as an ephemeral, capped buffer (ADR-002) is a conscious trade-off that prioritizes performance over durability. By disabling Redis persistence and capping buffer lists at 100,000 items, the system achieves sub-millisecond ingestion latency while preventing OOM crashes during traffic spikes. This addresses <strong>QR-001 (Time Behaviour)</strong> by maximizing throughput and minimizing latency.</p>
+<h4 id="3-maintainability-microservice-decomposition-adr-003">3. Maintainability: Microservice Decomposition (ADR-003)<a class="headerlink" href="#3-maintainability-microservice-decomposition-adr-003" title="Permanent link">&para;</a></h4>
+<p>The <strong>Deployment View</strong> shows CnSS decomposed into 4 isolated Docker containers (Ingestion, Reporting, WebSocket, REST API). This microservice architecture (ADR-003) enables independent testing, fault isolation, and future horizontal scaling. Each service communicates exclusively through Redis and TimescaleDB, with no direct service-to-service calls. This addresses <strong>QR-003 (Testability)</strong> by allowing each component to be tested in isolation with mocked dependencies, and <strong>QR-002 (Fault Tolerance)</strong> by containing failures within individual services.</p>
+<h4 id="4-quality-requirements-as-design-drivers">4. Quality Requirements as Design Drivers<a class="headerlink" href="#4-quality-requirements-as-design-drivers" title="Permanent link">&para;</a></h4>
+<p>Each quality requirement from Assignment 4 directly influenced architectural decisions:</p>
+<ul>
+<li><strong>QR-001 (Time Behaviour)</strong> → ADR-001 (FPGA wire-speed forwarding) + ADR-002 (Redis ephemeral buffering)</li>
+<li><strong>QR-002 (Fault Tolerance)</strong> → ADR-001 (hardware-software separation) + ADR-002 (capped buffers) + ADR-003 (microservice isolation)</li>
+<li><strong>QR-003 (Testability)</strong> → ADR-003 (microservice decomposition with independent testing)</li>
+</ul>
+<h4 id="5-evolution-and-future-decisions">5. Evolution and Future Decisions<a class="headerlink" href="#5-evolution-and-future-decisions" title="Permanent link">&para;</a></h4>
+<p>As the platform evolves, new architectural decisions will be documented as additional ADRs. For example:
+- <strong>ADR-004</strong> (proposed): Horizontal scaling of WebSocket Service via Redis Pub/Sub sharding
+- <strong>ADR-005</strong> (proposed): Migration to Kubernetes for multi-node deployment
+- <strong>ADR-006</strong> (proposed): Implementation of mTLS for CN → CnSS authentication</p>
+<p>Each new ADR will reference existing decisions and quality requirements, maintaining a complete architectural narrative.</p>
+<h3 id="adr-lifecycle">ADR Lifecycle<a class="headerlink" href="#adr-lifecycle" title="Permanent link">&para;</a></h3>
+<p>ADRs follow a simple lifecycle:</p>
+<ol>
+<li><strong>Proposed</strong>: Decision is under discussion; not yet implemented</li>
+<li><strong>Accepted</strong>: Decision is implemented and validated in production</li>
+<li><strong>Deprecated</strong>: Decision is superseded by a newer ADR; legacy approach still supported</li>
+<li><strong>Superseded</strong>: Decision is replaced by a newer ADR; legacy approach removed</li>
+</ol>
+<p>Current ADRs are all in <strong>Accepted</strong> status, reflecting decisions implemented in MVP v1 and v2.</p>
+<h3 id="relationship-to-other-documentation">Relationship to Other Documentation<a class="headerlink" href="#relationship-to-other-documentation" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>System Architecture</strong>: <a href="../system-documentation/">docs/system-documentation.md</a> — Detailed technical specifications</li>
+<li><strong>Static View</strong>: <a href="static-view/">static-view/README.md</a> — Component structure and data flows</li>
+<li><strong>Dynamic View</strong>: <a href="dynamic-view/">dynamic-view/README.md</a> — Runtime behavior and sequences</li>
+<li><strong>Deployment View</strong>: <a href="deployment-view/">deployment-view/README.md</a> — Infrastructure topology</li>
+<li><strong>Quality Requirements</strong>: <a href="../quality-requirements/">docs/quality-requirements.md</a> — Measurable quality gates</li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../js/base.js"></script>
+        <script src="../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

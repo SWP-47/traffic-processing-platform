@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="SWP-47 Team">
+        <link rel="canonical" href="https://swp-47.github.io/traffic-processing-platform/architecture/adr/adr-001-hardware-software-separation/">
+        <link rel="shortcut icon" href="../../../img/favicon.ico">
+        <title>ADR-001 - Traffic Processing Platform Documentation</title>
+        <link href="../../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../../css/brands.min.css" rel="stylesheet">
+        <link href="../../../css/solid.min.css" rel="stylesheet">
+        <link href="../../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../../..">Traffic Processing Platform Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="../../.." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Architecture</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../static-view/" class="dropdown-item">Static View</a>
+</li>
+                                    
+<li>
+    <a href="../../dynamic-view/" class="dropdown-item">Dynamic View</a>
+</li>
+                                    
+<li>
+    <a href="../../deployment-view/" class="dropdown-item">Deployment View</a>
+</li>
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">ADRs</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">ADR-001</a>
+</li>
+            
+<li>
+    <a href="../adr-002-ephemeral-redis-buffering/" class="dropdown-item">ADR-002</a>
+</li>
+            
+<li>
+    <a href="../adr-003-microservice-decomposition/" class="dropdown-item">ADR-003</a>
+</li>
+    </ul>
+  </li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Development</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../development-process/" class="dropdown-item">Development Process</a>
+</li>
+                                    
+<li>
+    <a href="../../../quality-requirements/" class="dropdown-item">Quality Requirements</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../../deployment-view/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../adr-002-ephemeral-redis-buffering/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/SWP-47/traffic-processing-platform/edit/master/docs/architecture/adr/adr-001-hardware-software-separation.md" class="nav-link">Edit on SWP-47/traffic-processing-platform
+                                    </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#adr-001-hardware-software-separation-for-zero-impact-monitoring" class="nav-link">ADR-001: Hardware-Software Separation for Zero-Impact Monitoring</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#status" class="nav-link">Status</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#context" class="nav-link">Context</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#decision" class="nav-link">Decision</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#consequences" class="nav-link">Consequences</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#quality-requirements-traceability" class="nav-link">Quality Requirements Traceability</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#alternatives-considered" class="nav-link">Alternatives Considered</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#references" class="nav-link">References</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="adr-001-hardware-software-separation-for-zero-impact-monitoring">ADR-001: Hardware-Software Separation for Zero-Impact Monitoring<a class="headerlink" href="#adr-001-hardware-software-separation-for-zero-impact-monitoring" title="Permanent link">&para;</a></h1>
+<h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
+<p><strong>Accepted</strong> — Implemented in MVP v1 and validated in production deployment.</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>The Traffic Processing Platform must monitor network traffic in real-time without degrading network performance or causing service interruptions. The system operates as an inline bridge between LAN and WAN, meaning any failure in monitoring components must not disrupt user internet connectivity.</p>
+<p><strong>Key constraints:</strong>
+- The system must forward packets at wire speed (Gigabit Ethernet)
+- Monitoring failures must have zero impact on data plane operations
+- The platform must extract detailed packet metadata for analysis
+- Latency introduced by monitoring must be negligible (&lt; 1ms)</p>
+<p><strong>Quality Requirements addressed:</strong>
+- <strong>QR-002 (Fault Tolerance)</strong>: System must continue operating under component failures
+- <strong>QR-001 (Time Behaviour)</strong>: Packet forwarding must meet wire-speed requirements</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p>We separate the Traffic Processor into two independent planes:</p>
+<h3 id="hardware-data-plane-fpga">Hardware Data Plane (FPGA)<a class="headerlink" href="#hardware-data-plane-fpga" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Technology</strong>: ARTIX-7 AX7201 FPGA programmed with SystemVerilog</li>
+<li><strong>Role</strong>: Transparent inline bridge operating at wire speed</li>
+<li><strong>Responsibilities</strong>:</li>
+<li>Receive packets from LAN interface</li>
+<li>Forward packets to WAN interface (and vice versa) with negligible latency</li>
+<li>Mirror all passing traffic to the software telemetry plane</li>
+<li><strong>Independence</strong>: Operates completely independently of all software components</li>
+</ul>
+<h3 id="software-telemetry-plane-tp-cn">Software Telemetry Plane (TP + CN)<a class="headerlink" href="#software-telemetry-plane-tp-cn" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Technology</strong>: Python + Scapy running in Docker containers</li>
+<li><strong>Role</strong>: Extract packet metadata and forward to CnSS</li>
+<li><strong>Responsibilities</strong>:</li>
+<li>Receive mirrored traffic from FPGA</li>
+<li>Extract metadata (IPs, ports, direction)</li>
+<li>Batch and forward to CnSS via UDP</li>
+<li><strong>Failure Impact</strong>: If TP/CN crash, telemetry stops but packet forwarding continues uninterrupted</li>
+</ul>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<h3 id="positive">Positive<a class="headerlink" href="#positive" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Zero-Impact Monitoring</strong>: User traffic flows uninterrupted even if all software components fail</li>
+<li><strong>Wire-Speed Performance</strong>: FPGA handles packet forwarding at hardware speed (no software overhead)</li>
+<li><strong>Fault Isolation</strong>: Software failures are contained to monitoring functionality only</li>
+<li><strong>Independent Scaling</strong>: Software components can be restarted/updated without affecting network connectivity</li>
+<li><strong>Hardware Acceleration</strong>: FPGA provides deterministic latency for critical path operations</li>
+</ul>
+<h3 id="negative">Negative<a class="headerlink" href="#negative" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Hardware Dependency</strong>: Requires specialized FPGA hardware (ARTIX-7 AX7201)</li>
+<li><strong>Increased Complexity</strong>: Two-tier architecture requires hardware + software stack management</li>
+<li><strong>Limited Flexibility</strong>: FPGA logic is harder to modify compared to pure software solutions</li>
+<li><strong>Higher Cost</strong>: FPGA development boards are more expensive than standard servers</li>
+<li><strong>Debugging Difficulty</strong>: Hardware issues require specialized tools (Vivado, oscilloscopes)</li>
+</ul>
+<h3 id="risks">Risks<a class="headerlink" href="#risks" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>FPGA Firmware Bugs</strong>: Could cause packet forwarding failures (mitigated by hardware watchdog)</li>
+<li><strong>Traffic Mirroring Overhead</strong>: Must ensure mirroring doesn't exceed FPGA capacity</li>
+<li><strong>Single Point of Failure</strong>: If FPGA fails, entire network connectivity is lost (mitigated by redundant hardware in production)</li>
+</ul>
+<h2 id="quality-requirements-traceability">Quality Requirements Traceability<a class="headerlink" href="#quality-requirements-traceability" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Quality Requirement</th>
+<th>How This Decision Addresses It</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>QR-002 (Fault Tolerance)</strong></td>
+<td>Complete fault isolation between data plane (FPGA) and control plane (software). Software failures have zero impact on packet forwarding.</td>
+</tr>
+<tr>
+<td><strong>QR-001 (Time Behaviour)</strong></td>
+<td>FPGA provides wire-speed packet forwarding with deterministic latency (&lt; 1μs), meeting Gigabit Ethernet requirements.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="alternatives-considered">Alternatives Considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
+<h3 id="alternative-1-pure-software-solution-dpdkaf_packet">Alternative 1: Pure Software Solution (DPDK/AF_PACKET)<a class="headerlink" href="#alternative-1-pure-software-solution-dpdkaf_packet" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Pros</strong>: No hardware dependency, easier to develop and debug</li>
+<li><strong>Cons</strong>: Software packet forwarding introduces latency (10-100μs), cannot guarantee wire-speed performance, higher CPU utilization</li>
+<li><strong>Rejected because</strong>: Cannot meet wire-speed requirements for high-throughput channels (1 Gbps+)</li>
+</ul>
+<h3 id="alternative-2-network-tap-separate-monitoring">Alternative 2: Network Tap + Separate Monitoring<a class="headerlink" href="#alternative-2-network-tap-separate-monitoring" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Pros</strong>: Complete isolation, no risk to production traffic</li>
+<li><strong>Cons</strong>: Cannot operate as inline bridge, requires network topology changes, more expensive</li>
+<li><strong>Rejected because</strong>: Customer requirement for inline deployment without network changes</li>
+</ul>
+<h3 id="alternative-3-smart-nic-with-monitoring">Alternative 3: Smart NIC with Monitoring<a class="headerlink" href="#alternative-3-smart-nic-with-monitoring" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Pros</strong>: Integrated solution, good performance</li>
+<li><strong>Cons</strong>: Limited flexibility, vendor lock-in, higher cost</li>
+<li><strong>Rejected because</strong>: FPGA provides more flexibility for custom telemetry extraction logic</li>
+</ul>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>System Architecture</strong>: <a href="../../../system-documentation/">docs/system-documentation.md</a> §2.1 Traffic Processor</li>
+<li><strong>Deployment Diagram</strong>: <a href="../../deployment-view/deployment-diagram.puml">docs/architecture/deployment-view/deployment-diagram.puml</a></li>
+<li><strong>User Stories</strong>: US-005, US-007, US-009 (Uninterrupted Traffic Flow)</li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../../js/base.js"></script>
+        <script src="../../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

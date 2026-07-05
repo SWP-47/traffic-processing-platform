@@ -1,0 +1,28 @@
+# Week 5 Reflection
+
+## Learning points
+
+* **Architecture Documentation & ADRs:** Formalizing our architecture into static, dynamic, and deployment views, alongside writing ADRs (ADR-001 through ADR-003), forced us to explicitly define the boundaries between our hardware data plane (FPGA TP) and the software telemetry side-channel (CnSS/MUI). Documenting the decision to use Redis for ephemeral buffering and TimescaleDB for historical retention clarified how we balance high-throughput UDP ingestion with persistent query capabilities without creating memory leaks.
+* **Configuration Management & Edge Deployment:** Containerizing the Traffic Processor (TP) and Communication Node (CN) using Docker highlighted the complexities of edge deployment. We learned that mapping raw physical network interfaces and interacting with hardware (like the FPGA board) inside Docker containers on a specific Ubuntu environment requires careful configuration management and privilege handling.
+* **Customer Review & Physical UAT:** Executing UATs in a physical environment taught us that software logic must account for hardware realities. For instance, the physical Ethernet disconnect (UAT-003) exposed a gap between our logical fault tolerance and actual physical resilience. Furthermore, seeing the customer interact with the MUI highlighted that backend data aggregation (like 5-minute smoothing) can obscure real-time physical events (like pressing a hardware blocking button) if the frontend isn't tuned for reactivity.
+
+## Validated assumptions
+
+* **Decoupled Telemetry Pipeline:** We assumed that separating the CnSS into four distinct microservices (Database, REST, UDP Listener, WebSocket) with Redis buffering would provide the scalability needed for high-throughput channels. The successful stress testing and stable deployment of MVP v2 validated that this architecture comfortably handles 100 Mbps channels without optimization.
+* **Historical Data Granularity:** We initially assumed that a 5-minute aggregation window for the historical line chart would be sufficient for retrospective analysis. The customer's feedback during UAT-002 corrected this assumption, validating that network administrators actually require near real-time granularity (1-minute to 5-minute zoom windows) to correlate UI state changes with immediate physical interventions.
+* **Hardware Blocking Visibility:** We assumed that dropping packets at the FPGA level would be cleanly reflected in the MUI dashboard. While the blocking worked (UAT-005), the customer's observation that the router sees "broken packets" and the low traffic environment (~3 pkt/s) validated that our test environment lacks the necessary volume to properly visualize the macroscopic effects of hardware blocking on standard web traffic.
+
+## Friction and gaps
+
+* **Hardware-Software Integration Friction:** The physical test stand (FPGA + Ubuntu + Docker) presented significant friction. As noted during the review, the Docker containers do not yet "play well" with the specific Ubuntu setup on the stand, complicating the seamless deployment of TP and CN and requiring manual workarounds during the demo.
+* **Physical Interface Stability Gap:** UAT-003 revealed a critical stability gap. When the Ethernet cable was physically disconnected to test inactive host marking, the CN/CnSS pipeline experienced state corruption and stopped transmitting entirely, requiring a manual restart. Our software fault tolerance did not gracefully handle physical layer disruptions.
+* **UX vs. Implementation Gap:** To meet the sprint goal for the host statistics table, we implemented a quick text-based filtering syntax. The customer immediately identified this as poor UX compared to the structured sidebar filters used elsewhere in the application, highlighting a gap between our rapid implementation choices and the polished UI/UX expectations of the end-user.
+* **Hardware Contact Bounce:** The physical implementation of the traffic blocking button (Key1) suffers from contact bounce, causing multiple unintended state toggles when pressed. This hardware-level gap was not fully anticipated in our initial software logic planning.
+
+## Planned response
+
+* **Stability & Fault Tolerance:** We will prioritize investigating and resolving the CN/CnSS state corruption crash triggered by physical network interface disconnects. The system must implement graceful error handling and state recovery for physical layer disruptions.
+* **Hardware Polish:** We will implement software/hardware debounce logic for the FPGA Key1 button to prevent multiple toggles. Additionally, we will expand the blocking rules from a single hardcoded IP to support configurable per-host or per-channel blocking rules.
+* **UI/UX Refinement:** We will replace the text-based filtering syntax in the host statistics table with structured sidebar/dropdown controls. We will also implement a 1-minute/5-minute time-scale toggle for the historical line chart to improve real-time reactivity.
+* **Testing Environments:** To address the low-traffic environment gap, we will prepare dedicated high-traffic test environments (e.g., local Speedtest servers, continuous streaming tabs) for future UAT sessions. This will allow us to properly validate telemetry counters and visually demonstrate the effects of hardware blocking.
+* **Documentation & Workflow:** We will continue to refine our `docs/development-process.md` to better document the Docker deployment nuances for edge hardware. The hosted documentation site will be updated to reflect the finalized MVP v2 microservice decomposition and ADRs.

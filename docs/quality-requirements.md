@@ -39,3 +39,36 @@ This document defines the architectural quality requirements for the Traffic Pro
 **Why this matters:** Critical backend components such as authentication, telemetry ingestion, and channel state management must be directly verifiable so defects are detected before merge and deployment.
 
 **Linked quality requirement tests:** [QRT-003](quality-requirement-tests.md#qrt-003-critical-module-unit-coverage)
+
+## Architectural Decision Records (ADRs)
+
+Each quality requirement is supported by specific architectural decisions documented in the ADRs below:
+
+### QR-001: CnSS Health API Responsiveness (Time Behaviour)
+
+**Related ADRs:**
+- [ADR-001: Hardware-Software Separation](architecture/adr/adr-001-hardware-software-separation.md) — FPGA provides wire-speed packet forwarding, ensuring monitoring doesn't introduce latency
+- [ADR-002: Ephemeral Redis Buffering](architecture/adr/adr-002-ephemeral-redis-buffering.md) — Redis in-memory buffering minimizes ingestion latency and maximizes throughput
+- [ADR-003: Microservice Decomposition](architecture/adr/adr-003-microservice-decomposition.md) — Independent scaling allows optimization of bottleneck components
+
+### QR-002: Fault Tolerance
+
+**Related ADRs:**
+- [ADR-001: Hardware-Software Separation](architecture/adr/adr-001-hardware-software-separation.md) — Complete fault isolation between data plane (FPGA) and control plane (software)
+- [ADR-002: Ephemeral Redis Buffering](architecture/adr/adr-002-ephemeral-redis-buffering.md) — Capped buffers prevent OOM crashes; graceful degradation on Redis failure
+- [ADR-003: Microservice Decomposition](architecture/adr/adr-003-microservice-decomposition.md) — Fault isolation between microservices; Docker restart policy ensures automatic recovery
+
+### QR-003: Critical Module Testability
+
+**Related ADRs:**
+- [ADR-003: Microservice Decomposition](architecture/adr/adr-003-microservice-decomposition.md) — Each microservice tested independently with mocked dependencies; ≥30% coverage enforced per critical module
+
+---
+
+## ADR Index
+
+| ADR ID | Title | Status | Quality Requirements |
+|--------|-------|--------|---------------------|
+| [ADR-001](architecture/adr/adr-001-hardware-software-separation.md) | Hardware-Software Separation for Zero-Impact Monitoring | Accepted | QR-001, QR-002 |
+| [ADR-002](architecture/adr/adr-002-ephemeral-redis-buffering.md) | Ephemeral Redis Buffering for High-Performance Telemetry Ingestion | Accepted | QR-001, QR-002 |
+| [ADR-003](architecture/adr/adr-003-microservice-decomposition.md) | Microservice Decomposition of CnSS Backend | Accepted | QR-001, QR-002, QR-003 |

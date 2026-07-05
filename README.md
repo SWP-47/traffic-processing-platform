@@ -1,6 +1,6 @@
 # Traffic Processing Platform
 
-[![Release](https://img.shields.io/badge/release-v1.1.0-orange)](https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.1.0)
+[![Release](https://img.shields.io/badge/release-v2.0.0-orange)](https://github.com/SWP-47/traffic-processing-platform/releases/tag/v2.0.0)
 
 ## Project Overview
 
@@ -32,8 +32,9 @@ cd traffic-processing-platform
 
 #### **Traffic Processor**
 
-##### Software part:
-note: Ensure you have Python 3.8 or higher and pip (Python package installer) installed on your system. Create and activate a virtual environment. 
+##### Software part
+
+note: Ensure you have Python 3.8 or higher and pip (Python package installer) installed on your system. Create and activate a virtual environment.
 
 1. Install dependencies using command `pip install -r requirements.txt`
 2. Create an environment file using `cp .env.example .env` (POSIX) or `copy .env.example .env` (PowerShell). Edit `.env` if necessary.
@@ -42,46 +43,50 @@ note: Ensure you have Python 3.8 or higher and pip (Python package installer) in
 ```bash
 sudo python3 software-part/tp_packet_counter.py
 ```
+
 or on Windows PowerShell:
 
 ```powershell
 python3 .\software-part\tp_packet_counter.py
 ```
 
+##### Hardware part
 
-##### Hardware part:
 note: Ensure you have AMD Vivado Design Suite installed on your system. The folder contains `top.sv` and `top.xdc` files which are expected to be used to program ARTIX-7 FPGA Development Board AX7201.
 
 1. Run Vivado IDE and add open `ax7201-ethernet-loopback.xpr` project.
-2. Run synthesis and Implementation process. Than generate bitstream. 
+2. Run synthesis and Implementation process. Than generate bitstream.
 3. Connect FPGA board to your computer using JTAG programmer.
 4. Open "Hardware manager" and program connected device using the corresponding button
 
 #### **Communication node**
 
-note: Ensure you have Python 3.8 or higher and pip (Python package installer) installed on your system. Create and activate a virtual environment. 
+note: Ensure you have Python 3.8 or higher and pip (Python package installer) installed on your system. Create and activate a virtual environment.
 
 1. Install dependencies using:
 
 ```bash
 pip install -r requirements.txt
 ```
+
 2. Create an environment file:
 
 ```bash
 cp .env.example .env
 ```
+
 or on PowerShell:
 
 ```powershell
 copy .env.example .env
 ```
 
-3. Run the Communication Node script (the actual demo script is `communication-node/cn_demo_1.py`):
+1. Run the Communication Node script (the actual demo script is `communication-node/cn_demo_1.py`):
 
 ```bash
 sudo python3 communication-node/cn_demo_1.py
 ```
+
 or on Windows PowerShell:
 
 ```powershell
@@ -109,7 +114,7 @@ Use this configuration for active local development. It includes hot-reload capa
 3. Start the development environment:
 
    ```bash
-   docker-compose up --build
+   make all-dev
    ```
 
    *The server will be available at `http://localhost:8000`.*
@@ -123,13 +128,10 @@ Use this configuration for deploying the service on a production Virtual Machine
 1. Copy the `cnss/` directory to your target VM.
 2. Ensure a `.env` file is present with production-appropriate values (do not use default dev tokens).
 3. Start the production environment in detached mode:
+
    ```bash
-   docker-compose -f docker-compose.prod.yml up --build -d
+   make prod
    ```
-4. Verify the container is running and healthy:
-   ```bash
-   docker-compose -f docker-compose.prod.yml ps
-  
 
 #### **Management User Interface (MUI)**
 
@@ -152,13 +154,23 @@ make logs
 make stop
 ```
 
+## Documentation
+
+- **Hosted Documentation Site**: [https://swp-47.github.io/traffic-processing-platform/](https://swp-47.github.io/traffic-processing-platform/)
+- **System Documentation**: [docs/system-documentation.md](docs/system-documentation.md)
+- **API Documentation**: [api/README.md](api/README.md)
+- **Development Process**: [docs/development-process.md](docs/development-process.md)
+- **Architecture Documentation**: [docs/architecture/README.md](docs/architecture/README.md)
+
 ## Links and Reports
 
 - **System Documentation**: [System Documentation](docs/system-documentation.md)
 - **API Documentation**: [API Documentation](api/README.md)
-- **Current Deployment / Runnable Artifacts**: http://10.93.26.186
+- **Development Process & Git Workflow**: [Development Process](docs/development-process.md)
+- **Current Deployment / Runnable Artifacts**: <http://10.93.26.186>
 - **Week 2 Reports**:
   - [Week 2 Report](reports/week2/README.md)
   - [MVP v0 Report](reports/week2/mvp-v0-report.md)
 - **Week 3 Reports:**
   - [Week 3 Report](reports/week3/README.md)
+- **Hosted Documentation Site**: [https://swp-47.github.io/traffic-processing-platform/](https://swp-47.github.io/traffic-processing-platform/)

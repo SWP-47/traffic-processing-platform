@@ -19,6 +19,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - N/A
 
+### Removed
+
+- N/A
+
+### Fixed
+
+- N/A
+
+### Security
+
+- N/A
+
+## [2.0.0] - 2026-07-05
+
+### Added
+
+- Ingestion Worker entry point and UDP receiver (`services/ingestion/main.py`, `services/ingestion/udp_server.py`) with `asyncio.DatagramProtocol`, component wiring, graceful shutdown via OS signals, and MTU payload validation. ([#218](https://github.com/SWP-47/traffic-processing-platform/issues/218))
+- Sequence tracking and Fast Path state management (`services/ingestion/sequence_tracker.py`, `services/ingestion/state_manager.py`) featuring Redis-backed `last_sequence` persistence, >1,000,000 threshold reset detection, conditional `last_activity_at` updates, `dropped_delta` accumulation, and 6-second TTL enforcement. ([#218](https://github.com/SWP-47/traffic-processing-platform/issues/218))
+- Redis Capped List buffering (`services/ingestion/buffer_manager.py`) with `LLEN` checks and `LTRIM` enforcement at 100,000 items to prevent OOM, alongside a background asyncio flusher (`services/ingestion/flusher.py`) utilizing Lua atomic pops and `asyncpg.executemany` for batch `INSERT` operations into the `packet_flows` hypertable. ([#219](https://github.com/SWP-47/traffic-processing-platform/issues/219))
+- Docker orchestration (`docker-compose.yml`, `docker-compose.dev.yml`) for 4 microservices, TimescaleDB, and Redis with `restart: always` policies. ([#216](https://github.com/SWP-47/traffic-processing-platform/issues/216))
+- Redis configured in ephemeral mode (`save ""`, `appendonly no`) to maximize IOPS and prevent disk-write bottlenecks. ([#216](https://github.com/SWP-47/traffic-processing-platform/issues/216))
+- Lightweight Dockerfiles for `ingestion`, `reporting`, `websocket`, and `api` services utilizing `uv` for fast dependency resolution. ([#216](https://github.com/SWP-47/traffic-processing-platform/issues/216))
+- Alembic setup and initial relational schema migrations for `users`, `channels`, and `user_channel_scopes` tables. ([#217](https://github.com/SWP-47/traffic-processing-platform/issues/217))
+- TimescaleDB initialization including `packet_flows` hypertables, `telemetry_1s` Continuous Aggregates, and 7-day automated retention policies via pure SQL and migrations. ([#217](https://github.com/SWP-47/traffic-processing-platform/issues/217))
+- Project initialization with `pyproject.toml` (service extras), `Makefile` aliases, and environment templates. ([#214](https://github.com/SWP-47/traffic-processing-platform/issues/214))
+- Typed configuration via Pydantic Settings and structured logging with a custom `TokenMaskingFilter` for sensitive data redaction. ([#214](https://github.com/SWP-47/traffic-processing-platform/issues/214))
+- Custom exception hierarchy (`CnSSBaseError` -> `AuthError`, `ValidationError`) for standardized error handling. ([#214](https://github.com/SWP-47/traffic-processing-platform/issues/214))
+- Pydantic data contracts for UDP telemetry batches and WebSocket subscription payloads. ([#214](https://github.com/SWP-47/traffic-processing-platform/issues/214))
+- `asyncpg` pool manager and `redis.asyncio` client with auto-loading Lua scripts for atomic operations. ([#215](https://github.com/SWP-47/traffic-processing-platform/issues/215))
+- Security mechanisms including `passlib` (Argon2id) for password hashing, HS256 JWT encode/decode, and scope verification. ([#215](https://github.com/SWP-47/traffic-processing-platform/issues/215))
+- SQLAlchemy ORM models for `users`, `channels`, and `packet_flows` to support database migrations and type hints. ([#215](https://github.com/SWP-47/traffic-processing-platform/issues/215))
+- WebSocket server implementation with upgrade handling, JWT validation, `jwt:revoked` checks, and `channel_id` verification returning specific close codes (4001-4004). Includes a 5-second Heartbeat mechanism and a 10-second TTL for `ws:session` keys in Redis to track active connections. ([#220](https://github.com/SWP-47/traffic-processing-platform/issues/220))
+- Deterministic `query_hash` (SHA256) generation for subscriptions with a strict Initial Snapshot order (`SUBSCRIBE` -> DB query -> push to client -> listen to Pub/Sub). Implemented Garbage Collection to clean listener sets on disconnect and remove empty `sub:registry` entries, alongside `channel_id` match validation between URL and control message (close code 4003). ([#221](https://github.com/SWP-47/traffic-processing-platform/issues/221))
+- Reporting Worker with a 1Hz polling loop to read `sub:active_hashes` and a dynamic SQL generator featuring a strict whitelist for `sort_by` and `sort_order` to prevent SQL injection. Includes Ghost Cleanup to validate `ws:session` via `EXISTS`/`SREM`, atomic drop flushing (Lua -> UPDATE PG -> LTRIM Redis), and mass `UPDATE is_active=FALSE` for timed-out sessions. ([#222](https://github.com/SWP-47/traffic-processing-platform/issues/222))
+- FastAPI application factory with dependency injection (`get_db`, `get_current_user`, `require_scope`), Pydantic DTOs for request/response validation, and a `POST /api/v1/auth/login` endpoint for Argon2id credential validation and HS256 JWT issuance with claims (`sub`, `iat`, `exp`, `role`, `scope`). ([#223](https://github.com/SWP-47/traffic-processing-platform/issues/223))
+- REST API data routes including `GET /channels` and `GET /status` reading from the `channels` table, `GET /history` calculating historical data using TimescaleDB's `time_bucket` function, and a `GET /health` endpoint for system monitoring. ([#224](https://github.com/SWP-47/traffic-processing-platform/issues/224))
+- CLI utilities and scripts including `init_db.py` for admin user creation, `seed_data.py` for test data generation, `revoke_token.py` for adding a token's `jti` to the `jwt:revoked` set in Redis, and `load_test_udp.py` as a UDP stress generator. ([#225](https://github.com/SWP-47/traffic-processing-platform/issues/225))
+- Testing infrastructure setup using `conftest.py` with `fake_redis` and `fake_db` fixtures, an asynchronous UDP mock, and comprehensive unit tests for `sequence_tracker` (reset detection), `sql_builder` (SQL injection prevention), `query_hash` (determinism), and `scopes` (access matrix). ([#226](https://github.com/SWP-47/traffic-processing-platform/issues/226))
+- Integration tests for the ingestion pipeline, WebSocket subscription flow, ghost cleanup, and authentication flow using `testcontainers` to spin up real Redis and PostgreSQL instances, alongside an E2E test verifying the full pipeline from UDP packet reception to WebSocket client delivery. ([#227](https://github.com/SWP-47/traffic-processing-platform/issues/227))
+- Comprehensive documentation including `architecture.md`, `api.md`, `websocket_protocol.md`, and `deployment.md`, OpenAPI descriptions for all REST endpoints, and PlantUML diagrams (`data_flow.puml`, `subscription_lifecycle.puml`) visualizing system architecture and protocols. ([#228](https://github.com/SWP-47/traffic-processing-platform/issues/228))
+- Top Tables component on the dashboard page of MUI. ([#205](https://github.com/SWP-47/traffic-processing-platform/issues/205))
+- Added another (more user-friendly) behavior of button to turn on and off the blocking using it ([#240](https://github.com/SWP-47/traffic-processing-platform/issues/240))
+
+### Changed
+
+- **BREAKING**: CnSS architecture migrated from monolithic in-memory storage to 4 isolated microservices (Ingestion, Reporting, WebSocket, API) with TimescaleDB persistence ([#214](https://github.com/SWP-47/traffic-processing-platform/issues/214))
+- **BREAKING**: REST API versioned to 2.0.0 with new subscription-based WebSocket protocol ([#220](https://github.com/SWP-47/traffic-processing-platform/issues/220))
+- **BREAKING**: Telemetry data model changed from aggregated counters to raw packet metadata arrays ([#218](https://github.com/SWP-47/traffic-processing-platform/issues/218))
+
+### Deprecated
+
+- N/A
+
+### Removed
+
+- Legacy in-memory `StateStore` implementation (replaced by TimescaleDB + Redis) ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))
+- Deprecated `GET /api/v1/channel/status` endpoint (use `GET /api/v1/channel/{channel_id}/status`) ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
+
 ### Fixed
 
 - N/A
@@ -30,6 +88,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.0] - 2026-06-28
 
 ### Added
+
 - Native TimescaleDB retention policies for automated historical data cleanup, replacing manual in-memory garbage collection. ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))
 - Documented the new REST endpoint `GET /api/v1/channel/{channel_id}/history` for lazy-loading historical telemetry data (Line Chart) with dynamic time-bucketing based on the requested period. ([#167](https://github.com/SWP-47/traffic-processing-platform/issues/167))
 - Documented WebSocket control messages (`subscribe`/`unsubscribe`) and the `hosts_update` payload schema to support real-time LAN/WAN host tables via the "Initial Snapshot on Subscribe" pattern. ([#167](https://github.com/SWP-47/traffic-processing-platform/issues/167))
@@ -49,8 +108,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Architectural descriptions of the new `Ingestion Worker` (UDP to DB) and `Reporting Worker` (DB to WebSocket) in CnSS responsibilities. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 - Line chart component (apache echarts library) to preview historical data ([#153](https://github.com/SWP-47/traffic-processing-platform/issues/153))
 - Information aboud how to build Docker containers added to CN and TP loacl README files ([#181](https://github.com/SWP-47/traffic-processing-platform/issues/181))
+- Added basic blocking logic for blocking 1 hardcoded ip address. Block and allow flag now saves in variable, because buttots and switches are not used yet ([#210](https://github.com/SWP-47/traffic-processing-platform/issues/210))
 
 ### Changed
+
 - Migrated CnSS telemetry storage from the legacy in-memory MVP v1 dictionary to TimescaleDB, restricting the in-memory `StateStore` strictly to lightweight metadata tracking and WebSocket session management. ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))
 - Refactored the `ChannelState` Pydantic model to drop the persistent `is_active` flag, shifting channel activity status to be computed on-the-fly based on `last_activity_timestamp`. ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))
 - Updated the Reporting Worker to derive channel activity timeouts directly from database timestamps instead of relying on legacy in-memory state flags. ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))
@@ -76,13 +137,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added Docker configuration for Traffic Processor (TP) to simplify deployment and ensure environment consistency. ([#90](https://github.com/SWP-47/traffic-processing-platform/issues/90))
 - Added Docker configuration for Communication Node (CN) to simplify deployment and ensure environment consistency. ([#88](https://github.com/SWP-47/traffic-processing-platform/issues/88))
 - Added JSON format validation using library jsonschema ([#152](https://github.com/SWP-47/traffic-processing-platform/issues/152))
-
+- Architecture of hardware (FPGA) part of TP was updated to make it more stroung and useful for future development ([#209](https://github.com/SWP-47/traffic-processing-platform/issues/209))
 
 ### Deprecated
 
 - N/A
 
 ### Removed
+
 - Removed the legacy `background_timeout_and_gc_task` and obsolete state mutation methods (e.g., `set_channel_active`, `set_channel_inactive`). ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))
 - Removed obsolete unit and integration tests (`test_recovery.py`, GC-related tests in `test_timeout_and_gc.py`) that validated deprecated in-memory state mutations. ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))
 - Dead code and unused variable assignments (e.g., `dropped` return value in `udp_server.py`, unused `batch` object in `test_websocket.py`) to improve code clarity and maintainability. ([#148](https://github.com/SWP-47/traffic-processing-platform/issues/148))
@@ -92,6 +154,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - References to in-memory `Dict` state management and legacy aggregated counter payloads (`direction_out`, `direction_in` objects) from all API and system documentation. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 
 ### Fixed
+
 - Fixed an issue where the JWT scope intersection during login relied on the in-memory store, causing empty scopes after a server restart before the first UDP packet arrived. The scope is now correctly derived from the database. ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))
 - Fixed runtime `AttributeError` in the Reporting Worker caused by calls to the removed `state_store.set_channel_active()` method. ([#179](https://github.com/SWP-47/traffic-processing-platform/issues/179))
 - Added graceful error handling and lazy pool re-initialization in `app/db.py` and `app/udp_server.py` to ensure the UDP listener never crashes if TimescaleDB becomes temporarily unreachable (AC 4). ([#145](https://github.com/SWP-47/traffic-processing-platform/issues/145), [#146](https://github.com/SWP-47/traffic-processing-platform/issues/146))
@@ -100,8 +163,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upper bound for time window of sending packets by CN was added to fix problems with fragmentation. ([#89](https://github.com/SWP-47/traffic-processing-platform/issues/89))
 
 ### Security
-- Documented UDP MTU enforcement (< 1400 bytes) as a critical mitigation against network-level fragmentation and silent packet drops in the CN Trust Model section. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 
+- Documented UDP MTU enforcement (< 1400 bytes) as a critical mitigation against network-level fragmentation and silent packet drops in the CN Trust Model section. ([#141](https://github.com/SWP-47/traffic-processing-platform/issues/141))
 
 ## [1.0.0] - 2026-06-21
 
@@ -195,10 +258,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added JWT-based authentication for all REST and WebSocket endpoints to protect telemetry data and prevent unauthorized access. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 - CnSS now sanitizes access logs to prevent `access_token` leakage via query parameters. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 
-
-[Unreleased]: https://github.com/SWP-47/traffic-processing-platform/compare/v1.1.0...HEAD
-[1.0.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.0.0
+[Unreleased]: https://github.com/SWP-47/traffic-processing-platform/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v2.0.0
 [1.1.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.1.0
+[1.0.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.0.0
 
 <!-- 
 RELEASE TEMPLATE (For Release Manager use only):

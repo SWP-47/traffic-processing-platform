@@ -5,6 +5,7 @@ This document serves as the canonical testing status artifact for the Traffic Pr
 ## Critical Modules and Coverage
 
 Critical modules are source files, packages, or product areas responsible for core user workflows, persistence, external integration, security, or business rules. Each critical module must maintain at least 30% automated line coverage.
+
 | Critical module | Why critical | Required line coverage | Current line coverage | Evidence |
 |---|---|---:|---:|---|
 | `cnss/app/` | Core telemetry ingestion (UDP server), JWT authentication, WebSocket state management, TimescaleDB persistence, and Reporting Worker. Enforces all QRs. | 30% | ≥ 30% (enforced by `--cov-fail-under=30` gate) | [Latest CI run → CnSS Check → "Run coverage gate" step](https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml) |
@@ -39,13 +40,19 @@ Critical modules are source files, packages, or product areas responsible for co
 **Branch Protection Evidence:**
 
 The `develop` and `general` branches are protected. Merging requires: (1) at least one approving review from a different team member, (2) all required CI status checks passing (including Lychee), and (3) squash/rebase merging is explicitly disabled — only merge commits are permitted to preserve full history.
+
 ## Additional QA Check Rationale
+
 Link checking (Lychee) does not satisfy the Assignment 4 additional QA check requirement. The following check was selected to address specific project risks.
+
 | QA objective or risk | Additional QA check | Scope | Latest result | Evidence | Limitations or follow-up |
 |---|---|---|---|---|---|
 | Dependencies with known vulnerabilities may expose deployments to avoidable security risk, especially since the CnSS is exposed to the network and ingests untrusted UDP payloads. | Automated Python dependency vulnerability scan via `pip-audit` | CnSS `requirements.txt` (and transitively all installed packages) | Passing | [Latest CI run → CnSS Check → "Run dependency audit" step](https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml) | `pip-audit` only covers Python dependencies. Frontend (`npm audit`) and OS-level (`apt`) vulnerabilities are not yet scanned in CI and should be added in a future sprint. Some transitive vulnerabilities may require manual triage or delayed upstream fixes. |
+
 ## Manual Evidence That Does Not Count as QRT
+
 Manual tests, observations, or exploratory checks that do not qualify as automated Quality Requirement Tests (QRTs).
+
 | Evidence | Scope | Result | Follow-up PBI or issue |
 |---|---|---|---|
 | End-to-end smoke test of the deployment (TP → CN → CnSS → MUI) on the Innopolis University testbed | Full telemetry pipeline | Passed — real-time packet counters and channel activity indicator update correctly | [None] |
@@ -55,6 +62,7 @@ Manual tests, observations, or exploratory checks that do not qualify as automat
 ## Active Quality Gates for Future Sprints
 
 The following Assignment 4 quality gates, tests, and CI checks are maintained as active repository requirements for all future project work. Later PBIs must satisfy these gates unless explicitly superseded by a documented equivalent or stronger check.
+
 - [ ] All automated unit and integration tests must pass.
 - [ ] Automated Quality Requirement Tests (QRT-001, QRT-002, QRT-003) must pass.
 - [ ] Critical modules must maintain ≥ 30% line coverage.

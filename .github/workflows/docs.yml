@@ -1,0 +1,50 @@
+name: Deploy Documentation
+
+on:
+  push:
+    branches:
+      - general
+      - develop
+    paths:
+      - 'docs/**'
+      - 'api/**'
+      - 'reports/**'
+      - 'mkdocs.yml'
+      - 'docs-requirements.txt'
+  pull_request:
+    branches:
+      - develop
+      - general
+    paths:
+      - 'docs/**'
+      - 'api/**'
+      - 'reports/**'
+      - 'mkdocs.yml'
+      - 'docs-requirements.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: (github.event_name == 'push' && (github.ref == 'refs/heads/general' || github.ref == 'refs/heads/release/v2.0.0')) || (github.event_name == 'pull_request' && github.ref == 'refs/heads/general')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r docs-requirements.txt
+      
+      - name: Build and deploy documentation
+        run: mkdocs gh-deploy --force

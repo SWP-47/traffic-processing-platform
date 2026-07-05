@@ -1,4 +1,4 @@
-# Customer Review Summary
+# Sprint Review Summary
 
 **Date**: July 4, 2026
 

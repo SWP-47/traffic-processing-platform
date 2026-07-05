@@ -1,4 +1,4 @@
-# Customer Review Summary
+# Sprint Review Summary
 
 **Date**: July 4, 2026
 
@@ -49,7 +49,9 @@ The customer executed five UAT scenarios to validate the MVP v2 increment during
 ## Addressed Customer Feedback (from previous sprints)
 
 - **Backend Architecture:** Implemented the customer's suggestion to separate logical elements (WebSocket, REST, UDP) into distinct containers to improve modularity and scalability.
-- **MUI Design:** The dashboard now matches the approved Figma prototype, including the toggle for raw numbers vs. charts, and the layout for historical data.
+- **MUI Design:** The dashboard now matches the approved Figma prototype, including the toggle for raw numbers vs. charts, and the layout for host statistics tables.
+![mui dashboard](images/mui-dashboard.png)
+![mui hosts](images/mui-hosts.png)
 
 ## Architecture & Workflow Changes Discussed
 
@@ -76,7 +78,7 @@ The customer executed five UAT scenarios to validate the MVP v2 increment during
 | Redesign the Host filtering UI to be more user-friendly (less reliant on strict text syntax). | New PBI: Improve Host Filtering UX | Should |
 | Implement the detailed Host Statistics page | PBI: Detailed Host Stats Page | Should |
 | Investigate and fix the system crash/fatigue upon Ethernet disconnect. | Bug: CN/CnSS state corruption on interface loss | Must |
-| Fix hardware button debounce issue on the FPGA/TP. | Bug: Key1 Contact Bounce | Should |
+| Fix hardware button debounce issue on the FPGA/TP. | Bug: Key1 Contact Bounce | Could |
 
 ## Overall Assessment
 

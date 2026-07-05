@@ -6,29 +6,27 @@ This document defines the end-user-facing scenarios that customers or relevant s
 
 ---
 
-## UAT-001: [Short Title, e.g., Authenticate and View Real-Time Telemetry]
+## UAT-001: Assessment of the current channel load
 
-**Scenario Status:** [Active / Retired / Superseded]
+**Scenario Status:** Active
 
 **User Goal:**
-[What the user is trying to achieve. e.g., "As a system administrator, I want to log in and view real-time packet counts so that I can monitor network activity."]
+As a network administrator, I want to quickly and accurately count the numeric values of RX/TX rate in order to understand the actual channel load.
 
 **Preconditions:**
 
-- [e.g., The CnSS and MUI are deployed and accessible.]
-- [e.g., The TP is actively forwarding traffic and sending telemetry to the CN.]
-- [e.g., Valid administrator credentials are available.]
+- CnSS and MUI are working, TP/CN are sending telemetry
+- The user is logged in to the account
+- A channel has been selected
 
 **Step-by-step Instructions & Expected Outcomes:**
 
 | Step | Action | Expected Outcome |
 |---|---|---|
-| 1 | Navigate to the MUI deployment URL. | The login screen is displayed. |
-| 2 | Enter valid username and password, then click "Login". | The user is redirected to the main dashboard. No error messages are shown. |
-| 3 | Observe the Channel Activity indicator and Rx/Tx packet counters. | The activity indicator shows "Active" (Green). The Rx/Tx counters update in real-time (every 0.5 - 2 seconds) reflecting actual traffic. |
-| 4 | [Add further steps...] | [Add expected outcomes...] |
+| 1 | Open the dashboard and look at the RX/TX bar chart. | Two columns are visible, the bar height reflects the current load in one direction. |
+| 2 | Switch the widget to the numerical mode (click on the hashtag icon in the right top corner). | The column bars disappear, and large numbers of RX and TX rate appear and display current channel load in pkt/s. |
 
-### UAT-001 Execution Results (Week 4)
+### UAT-001 Execution Results (Week 5)
 
 *Record the results of the customer executing this scenario during the recorded UAT session.*
 
@@ -46,27 +44,29 @@ This document defines the end-user-facing scenarios that customers or relevant s
 
 ---
 
-## UAT-002: [Short Title, e.g., Switch Between Monitored Channels]
+## UAT-002: A retrospective analysis of channel activity
 
-**Scenario Status:** [Active / Retired / Superseded]
+**Scenario Status:** Active
 
 **User Goal:**
-[What the user is trying to achieve. e.g., "As an administrator with access to multiple bridges, I want to switch between them to compare their network states."]
+
+As a network administrator, I want to find the moment of an anomaly or load surge in the past in order to understand exactly when the network problems started.
 
 **Preconditions:**
 
-- [e.g., User is logged in with an account that has `scope` access to at least two distinct channels (e.g., `bridge-berlin` and `bridge-prague`).]
-- [e.g., Both channels are actively receiving telemetry.]
+- CnSS and MUI are working, TP/CN are sending telemetry
+- The user is logged in to the account
+- A channel has been selected
+- The channel have historical data of Rx/Tx changes
 
 **Step-by-step Instructions & Expected Outcomes:**
 
 | Step | Action | Expected Outcome |
 |---|---|---|
-| 1 | On the dashboard, open the channel selection dropdown. | The dropdown lists all channels accessible to the user's JWT scope. |
-| 2 | Select a different channel (e.g., switch from `bridge-berlin` to `bridge-prague`). | The dashboard immediately clears the previous data and begins displaying the real-time telemetry for the newly selected channel. |
-| 3 | [Add further steps...] | [Add expected outcomes...] |
+| 1 | Open the dashboard and find the line chart of the RX/TX rate history. | Two lines are visible (blue - RX, pink - TX) for the last hour. |
+| 2 | Hover the cursor over a point on the chart. | A tooltip appears with the exact values of RX/TX and time. |
 
-### UAT-002 Execution Results (Week 4)
+### UAT-002 Execution Results (Week 5)
 
 - **Execution Date:** [YYYY-MM-DD]
 - **Result:** [Passed / Failed / Passed with minor feedback]
@@ -79,32 +79,110 @@ This document defines the end-user-facing scenarios that customers or relevant s
 
 ---
 
-## UAT-003: [Short Title, e.g., Verify Access Control for Restricted Viewer]
+## UAT-003: Fast identification of the top consumer in the network
 
-**Scenario Status:** [Active / Retired / Superseded]
+**Scenario Status:** Active
 
 **User Goal:**
-[What the user is trying to achieve. e.g., "As a restricted viewer, I want to ensure I cannot access channels outside my assigned scope."]
+
+As a network administrator, I want to quickly understand who is generating the main load on the network right now.
 
 **Preconditions:**
 
-- [e.g., A `viewer` account exists with a JWT scope restricted to only `bridge-berlin`.]
+- CnSS and MUI are working, TP/CN are sending telemetry
+- The user is logged in to the account
+- A channel has been selected
+- The channel have several hosts with different received and sent per second metrics
 
 **Step-by-step Instructions & Expected Outcomes:**
 
 | Step | Action | Expected Outcome |
 |---|---|---|
-| 1 | Log in using the restricted `viewer` credentials. | Login is successful, dashboard loads. |
-| 2 | Check the channel selection dropdown. | Only `bridge-berlin` is visible. Other channels are hidden. |
-| 3 | Attempt to manually construct a WebSocket URL for an unauthorized channel (e.g., `bridge-prague`). | The WebSocket connection is rejected with close code `4003` (channel_forbidden), and the UI handles the disconnection gracefully. |
+| 1 | Find the "Top LAN hosts" table. | A table with a maximum of 5 hosts and their current activity is visible. |
+| 2 | Click on the Received column to apply sorting by traffic consumption. | The table is sorted by the desired column. |
+| 3 | Determine which host receives the most packets. | The user sees the "leader" by RX or TX metrics in the first row of the table. |
 
-### UAT-003 Execution Results (Week 4)
+### UAT-003 Execution Results (Week 5)
 
 - **Execution Date:** [YYYY-MM-DD]
 - **Result:** [Passed / Failed / Passed with minor feedback]
 - **Observations:** [e.g., "Customer successfully verified that the UI correctly filters the dropdown and the backend correctly rejects unauthorized WS connections."]
 
 ### UAT-003 Customer Comments & Resulting PBIs
+
+- **Comments:** [Customer feedback]
+- **Resulting PBIs/Issues:** [Links to issues or "None"]
+
+---
+
+## UAT-004: Overview of the list of active network hosts
+
+**Scenario Status:** Active
+
+**User Goal:**
+
+As a network administrator, I want to see the full picture of network activity and find a specific host in order to understand what is happening on the network as a whole.
+
+**Preconditions:**
+
+- CnSS and MUI are working, TP/CN are sending telemetry
+- The user is logged in to the account
+- A channel has been selected
+- The channel have several hosts with different received and sent per second metrics
+
+**Step-by-step Instructions & Expected Outcomes:**
+
+| Step | Action | Expected Outcome |
+|---|---|---|
+| 1 | Click on the "View all entries" button at the bottom of the "Top LAN hosts" table. | The `/hosts` page opened with the full table of hosts activity. |
+| 2 | Locate filter input field right above the table and write `location: LAN` here. | The table is filtered to show only hosts in the local area network. |
+| 3 | Click on the Received column to apply sorting by traffic consumption. | The table is sorted by the desired column. |
+| 4 | Change "Results per page" limit at the bottom of the table to 50. | Table shows more rows on one page. |
+
+### UAT-004 Execution Results (Week 5)
+
+- **Execution Date:** [YYYY-MM-DD]
+- **Result:** [Passed / Failed / Passed with minor feedback]
+- **Observations:** [e.g., "Customer successfully verified that the UI correctly filters the dropdown and the backend correctly rejects unauthorized WS connections."]
+
+### UAT-004 Customer Comments & Resulting PBIs
+
+- **Comments:** [Customer feedback]
+- **Resulting PBIs/Issues:** [Links to issues or "None"]
+
+---
+
+## UAT-005: Hardware traffic blocking
+
+**Scenario Status:** Active
+
+**User Goal:**
+
+As a network administrator, I want to physically stop unwanted traffic and make sure that the system displays this status correctly.
+
+**Preconditions:**
+
+- Demo LAN laptop is connected to the network
+- Traffic processor is connected to the network
+- CnSS and MUI are working, CN is sending telemetry
+- The channel has been selected
+
+**Step-by-step Instructions & Expected Outcomes:**
+
+| Step | Action | Expected Outcome |
+|---|---|---|
+| 1 | Open some internet page on the demo LAN laptop. | Ensure, that the internet is working as expected. |
+| 2 | Press the physical button on the FPGA board to block traffic from the demo LAN laptop. | Opened intenet page stops loading. |
+| 3 | Check MUI dashboard charts. | The overall channel activity decreases. |
+| 4 | Press the physical button on the FPGA board again to stop blocking traffic from the demo LAN laptop. | Internet is working on the demo laptop again and channel activity on the MUI increases. |
+
+### UAT-005 Execution Results (Week 5)
+
+- **Execution Date:** [YYYY-MM-DD]
+- **Result:** [Passed / Failed / Passed with minor feedback]
+- **Observations:** [e.g., "Customer successfully verified that the UI correctly filters the dropdown and the backend correctly rejects unauthorized WS connections."]
+
+### UAT-005 Customer Comments & Resulting PBIs
 
 - **Comments:** [Customer feedback]
 - **Resulting PBIs/Issues:** [Links to issues or "None"]

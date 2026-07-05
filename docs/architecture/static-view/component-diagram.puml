@@ -1,0 +1,176 @@
+@startuml component-diagram
+!theme plain
+title Traffic Processing Platform - Component Diagram (Static View)
+
+' === Skin Parameters ===
+skinparam componentStyle rectangle
+skinparam packageStyle frame
+skinparam linetype polyline
+skinparam nodesep 40
+skinparam ranksep 40
+skinparam defaultPadding 1
+skinparam arrowThickness 1.1
+skinparam arrowFontSize 9
+skinparam component {
+    BackgroundColor White
+    BorderColor Black
+    FontSize 11
+}
+skinparam package {
+    BackgroundColor #F5F5F5
+    BorderColor #CCCCCC
+}
+
+' === External Entities ===
+actor "Network User" as User
+actor "System Admin" as Admin
+cloud "Internet/WAN" as WAN
+
+' === Traffic Processor Package ===
+package "Traffic Processor (TP)" as TP {
+    component "FPGA\nData Plane" as FPGA
+    component "Software\nTelemetry Extractor" as TP_SW
+}
+
+' === Communication Node Package ===
+package "Communication Node (CN)" as CN {
+    component "Telemetry\nBatcher & Forwarder" as CN_Batcher
+}
+
+' === CnSS Package ===
+package "Control and Status Server (CnSS)" as CnSS {
+    
+    package "Ingestion Worker" as Ingestion {
+        component "UDP Server\n(Port 5140)" as UDP_Server
+        component "Sequence\nTracker" as SeqTracker
+        component "Buffer\nManager" as BufManager
+        component "Background\nFlusher" as Flusher
+    }
+    
+    package "Reporting Worker" as Reporting {
+        component "Poller\n(1Hz)" as Poller
+        component "Channel State\nSyncer" as StateSyncer
+        component "Ghost\nCleaner" as GhostCleaner
+        component "SQL Handlers\n(Telemetry/Hosts)" as Handlers
+    }
+    
+    package "WebSocket Service" as WS_Service {
+        component "Connection\nHandler" as WS_Handler
+        component "Session\nManager" as SessionMgr
+        component "Subscription\nManager" as SubMgr
+        component "Pub/Sub\nConsumer" as PubSubConsumer
+        component "Snapshot\nFetcher" as SnapshotFetcher
+        component "Garbage\nCollector" as GC
+    }
+    
+    package "REST API & Auth" as API_Service {
+        component "FastAPI\nApplication" as FastAPI
+        component "Auth Routes" as AuthRoutes
+        component "Channel Routes" as ChannelRoutes
+        component "History Routes" as HistoryRoutes
+        component "Health Route" as HealthRoute
+        component "JWT\nValidator" as JWT_MW
+    }
+}
+
+' === Data Stores ===
+database "TimescaleDB\n(Packet Flows + Aggregates)" as TSDB
+database "Redis\n(Ephemeral State + Pub/Sub)\n\n" as Redis
+
+' === Frontend ===
+package "Management UI (MUI)" as MUI {
+    component "React\nApplication" as ReactApp
+    component "WebSocket\nClient" as WSClient
+    component "REST API\nClient" as RESTClient
+    component "ECharts\nVisualization" as Charts
+}
+
+' === Infrastructure ===
+package "Infrastructure Layer" as Infra {
+    component "Edge Nginx\n(TLS Termination)" as Nginx
+}
+
+' === External Connections ===
+User -[hidden]> WAN
+WAN -[hidden]> FPGA
+
+' === Data Plane (Physical Traffic) ===
+User --> FPGA : "Network packets"
+FPGA --> WAN : "Forwarded packets"
+FPGA --> TP_SW : "Packet metadata\n(mirrored)"
+
+' === Telemetry Pipeline ===
+TP_SW --> CN_Batcher : "Raw packet metadata\n(Local IPC/UDP)"
+CN_Batcher --> UDP_Server : "TelemetryBatch JSON\n(UDP 5140)"
+
+' === Ingestion Worker Internal Flow ===
+UDP_Server --> SeqTracker : "Validate sequence"
+UDP_Server --> BufManager : "Buffer packets"
+SeqTracker --> Redis : "HSET channel:seq"
+BufManager --> Redis : "LPUSH udp:buffer"
+Flusher --> Redis : "LPOP buffer"
+Flusher --> TSDB : "Batch INSERT\npacket_flows"
+
+' === Reporting Worker Flow ===
+Poller --> Redis : "SMEMBERS\nsub:active_hashes"
+Poller --> Handlers : "Execute queries"
+Handlers --> TSDB : "SELECT from\ncontinuous aggregates"
+Poller --> Redis : "PUBLISH\nws:push:{hash}"
+StateSyncer --> Redis : "SCAN channel:state:*"
+StateSyncer --> TSDB : "UPSERT channels\n(is_active, dropped)"
+GhostCleaner --> Redis : "EXISTS ws:session"
+GhostCleaner --> Redis : "SREM stale listeners"
+
+' === WebSocket Service Flow ===
+WS_Handler --> JWT_MW : "Extract & validate"
+JWT_MW --> Redis : "SISMEMBER\njwt:revoked"
+WS_Handler --> SessionMgr : "Create session\n(TTL 10s)"
+SessionMgr --> Redis : "HSET ws:session"
+WS_Handler --> SubMgr : "Subscribe request"
+SubMgr --> Redis : "SET sub:registry"
+SubMgr --> Redis : "SADD sub:listeners"
+SnapshotFetcher --> TSDB : "Initial snapshot\nquery"
+PubSubConsumer --> Redis : "PSUBSCRIBE\nws:push:*"
+PubSubConsumer --> WSClient : "Push updates"
+GC --> Redis : "Cleanup on disconnect"
+
+' === REST API Flow ===
+FastAPI --> AuthRoutes
+FastAPI --> ChannelRoutes
+FastAPI --> HistoryRoutes
+FastAPI --> HealthRoute
+AuthRoutes --> TSDB : "SELECT users"
+AuthRoutes --> Redis : "SADD jwt:revoked"
+ChannelRoutes --> TSDB : "SELECT channels"
+HistoryRoutes --> TSDB : "time_bucket\naggregation"
+HealthRoute --> TSDB : "Health check"
+HealthRoute --> Redis : "Ping"
+
+' === Frontend Connections ===
+Admin --> ReactApp : "Browser (HTTPS)"
+ReactApp --> RESTClient : "API calls"
+ReactApp --> WSClient : "WebSocket"
+RESTClient --> Nginx : "HTTPS /api/*"
+WSClient --> Nginx : "WSS /api/v1/ws/*"
+
+' === Infrastructure Routing ===
+Nginx --> FastAPI : "Proxy to :8000"
+Nginx --> WS_Handler : "Proxy to :8001"
+Nginx --> ReactApp : "Serve static files"
+
+' === Internal Component Relationships ===
+FPGA -[hidden]-> TP_SW
+Ingestion -[hidden]-> Reporting
+Reporting -[hidden]-> WS_Service
+WS_Service -[hidden]-> API_Service
+
+' === Legend ===
+legend right
+  | =Key= | =Description= |
+  | UDP | User Datagram Protocol |
+  | WSS | WebSocket Secure |
+  | HTTPS | HTTP Secure (TLS) |
+  | IPC | Inter-Process Communication |
+endlegend
+
+@enduml

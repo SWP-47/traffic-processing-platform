@@ -41,6 +41,7 @@ jobs:
             --exclude '10\.93\.26\.186'
             --exclude https://github.com/SWP-47/traffic-processing-platform/releases/tag/
             --exclude https://github.com/SWP-47/traffic-processing-platform/compare/
+            --exclude https://swp-47.github.io/traffic-processing-platform/
             './**/*.md'
           fail: true 
         env:

@@ -74,6 +74,7 @@ jobs:
     defaults:
       run:
         working-directory: cnss
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -82,35 +83,56 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+        run: uv sync --all-extras
 
-      - name: Lint code (Black & Flake8)
+      - name: Lint code (Ruff, Flake8, Mypy, Black)
         run: |
-          black --check .
-          flake8 .
+          uv run ruff check .
+          uv run flake8 .
+          uv run mypy .
+          uv run black --check .
 
-      - name: Run containerized CnSS integration tests
+      - name: Start infrastructure (TimescaleDB, Redis)
+        run: docker compose -f docker-compose.dev.yml up -d
+
+      - name: Wait for infrastructure to be ready
         run: |
-          docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
+          timeout 60 bash -c 'until docker compose -f docker-compose.dev.yml exec -T timescaledb pg_isready -U cnss; do sleep 2; done'
+          timeout 60 bash -c 'until docker compose -f docker-compose.dev.yml exec -T redis redis-cli ping; do sleep 2; done'
+
+      - name: Run database migrations
+        env:
+          # Переопределяем URL на localhost, так как тесты запускаются на хосте runner, а не в Docker-сети
+          DATABASE_URL: postgresql+asyncpg://cnss:cnss@localhost:5432/cnss
+        run: uv run alembic upgrade head
 
       - name: Install coverage tools
-        run: |
-          python -m pip install pytest-cov
+        run: uv pip install pytest-cov
 
       - name: Run coverage gate
+        env:
+          REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: postgresql+asyncpg://cnss:cnss@localhost:5432/cnss
         run: |
-          pytest --cov=app --cov-report=term-missing --cov-fail-under=30 tests/ -q
+          uv run pytest --cov=core --cov=services --cov-report=term-missing --cov-fail-under=30 tests/ -q
+
+      - name: Stop infrastructure
+        if: always()
+        run: docker compose -f docker-compose.dev.yml down -v
 
       - name: Run dependency audit
         run: |
-          python -m pip install pip-audit
-          python -m pip_audit -r requirements.txt
-
+          # Generation of requirements.txt for pip-audit
+          uv pip compile pyproject.toml --all-extras -o requirements.txt
+          uv pip install pip-audit
+          uv run pip-audit -r requirements.txt
   mui:
     name: MUI Check
     runs-on: ubuntu-latest

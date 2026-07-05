@@ -16,8 +16,7 @@ class SubscriptionManager {
    // Mappings
    private keyToId: Record<string, string> = {};
    private idToCallbacks: Record<string, Set<Callback>> = {};
-   private idToParams: Record<string, Record<string, unknown>> = {}; 
-   private needReconnection: boolean = false;
+   private idToParams: Record<string, Record<string, unknown>> = {};
 
    constructor() {
       websocket.subscribeMessages(this.onUpdate.bind(this));

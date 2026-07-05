@@ -15,7 +15,7 @@ export interface paths {
         put?: never;
         /**
          * User Authentication
-         * @description Authenticate user and issue JWT token with role and scope information.
+         * @description Authenticate user and issue JWT access token. Sets `refresh_token` as an HttpOnly cookie.
          */
         post: {
             parameters: {
@@ -33,19 +33,11 @@ export interface paths {
                 /** @description Successful authentication */
                 200: {
                     headers: {
+                        "Set-Cookie"?: string;
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["LoginResponse"];
-                    };
-                };
-                /** @description Bad request (missing fields) */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        "application/json": components["schemas"]["TokenResponse"];
                     };
                 };
                 /** @description Invalid credentials */
@@ -55,6 +47,94 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh Access Token
+         * @description Issues a new short-lived access token using the long-lived refresh token stored in the HttpOnly cookie.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description New access token issued */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RefreshTokenResponse"];
+                    };
+                };
+                /** @description Refresh token missing, invalid, expired, or revoked */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * User Logout
+         * @description Invalidates the current session by revoking the refresh token in Redis and clearing the cookie.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successfully logged out */
+                200: {
+                    headers: {
+                        "Set-Cookie"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LogoutResponse"];
                     };
                 };
             };
@@ -100,7 +180,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["HealthResponse"];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
             };
@@ -141,7 +221,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ChannelsResponse"];
+                        "application/json": components["schemas"]["ChannelsListResponse"];
                     };
                 };
                 /** @description Unauthorized */
@@ -192,7 +272,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ChannelStatusResponse"];
+                        "application/json": components["schemas"]["ChannelStatus"];
                     };
                 };
                 /** @description Forbidden (user has no access to this channel) */
@@ -232,14 +312,16 @@ export interface paths {
         };
         /**
          * Historical Telemetry Data (Line Chart)
-         * @description Lazy-loads historical telemetry data for the Line Chart.
-         *     CnSS dynamically calculates the optimal `time_bucket` interval based on the requested period.
+         * @description Lazy-loads historical telemetry data for the Channel Line Chart.
+         *     CnSS dynamically calculates the optimal `time_bucket` interval (approx 1400 points).
          */
         get: {
             parameters: {
                 query: {
-                    /** @description Time period to query. */
+                    /** @description Duration of the time window. */
                     period: "1h" | "24h" | "7d" | "30d";
+                    /** @description Start of the time range (ISO 8601). If omitted, defaults to `now - period`. */
+                    start_time?: string;
                 };
                 header?: never;
                 path: {
@@ -255,29 +337,108 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["HistoryResponse"];
+                        "application/json": components["schemas"]["ChannelHistoryResponse"];
                     };
                 };
-                /** @description Unauthorized */
-                401: {
+                /** @description Bad request (invalid start_time or exceeds retention) */
+                400: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
                 };
                 /** @description Forbidden */
                 403: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
                 };
                 /** @description Channel not found */
                 404: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/channel/{channel_id}/hosts/{host_ip}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Historical Host Rx/Tx Data
+         * @description Lazy-loads historical Rx/Tx rate data for a specific Host Line Chart.
+         */
+        get: {
+            parameters: {
+                query: {
+                    period: "1h" | "24h" | "7d" | "30d";
+                    start_time?: string;
+                };
+                header?: never;
+                path: {
+                    channel_id: string;
+                    /** @description IP address of the host (IPv4/IPv6). */
+                    host_ip: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Aggregated host historical points */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HostHistoryResponse"];
+                    };
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Channel or host not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
                 };
             };
         };
@@ -297,23 +458,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Real-time Telemetry Stream (WebSocket)
-         * @description Upgrades to WebSocket for real-time push stream, scoped to a specific channel.
+         * Real-time WebSocket Gateway
+         * @description Upgrades to WebSocket for real-time push streams, scoped to a specific channel.
          *     Auth via query parameters `?token={{access_token}}&channel_id={{channel_id}}`.
          *
-         *     **Connection Lifecycle & Close Codes:**
-         *     1. MUI opens WebSocket connection with `token` and `channel_id`.
-         *     2. CnSS validates token. On failure, closes with code `4001` (invalid_token).
-         *     3. CnSS checks if the `channel_id` query parameter is present in the URL. On failure, closes with code `4002` (missing_channel).
-         *     4. CnSS checks access to `channel_id` via JWT scope. On failure, closes with code `4003` (channel_forbidden).
-         *     5. CnSS checks if the provided `channel_id` value exists in the registry. On failure, closes with code `4004` (channel_not_found).
-         *     6. CnSS pushes `telemetry_update` frames at 1 Hz (aggregated by Reporting Worker from TimescaleDB).
-         *     7. **Keep-Alive:** CnSS sends periodic `ping` frames. MUI must respond with `pong`.
-         *     8. If no telemetry from CN for 5000ms, CnSS sends `is_active: false`.
-         *     9. **Control Messages:** MUI can send JSON text frames to manage subscriptions for host tables (e.g., `{"action": "subscribe", "target": "lan_hosts"}`).
-         *     10. **Host Updates:** CnSS pushes `hosts_update` frames to subscribed clients containing real-time LAN/WAN host statistics.
-         *
-         *     *Security Note: CnSS MUST NOT log the full request URL to prevent token leakage.*
+         *     **Control Messages:**
+         *     MUI must send a JSON text frame to subscribe to specific data targets.
+         *     See `WSControlMessage` schema for details on targets and parameters.
          */
         get: {
             parameters: {
@@ -334,7 +485,9 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": string;
+                    };
                 };
             };
         };
@@ -359,245 +512,298 @@ export interface components {
              */
             password: string;
         };
-        LoginResponse: {
+        TokenResponse: {
+            /** @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... */
+            access_token: string;
             /**
-             * @description JWT token for authenticated requests.
-             * @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-             */
-            access_token?: string;
-            /** @example Bearer */
-            token_type?: string;
-            /**
-             * @description Token lifetime in seconds.
-             * @example 86400
-             */
-            expires_in?: number;
-            /**
-             * Format: date-time
-             * @example 2026-06-18T12:00:00Z
-             */
-            issued_at?: string;
-            /**
-             * @example admin
+             * @example Bearer
              * @enum {string}
              */
-            role?: "admin" | "viewer";
-            /**
-             * @description List of accessible channel_ids.
-             * @example [
-             *       "bridge-berlin-01",
-             *       "bridge-prague-01"
-             *     ]
-             */
-            scope?: string[];
+            token_type: "Bearer";
+            /** @example 86400 */
+            expires_in: number;
+            /** Format: date-time */
+            issued_at: string;
+            /** @enum {string} */
+            role: "admin" | "viewer";
+            /** @description List of accessible channel_ids. Empty for admin. */
+            scope: string[];
         };
-        ErrorResponse: {
-            /** @example invalid_credentials */
-            error?: string;
-            /** @example Invalid username or password. */
-            message?: string;
+        RefreshTokenResponse: {
+            access_token: string;
+            /** @enum {string} */
+            token_type: "Bearer";
+            expires_in: number;
+            /** Format: date-time */
+            issued_at: string;
+        };
+        LogoutResponse: {
+            /** @example Successfully logged out. */
+            message: string;
         };
         HealthResponse: {
-            /**
-             * @example healthy
-             * @enum {string}
-             */
-            status?: "healthy" | "degraded" | "unhealthy";
-            components?: {
-                /**
-                 * @example active
-                 * @enum {string}
-                 */
-                cnss?: "active" | "inactive" | "error";
-            };
-            /**
-             * @description Number of channels currently reporting telemetry.
-             * @example 3
-             */
-            channels_active?: number;
-            /**
-             * @description Total number of channels known to CnSS.
-             * @example 4
-             */
-            channels_total?: number;
-            /**
-             * Format: date-time
-             * @example 2026-06-17T12:00:00Z
-             */
-            timestamp?: string;
-        };
-        ChannelsResponse: {
-            channels?: components["schemas"]["ChannelStatusResponse"][];
-            /** @example 2 */
-            total?: number;
-        };
-        ChannelStatusResponse: {
-            /** @example bridge-berlin-01 */
-            channel_id?: string;
-            /** @example true */
-            is_active?: boolean;
-            /**
-             * Format: date-time
-             * @example 2026-06-17T12:00:00Z
-             */
-            last_activity_timestamp?: string;
-        };
-        /** @description Raw metadata for a single observed packet. */
-        PacketMetadata: {
-            /**
-             * @description 0 for IN, 1 for OUT.
-             * @example 0
-             * @enum {integer}
-             */
-            direction?: 0 | 1;
-            /**
-             * @description Source IP address (IPv4/IPv6).
-             * @example 192.168.1.100
-             */
-            src_ip?: string;
-            /**
-             * @description Destination IP address (IPv4/IPv6).
-             * @example 8.8.8.8
-             */
-            dst_ip?: string;
-            /**
-             * @description Source port.
-             * @example 12345
-             */
-            src_port?: number;
-            /**
-             * @description Destination port.
-             * @example 53
-             */
-            dst_port?: number;
-        };
-        /**
-         * @description Payload sent from CN to CnSS over UDP.
-         *     Contains raw packet metadata for a specific time window.
-         *     CN must keep `window_ms` small enough to ensure the JSON payload fits within a single UDP datagram (ideally < 1400 bytes to avoid IP fragmentation).
-         */
-        TelemetryBatch: {
-            /**
-             * @description Identifier of the monitored channel/bridge. Used by CnSS to route the batch.
-             * @example bridge-berlin-01
-             */
-            channel_id?: string;
-            /**
-             * @description Unix timestamp (seconds) of the window start.
-             * @example 1718625600
-             */
-            timestamp?: number;
-            /**
-             * @description Monotonically increasing sequence number per channel. Used by CnSS to detect dropped UDP datagrams.
-             * @example 1042
-             */
-            sequence?: number;
-            /**
-             * @description Duration of the batching window in milliseconds. Must be kept small enough to ensure the JSON fits within the UDP MTU (< 1400 bytes).
-             * @example 50
-             */
-            window_ms?: number;
-            /** @description Array of raw packet metadata captured during the window. */
-            packets?: components["schemas"]["PacketMetadata"][];
-        };
-        /** @description Payload pushed from CnSS to MUI over WebSocket. Aggregated by the Reporting Worker from TimescaleDB at 1 Hz. */
-        TelemetryUpdate: {
-            /** @example telemetry_update */
-            type?: string;
-            /** @example bridge-berlin-01 */
-            channel_id?: string;
-            /** @example true */
-            is_active?: boolean;
-            /** @example 50 */
-            window_ms?: number;
-            /**
-             * @description Number of lost UDP datagrams between the previous and current batch for this channel.
-             * @example 0
-             */
-            dropped_batches?: number;
-            metrics?: {
-                direction_out?: {
-                    /**
-                     * Format: float
-                     * @example 300
-                     */
-                    packets_per_sec?: number;
-                    /** @example 15 */
-                    packets?: number;
-                };
-                direction_in?: {
-                    /**
-                     * Format: float
-                     * @example 280
-                     */
-                    packets_per_sec?: number;
-                    /** @example 14 */
-                    packets?: number;
-                };
-            };
-            /**
-             * Format: date-time
-             * @description Original timestamp from the latest CN batch.
-             * @example 2026-06-17T12:00:00Z
-             */
-            timestamp?: string;
-            /**
-             * Format: date-time
-             * @description Server time at CnSS when the aggregation was generated by the Reporting Worker.
-             * @example 2026-06-17T12:00:00.050Z
-             */
-            received_at?: string;
-        };
-        HistoryResponse: {
-            channel_id?: string;
             /** @enum {string} */
-            period?: "1h" | "24h" | "7d" | "30d";
-            /** @description The calculated time bucket size in seconds. */
-            interval_sec?: number;
-            points?: components["schemas"]["HistoryPoint"][];
+            status: "healthy" | "unhealthy";
+            components: {
+                [key: string]: "active" | "error";
+            };
+            channels_active: number;
+            channels_total: number;
+            /** Format: date-time */
+            timestamp: string;
+        };
+        ChannelStatus: {
+            channel_id: string;
+            is_active: boolean;
+            /** Format: date-time */
+            last_activity_timestamp: string | null;
+        };
+        ChannelsListResponse: {
+            channels: components["schemas"]["ChannelStatus"][];
+            total: number;
+        };
+        ChannelHistoryResponse: {
+            channel_id: string;
+            period: string;
+            /** Format: date-time */
+            start_time: string;
+            /** Format: date-time */
+            end_time: string;
+            interval_sec: number;
+            points: components["schemas"]["HistoryPoint"][];
         };
         HistoryPoint: {
             /** Format: date-time */
-            timestamp?: string;
+            timestamp: string;
             /** Format: float */
-            packets_in_per_sec?: number;
+            packets_in_per_sec: number;
             /** Format: float */
-            packets_out_per_sec?: number;
-            is_active?: boolean;
+            packets_out_per_sec: number;
+            is_active: boolean;
         };
-        /** @description Text frame sent from MUI to CnSS to manage WebSocket subscriptions. */
-        WSControlMessage: {
-            /** @enum {string} */
-            action?: "subscribe" | "unsubscribe";
-            /** @enum {string} */
-            target?: "lan_hosts" | "wan_hosts";
+        HostHistoryResponse: {
+            channel_id: string;
+            host_ip: string;
+            period: string;
+            /** Format: date-time */
+            start_time: string;
+            /** Format: date-time */
+            end_time: string;
+            interval_sec: number;
+            points: components["schemas"]["HostHistoryPoint"][];
+        };
+        HostHistoryPoint: {
+            /** Format: date-time */
+            timestamp: string;
+            /** Format: float */
+            packets_in_per_sec: number;
+            /** Format: float */
+            packets_out_per_sec: number;
+        };
+        ErrorResponse: {
             /**
-             * @description Required if action is 'subscribe'.
+             * @description Machine-readable error code
+             * @example invalid_credentials
+             */
+            error: string;
+            /**
+             * @description Human-readable description
+             * @example Invalid username or password.
+             */
+            message: string;
+            /** @description Optional validation error details */
+            details: Record<string, never>[];
+        };
+        /** @description Payload sent from CN to CnSS over UDP. */
+        TelemetryBatch: {
+            channel_id: string;
+            /** @description Unix timestamp (seconds) */
+            timestamp: number;
+            /**
+             * Format: int64
+             * @description 64-bit monotonically increasing sequence number
+             */
+            sequence: number;
+            window_ms: number;
+            packets: components["schemas"]["PacketFlow"][];
+        };
+        PacketFlow: {
+            /**
+             * @description 0 for IN, 1 for OUT
+             * @enum {integer}
+             */
+            direction: 0 | 1;
+            src_ip: string;
+            dst_ip: string;
+            src_port: number;
+            dst_port: number;
+            /**
+             * @description Protocol (e.g., TCP/UDP). Required for accurate host_top_ports protocol reporting.
              * @enum {string}
              */
-            sort_by?: "sent" | "received" | "last_seen";
-            /** @description Required if action is 'subscribe'. Default 5. */
-            limit?: number;
+            protocol: "TCP" | "UDP";
         };
-        /** @description JSON frame pushed from CnSS to MUI with real-time host table data. */
-        HostsUpdate: {
-            /** @example hosts_update */
-            type?: string;
+        /**
+         * @description Text frame sent from MUI to CnSS to manage WebSocket subscriptions.
+         *     The `id` field is required and must be unique per subscription instance.
+         *     The `params` object structure depends on the `target`.
+         */
+        WSControlMessage: {
             /** @enum {string} */
-            target?: "lan_hosts" | "wan_hosts";
-            channel_id?: string;
+            action: "subscribe" | "unsubscribe";
+            /** @description Client-generated unique identifier */
+            id: string;
+            channel_id: string;
+            /** @enum {string} */
+            target: "telemetry" | "hosts_table" | "host_details" | "host_top_destinations" | "host_top_ports";
+            /**
+             * @description Target-specific parameters. See schemas:
+             *     - `telemetry`: `TelemetryParams`
+             *     - `hosts_table`: `HostsTableParams`
+             *     - `host_details`: `HostDetailsParams`
+             *     - `host_top_destinations`: `HostTopDestinationsParams`
+             *     - `host_top_ports`: `HostTopPortsParams`
+             */
+            params?: Record<string, never>;
+        };
+        TelemetryParams: {
+            /**
+             * Format: float
+             * @description Aggregation time window in seconds.
+             */
+            window_sec: number;
+        };
+        HostsTableParams: {
+            /** @enum {string} */
+            period: "5m" | "15m" | "1h" | "24h" | "7d" | "30d";
+            /** @enum {string|null} */
+            location: "LAN" | "WAN" | null;
+            ip: string | null;
+            /** @enum {string} */
+            sort_by: "location" | "ip" | "unique_destinations" | "tx" | "rx" | "last_activity";
+            /** @enum {string} */
+            sort_order: "asc" | "desc";
+            limit: number;
+            offset: number;
+        };
+        HostDetailsParams: {
+            host_ip: string;
+            /** @enum {string} */
+            period: "5m" | "15m" | "1h" | "24h" | "7d" | "30d";
+        };
+        HostTopDestinationsParams: {
+            host_ip: string;
+            /** @enum {string} */
+            period: "5m" | "15m" | "1h" | "24h" | "7d" | "30d";
+            /** @enum {string} */
+            sort_by: "ip" | "location" | "received" | "last_seen";
+            /** @enum {string} */
+            sort_order: "asc" | "desc";
+            limit: number;
+            offset: number;
+        };
+        HostTopPortsParams: {
+            host_ip: string;
+            /** @enum {string} */
+            period: "5m" | "15m" | "1h" | "24h" | "7d" | "30d";
+            /** @enum {string} */
+            sort_by: "port" | "protocol" | "pps";
+            /** @enum {string} */
+            sort_order: "asc" | "desc";
+            limit: number;
+            offset: number;
+        };
+        TelemetryUpdate: {
+            /** @enum {string} */
+            type: "telemetry_update";
+            id: string;
+            channel_id: string;
+            is_active: boolean;
+            window_ms: number;
+            dropped_batches: number;
+            metrics: {
+                direction_out: {
+                    packets_per_sec: number;
+                    packets: number;
+                };
+                direction_in: {
+                    packets_per_sec: number;
+                    packets: number;
+                };
+            };
             /** Format: date-time */
-            timestamp?: string;
-            hosts?: components["schemas"]["HostEntry"][];
+            timestamp: string;
+            /** Format: date-time */
+            received_at: string;
+        };
+        HostsTableUpdate: {
+            /** @enum {string} */
+            type: "hosts_table_update";
+            id: string;
+            channel_id: string;
+            /** @enum {string} */
+            target: "hosts_table";
+            /** Format: date-time */
+            timestamp: string;
+            total_count: number;
+            hosts: components["schemas"]["HostEntry"][];
         };
         HostEntry: {
-            ip?: string;
-            /** Format: float */
-            sent_per_sec?: number;
-            /** Format: float */
-            received_per_sec?: number;
+            /** @enum {string} */
+            location: "LAN" | "WAN";
+            ip: string;
+            unique_destinations: number;
+            tx_per_sec: number;
+            rx_per_sec: number;
             /** Format: date-time */
-            last_seen?: string;
+            last_activity: string;
+        };
+        HostDetailsUpdate: {
+            /** @enum {string} */
+            type: "host_details_update";
+            id: string;
+            channel_id: string;
+            host_ip: string;
+            /** Format: date-time */
+            timestamp: string;
+            tx_per_sec: number;
+            rx_per_sec: number;
+        };
+        HostTopDestinationsUpdate: {
+            /** @enum {string} */
+            type: "host_top_destinations_update";
+            id: string;
+            channel_id: string;
+            host_ip: string;
+            /** Format: date-time */
+            timestamp: string;
+            total_count: number;
+            destinations: components["schemas"]["DestinationEntry"][];
+        };
+        DestinationEntry: {
+            ip: string;
+            /** @enum {string} */
+            location: "LAN" | "WAN";
+            received_per_sec: number;
+            /** Format: date-time */
+            last_seen: string;
+        };
+        HostTopPortsUpdate: {
+            /** @enum {string} */
+            type: "host_top_ports_update";
+            id: string;
+            channel_id: string;
+            host_ip: string;
+            /** Format: date-time */
+            timestamp: string;
+            total_count: number;
+            ports: components["schemas"]["PortEntry"][];
+        };
+        PortEntry: {
+            port: number;
+            /** @enum {string} */
+            protocol: "TCP" | "UDP";
+            packets_per_sec: number;
         };
     };
     responses: never;

@@ -27,6 +27,7 @@ const WS_ERROR_CODE = {
 
 class WebSocketConnectionService {
     private stateListeners = new Set<() => void>();
+    private messagesListeners = new Set<(message: string) => void>;
     private updatesListeners: { [index: string]: Set<(update: unknown) => void> } = {};
     
     subscribeState(callback: () => void): () => void {
@@ -42,6 +43,11 @@ class WebSocketConnectionService {
         this.updatesListeners[updateType].add(callback);
         return () => this.updatesListeners[updateType]?.delete(callback);
     }
+
+    subscribeMessages(callback: (update: string) => void): () => void {
+        this.messagesListeners.add(callback);
+        return () => this.messagesListeners.delete(callback);
+    }
     
     getState(): ConnectionState {
         return this.state;
@@ -55,6 +61,7 @@ class WebSocketConnectionService {
         this.updatesListeners[updateType]?.forEach((callback) => callback(update));
     }
 
+
     // Connection
     private connection: WebSocket | null = null;
     private lastConnectionData: ConnectionData | null = null;
@@ -67,15 +74,6 @@ class WebSocketConnectionService {
         connectionStatus: 'idle',
         message: null,
         channelId: null
-    }
-
-    send(payload: string) {
-        if (!this.connection) {
-            console.error("[WebSocketService] Failed to sent payload through WS connection! Connection is not established.");
-            return;
-        }
-        this.connection?.send(payload);
-        console.debug("[WebSocketService] Sent payload through WS connection. Payload: " + payload);
     }
 
     /**
@@ -208,12 +206,15 @@ class WebSocketConnectionService {
         }
     }
 
-    private onMessage(event: MessageEvent) {
+    private onMessage(event: MessageEvent<string>) {
         // Ping/pong
         if (event.data === "ping") {
             this.connection!.send("pong");
             return;
         }
+
+        console.debug(`[WebSocketService] WebSocket received a message.`);
+        this.messagesListeners.forEach((callback) => callback(event.data));
 
         try {
             console.debug(`[WebSocketService] WebSocket received an update.`);
@@ -232,6 +233,15 @@ class WebSocketConnectionService {
             this.reconnectionTimeout = undefined;
         }
         this.reconnectionAttempt = 0;
+    }
+
+    send(payload: string) {
+        if (!this.connection) {
+            console.error("[WebSocketService] Failed to sent payload through WS connection! Connection is not established.");
+            return;
+        }
+        this.connection?.send(payload);
+        console.debug("[WebSocketService] Sent payload through WS connection. Payload: " + payload);
     }
 }
 

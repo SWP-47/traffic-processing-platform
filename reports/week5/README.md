@@ -106,7 +106,7 @@ Each quality requirement directly drives specific architectural decisions: **QR-
 
 ## 7. Testing & CI Status
 
-All Assignment 4 CI gates, QRTs, and the Definition of Done remain active and were extended for `MVP v2`.
+All Assignment 4 automated Quality Requirement Tests (QRT-001 through QRT-003), CI quality gates, and the pip-audit dependency scan remain active and are passing for the MVP v2 increment. Although no new tests were introduced this sprint, the existing suite successfully validates the newly decoupled CnSS architecture while maintaining the required 42% coverage and security baselines.
 
 * **CI Pipeline Configuration:** [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)
 * **Latest Default-Branch CI Run:** [CI Run Link](https://github.com/SWP-47/traffic-processing-platform/actions/runs/28707290400)
@@ -153,7 +153,7 @@ We executed 5 UAT scenarios with the customer during the Week 5 review session.
 
 ## 10. Sprint Review & Reflections
 
-* **Sprint Review Summary:** [reports/week5/sprint-review-summary.md](sprint-review-summary.md)
+* **Sprint Review Summary:** [reports/week5/customer-review-summary.md](sprint-review-summary.md)
 * **Sprint Review Transcript:** [reports/week5/sprint-review-transcript.md](sprint-review-transcript.md)
 * **Reflection:** [reports/week5/reflection.md](reflection.md)
 * **Retrospective:** [reports/week5/retrospective.md](retrospective.md)

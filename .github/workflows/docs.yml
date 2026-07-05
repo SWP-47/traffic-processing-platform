@@ -28,7 +28,7 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/general'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/general' || github.ref == 'refs/heads/release/v2.0.0')
     
     steps:
       - name: Checkout repository

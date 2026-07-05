@@ -77,6 +77,7 @@ class TelemetryService {
     private getInactiveUpdateObject(): TelemetryUpdate {
         return {
             ...this.lastUpdate,
+            type: 'telemetry_update',
             is_active: false,
             metrics: {
                 direction_in: { packets: 0, packets_per_sec: 0 },
@@ -84,7 +85,7 @@ class TelemetryService {
             },
             timestamp: new Date().toISOString(),
             received_at: new Date().toISOString(),
-        };
+        } as TelemetryUpdate;
     }
 
     private validateUpdate(data: unknown): data is TelemetryUpdate {

@@ -4,7 +4,7 @@ import "@/styles/global.css";
 import Dashboard from "@/pages/Dashboard/Dashboard";
 import Login from "@/pages/Login/Login";
 import PrivateRoute from "./components/PrivateRoute";
-import Hosts from "./pages/Hosts";
+import Hosts from "./pages/Hosts/Hosts";
 
 function App() {
   return (

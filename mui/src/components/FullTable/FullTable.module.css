@@ -1,0 +1,141 @@
+.table {
+    display: grid;
+    grid-template-columns: repeat(var(--column-count), auto);
+    color: var(--color-text);
+    border-radius: 35px;
+    background: var(--gradient-card);
+    overflow: clip;
+}
+
+.row {
+    display: contents;
+    cursor: pointer;
+}
+
+.row:hover .cell:not(.header) {
+    background-color: var(--color-surface-hover);
+    transition: background-color 0.2s;
+}
+
+.cell {
+    padding: 15px 30px;
+    border-bottom: 2px solid var(--color-surface-hover);
+}
+
+.cell.header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: bold;
+    user-select: none;
+}
+
+.cell.header:has(.sort_icon) {
+    cursor: pointer;
+}
+
+/* Sorting Icons */
+.sort_wrapper {
+    display: grid;
+    justify-content: center;
+    align-items: center;
+}
+
+.sort_icon {
+    grid-area: 1 / 1;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.cell.header:not(.sorting):hover .sort_select_icon {
+    opacity: 0.5;
+}
+
+.cell.header.sorting .sort_asc .sort_asc_icon,
+.cell.header.sorting .sort_desc .sort_desc_icon {
+    opacity: 1;
+}
+
+/* Pagination Controls */
+.pagination_controls {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 40% 1fr; 
+    gap: 10px;
+    align-items: center;
+    padding: 20px 30px;
+}
+
+.select_limit {
+    grid-column: 1;
+    justify-self: start;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.select_limit .label {
+    font-weight: bold;
+    margin: 0;
+}
+
+.select_limit select {
+    background-color: transparent;
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--color-text);
+    border: none;
+    outline: none;
+    cursor: pointer;
+    text-align: center;
+}
+
+.select_page {
+    grid-column: 2;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.back_button,
+.next_button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.back_button.disabled,
+.next_button.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.pages {
+    display: flex;
+    gap: 10px;
+    user-select: none;
+}
+
+.page {
+    padding: 2px 8px;
+    border-radius: 10px;
+    cursor: pointer;
+    margin: 0;
+
+    transition: background-color .2s;
+}
+
+.page:hover:not(.selected):not(.ellipses) {
+    background-color: var(--color-surface-hover);
+}
+
+.page.selected {
+    background-color: var(--color-primary);
+}
+
+.page.ellipses {
+    cursor: default;
+    padding: 2px 0;
+}

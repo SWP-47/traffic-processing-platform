@@ -581,3 +581,272 @@ async def test_multiple_parallel_subscriptions(redis_setup, subscription_manager
     await redis.delete(listeners_key, f"{REGISTRY_KEY_PREFIX}{hash1}")
     await redis.srem(ACTIVE_HASHES_KEY, hash1)
     await session.destroy()
+
+
+# --- Registry No TTL Tests ---
+async def test_registry_key_has_no_ttl(redis_setup, subscription_manager, session):
+    """
+    Architecture §3.2: sub:registry:{query_hash} (String, No TTL).
+    Registry key must NOT have a TTL to ensure persistence until explicitly deleted.
+    """
+    redis = redis_setup
+
+    # Create session
+    await session.create()
+
+    # Subscribe
+    request = create_subscribe_request(sub_id="sub-no-ttl-test")
+    query_hash, _ = await subscription_manager.subscribe(session, request)
+
+    # Verify registry key exists
+    registry_key = f"{REGISTRY_KEY_PREFIX}{query_hash}"
+    exists = await redis.exists(registry_key)
+    assert exists == 1, "Registry key should exist"
+
+    # Verify TTL is -1 (no expiration) or -2 (key does not exist)
+    # Redis returns -1 if key exists but has no TTL
+    ttl = await redis.ttl(registry_key)
+    assert ttl == -1, f"Registry key should have NO TTL, got {ttl}"
+
+    # Cleanup
+    await redis.delete(registry_key)
+    await session.destroy()
+
+
+# --- Session Tracking Set Tests ---
+async def test_session_subs_set_contains_subscription(redis_setup, subscription_manager, session):
+    """
+    Architecture §3.2: ws:session:{ws_client_id}:subs (Set) stores active subscription
+    instances as 'query_hash:sub_id' strings for rapid garbage collection.
+    Verifies that after subscribe, the session tracking set contains the composite key.
+    """
+    redis = redis_setup
+
+    # Create session
+    await session.create()
+
+    # Subscribe
+    request = create_subscribe_request(sub_id="sub-tracking-test")
+    query_hash, _ = await subscription_manager.subscribe(session, request)
+
+    # Verify session tracking set contains the composite key
+    subs_key = f"{SESSION_KEY_PREFIX}{session.client_id}:subs"
+    members = await redis.smembers(subs_key)
+    composite_key = f"{query_hash}:sub-tracking-test"
+    assert composite_key in members, f"Session subs set should contain '{composite_key}'"
+
+    # Cleanup
+    await session.destroy()
+
+
+# --- Active Hashes Removal Tests ---
+async def test_active_hashes_removed_on_last_unsubscribe(redis_setup, subscription_manager, session):
+    """
+    Architecture §4.4: When the last listener unsubscribes, the hash must be removed
+    from sub:active_hashes to stop the Reporting Worker from polling the DB.
+    Verifies that active_hashes set no longer contains the query_hash.
+    """
+    redis = redis_setup
+
+    # Create session
+    await session.create()
+
+    # Subscribe
+    request = create_subscribe_request(sub_id="sub-active-hash-test")
+    query_hash, _ = await subscription_manager.subscribe(session, request)
+
+    # Verify hash is in active_hashes
+    active_hashes = await redis.smembers(ACTIVE_HASHES_KEY)
+    assert query_hash in active_hashes, "Hash should be in active_hashes after subscribe"
+
+    # Unsubscribe (last listener)
+    await subscription_manager.unsubscribe(session, request)
+
+    # Verify hash is removed from active_hashes
+    active_hashes = await redis.smembers(ACTIVE_HASHES_KEY)
+    assert query_hash not in active_hashes, "Hash should be removed from active_hashes after last unsubscribe"
+
+    # Cleanup
+    await session.destroy()
+
+
+# --- Unsubscribe Preserves Registry Tests ---
+async def test_unsubscribe_preserves_registry_when_other_listeners_exist(redis_setup, subscription_manager, session):
+    """
+    Architecture §4.4: If the listener set is NOT empty after unsubscribe,
+    the registry key must NOT be deleted (other clients are still listening).
+    Verifies that registry and listeners keys remain intact.
+    """
+    redis = redis_setup
+
+    # Create session
+    await session.create()
+
+    # Subscribe
+    request = create_subscribe_request(sub_id="sub-preserve-registry")
+    query_hash, _ = await subscription_manager.subscribe(session, request)
+
+    # Add another listener (simulate another client)
+    listeners_key = f"{LISTENERS_KEY_PREFIX}{query_hash}"
+    await redis.sadd(listeners_key, "other-client:sub-other")
+
+    # Unsubscribe our client
+    await subscription_manager.unsubscribe(session, request)
+
+    # Verify registry still exists
+    registry_key = f"{REGISTRY_KEY_PREFIX}{query_hash}"
+    exists = await redis.exists(registry_key)
+    assert exists == 1, "Registry should remain when other listeners exist"
+
+    # Verify listeners key still exists
+    exists = await redis.exists(listeners_key)
+    assert exists == 1, "Listeners key should remain when other listeners exist"
+
+    # Verify other listener is still in the set
+    members = await redis.smembers(listeners_key)
+    assert "other-client:sub-other" in members, "Other listener should remain"
+
+    # Cleanup
+    await redis.delete(registry_key, listeners_key)
+    await session.destroy()
+
+
+# --- Pub/Sub ID Injection Per Sub_ID Tests ---
+async def test_pubsub_id_injection_for_multiple_subscriptions(redis_setup, subscription_manager, session):
+    """
+    Architecture §2.3.5: Upon receiving messages, the Pub/Sub consumer injects the
+    client-specific 'sub_id' into the JSON payload as the "id" field.
+    Verifies that multiple parallel subscriptions from the same client each receive
+    their correct sub_id in the payload (one message per sub_id).
+    """
+    redis = redis_setup
+    
+    # Create session
+    await session.create()
+    
+    # Subscribe multiple times with different IDs but same params
+    # (same channel_id, target, params → same query_hash)
+    request1 = create_subscribe_request(sub_id="sub-multi-1")
+    request2 = create_subscribe_request(sub_id="sub-multi-2")
+    
+    hash1, _ = await subscription_manager.subscribe(session, request1)
+    hash2, _ = await subscription_manager.subscribe(session, request2)
+    
+    # Both subscriptions must share the same query_hash (id is excluded from hash)
+    assert hash1 == hash2, "Parallel subscriptions with same params must share query_hash"
+    
+    # Mock WebSocket
+    mock_ws = AsyncMock()
+    mock_ws.send = AsyncMock()
+    
+    # Create Pub/Sub consumer with mock WebSocket getter
+    def get_websocket(client_id: str):
+        if client_id == session.client_id:
+            return mock_ws
+        return None
+    
+    consumer = PubSubConsumer(get_websocket=get_websocket)
+    
+    # Simulate incoming Pub/Sub message for the shared hash
+    message = {
+        "type": "pmessage",
+        "channel": f"ws:push:{hash1}".encode("utf-8"),
+        "data": json.dumps({"type": "telemetry_update", "data": "test"}).encode("utf-8"),
+    }
+    
+    await consumer._handle_message(message)
+    
+    # Verify that send was called TWICE — once per parallel subscription (sub_id).
+    # Architecture §2.3.5: each parallel subscription receives its own message
+    # with the correct "id" injected into the payload.
+    assert mock_ws.send.await_count == 2, (
+        f"Expected 2 messages (one per sub_id), got {mock_ws.send.await_count}"
+    )
+    
+    # Verify that each sent message contains the correct sub_id as "id".
+    # Both sub_ids must be present across the two sent payloads.
+    sent_payloads = [json.loads(call[0][0]) for call in mock_ws.send.call_args_list]
+    sent_ids = {p["id"] for p in sent_payloads}
+    assert sent_ids == {"sub-multi-1", "sub-multi-2"}, (
+        f"Expected both sub_ids in payloads, got {sent_ids}"
+    )
+    
+    # Verify original payload fields are preserved in both messages
+    for payload in sent_payloads:
+        assert payload["type"] == "telemetry_update"
+        assert payload["data"] == "test"
+    
+    # Cleanup
+    await redis.delete(f"{REGISTRY_KEY_PREFIX}{hash1}", f"{LISTENERS_KEY_PREFIX}{hash1}")
+    await redis.srem(ACTIVE_HASHES_KEY, hash1)
+    await session.destroy()
+
+
+# --- Session Subs Set Cleanup Tests ---
+async def test_session_subs_set_empty_after_gc(redis_setup, garbage_collector, subscription_manager, session):
+    """
+    Architecture §2.3.6: On client disconnect, the GC reads the session's tracking set
+    to find all 'query_hash:sub_id' pairs and removes them from listener sets.
+    Verifies that after GC cleanup, the session subs set is empty.
+    """
+    redis = redis_setup
+
+    # Create session
+    await session.create()
+
+    # Subscribe to multiple targets
+    request1 = create_subscribe_request(target="telemetry", sub_id="sub-gc-cleanup-1")
+    request2 = create_subscribe_request(target="hosts_table", sub_id="sub-gc-cleanup-2")
+
+    await subscription_manager.subscribe(session, request1)
+    await subscription_manager.subscribe(session, request2)
+
+    # Verify session subs set contains subscriptions
+    subs_key = f"{SESSION_KEY_PREFIX}{session.client_id}:subs"
+    members_before = await redis.smembers(subs_key)
+    assert len(members_before) == 2, "Session subs set should contain 2 subscriptions"
+
+    # Simulate disconnect: run GC cleanup
+    await garbage_collector.cleanup(session.client_id)
+    await session.destroy()
+
+    # Verify session subs set is now empty (or key is deleted)
+    members_after = await redis.smembers(subs_key)
+    assert len(members_after) == 0, "Session subs set should be empty after GC"
+
+    # Cleanup
+    await session.destroy()
+
+
+# --- Registry JSON Content Tests ---
+async def test_registry_stores_full_subscription_json(redis_setup, subscription_manager, session):
+    """
+    Architecture §2.3.3: The registry stores the full request JSON for the Reporting
+    Worker to parse. Verifies that the registry contains the complete SubscribeRequest
+    structure including channel_id, target, and params.
+    """
+    redis = redis_setup
+
+    # Create session
+    await session.create()
+
+    # Subscribe with specific parameters
+    request = create_subscribe_request(sub_id="sub-json-content-test")
+    query_hash, _ = await subscription_manager.subscribe(session, request)
+
+    # Retrieve registry JSON
+    registry_key = f"{REGISTRY_KEY_PREFIX}{query_hash}"
+    registry_json = await redis.get(registry_key)
+    assert registry_json is not None, "Registry should contain JSON data"
+
+    # Parse and verify JSON structure
+    registry_data = json.loads(registry_json)
+    assert registry_data["action"] == "subscribe", "JSON should contain action field"
+    assert registry_data["id"] == "sub-json-content-test", "JSON should contain id field"
+    assert registry_data["channel_id"] == request.channel_id, "JSON should contain channel_id"
+    assert registry_data["target"] == request.target, "JSON should contain target"
+    assert "params" in registry_data, "JSON should contain params field"
+
+    # Cleanup
+    await redis.delete(registry_key)
+    await session.destroy()

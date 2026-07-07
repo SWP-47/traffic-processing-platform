@@ -5,11 +5,10 @@
 # Ensures 'id' field is strictly excluded from hash calculation.
 # ==============================================================================
 
-import pytest
-from core.contracts.subscriptions import compute_query_hash, SubscribeRequest, SubscriptionParams
-
+from core.contracts.subscriptions import SubscribeRequest, SubscriptionParams, compute_query_hash
 
 # --- Deterministic Hash Tests ---
+
 
 def test_same_inputs_produce_same_hash():
     """
@@ -49,6 +48,7 @@ def test_different_params_produce_different_hash():
 
 
 # --- ID Exclusion Tests (Critical) ---
+
 
 def test_id_excluded_from_hash_calculation():
     """
@@ -111,6 +111,7 @@ def test_subscribe_request_different_params_different_hash():
 
 # --- Hash Format Tests ---
 
+
 def test_hash_length_is_16_characters():
     """
     Architecture §4.2: Hash is SHA-256 truncated to 16 hex characters.
@@ -128,6 +129,7 @@ def test_hash_contains_only_hex_characters():
 
 
 # --- Parameter Ordering Tests ---
+
 
 def test_param_key_order_does_not_affect_hash():
     """
@@ -153,6 +155,7 @@ def test_nested_param_order_does_not_affect_hash():
 
 
 # --- Edge Cases ---
+
 
 def test_empty_params():
     """
@@ -237,6 +240,7 @@ def test_unicode_characters_in_params():
 
 # --- SubscribeRequest Computed Field Tests ---
 
+
 def test_subscribe_request_query_hash_is_property():
     """
     Verify that query_hash is a computed property, not a stored field.
@@ -302,6 +306,7 @@ def test_subscribe_request_action_not_in_hash():
 
 # --- Collision Resistance Tests ---
 
+
 def test_similar_params_produce_different_hashes():
     """
     Verify that minor differences in params produce different hashes.
@@ -323,6 +328,7 @@ def test_whitespace_differences_in_strings():
 
 
 # --- Integration with SubscriptionParams Model ---
+
 
 def test_subscription_params_model_dump():
     """

@@ -720,62 +720,58 @@ async def test_pubsub_id_injection_for_multiple_subscriptions(redis_setup, subsc
     their correct sub_id in the payload (one message per sub_id).
     """
     redis = redis_setup
-    
+
     # Create session
     await session.create()
-    
+
     # Subscribe multiple times with different IDs but same params
     # (same channel_id, target, params → same query_hash)
     request1 = create_subscribe_request(sub_id="sub-multi-1")
     request2 = create_subscribe_request(sub_id="sub-multi-2")
-    
+
     hash1, _ = await subscription_manager.subscribe(session, request1)
     hash2, _ = await subscription_manager.subscribe(session, request2)
-    
+
     # Both subscriptions must share the same query_hash (id is excluded from hash)
     assert hash1 == hash2, "Parallel subscriptions with same params must share query_hash"
-    
+
     # Mock WebSocket
     mock_ws = AsyncMock()
     mock_ws.send = AsyncMock()
-    
+
     # Create Pub/Sub consumer with mock WebSocket getter
     def get_websocket(client_id: str):
         if client_id == session.client_id:
             return mock_ws
         return None
-    
+
     consumer = PubSubConsumer(get_websocket=get_websocket)
-    
+
     # Simulate incoming Pub/Sub message for the shared hash
     message = {
         "type": "pmessage",
         "channel": f"ws:push:{hash1}".encode("utf-8"),
         "data": json.dumps({"type": "telemetry_update", "data": "test"}).encode("utf-8"),
     }
-    
+
     await consumer._handle_message(message)
-    
+
     # Verify that send was called TWICE — once per parallel subscription (sub_id).
     # Architecture §2.3.5: each parallel subscription receives its own message
     # with the correct "id" injected into the payload.
-    assert mock_ws.send.await_count == 2, (
-        f"Expected 2 messages (one per sub_id), got {mock_ws.send.await_count}"
-    )
-    
+    assert mock_ws.send.await_count == 2, f"Expected 2 messages (one per sub_id), got {mock_ws.send.await_count}"
+
     # Verify that each sent message contains the correct sub_id as "id".
     # Both sub_ids must be present across the two sent payloads.
     sent_payloads = [json.loads(call[0][0]) for call in mock_ws.send.call_args_list]
     sent_ids = {p["id"] for p in sent_payloads}
-    assert sent_ids == {"sub-multi-1", "sub-multi-2"}, (
-        f"Expected both sub_ids in payloads, got {sent_ids}"
-    )
-    
+    assert sent_ids == {"sub-multi-1", "sub-multi-2"}, f"Expected both sub_ids in payloads, got {sent_ids}"
+
     # Verify original payload fields are preserved in both messages
     for payload in sent_payloads:
         assert payload["type"] == "telemetry_update"
         assert payload["data"] == "test"
-    
+
     # Cleanup
     await redis.delete(f"{REGISTRY_KEY_PREFIX}{hash1}", f"{LISTENERS_KEY_PREFIX}{hash1}")
     await redis.srem(ACTIVE_HASHES_KEY, hash1)

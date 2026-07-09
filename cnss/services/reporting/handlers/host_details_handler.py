@@ -27,18 +27,10 @@ from services.reporting.query_builder import (
 # --- Module Logger ---
 logger = logging.getLogger(__name__)
 
-# --- Period to Seconds Mapping ---
-# Maps human-readable period strings to their duration in seconds.
-# Used to convert packet COUNT(*) into per-second rates (tx_per_sec, rx_per_sec).
-PERIOD_TO_SECONDS: Dict[str, int] = {
-    "5m": 300,
-    "15m": 900,
-    "1h": 3600,
-    "24h": 86400,
-    "7d": 604800,
-    "30d": 2592000,
-}
-DEFAULT_PERIOD = "5m"
+# --- Default Period ---
+# Default aggregation window in seconds if not specified in the subscription request.
+# Set to 300 seconds (5 minutes) for a balance between responsiveness and stability.
+DEFAULT_PERIOD_SEC = 300.0
 
 
 # --- Host Details Handler ---
@@ -57,12 +49,11 @@ class HostDetailsHandler(BaseSubscriptionHandler):
     async def execute(self, db_pool: asyncpg.Pool, request: SubscribeRequest) -> Optional[Dict[str, Any]]:
         """
         Executes the host details query and returns the formatted JSON result.
-
         Query Strategy:
         - Filter packet_flows by channel_id and time window
         - Find all packets where host_ip appears as src_ip OR dst_ip
-        - Calculate tx_per_sec: COUNT(src_ip = host_ip) / period_seconds
-        - Calculate rx_per_sec: COUNT(dst_ip = host_ip) / period_seconds
+        - Calculate tx_per_sec: COUNT(src_ip = host_ip) / period_sec
+        - Calculate rx_per_sec: COUNT(dst_ip = host_ip) / period_sec
 
         :param db_pool: The asyncpg connection pool.
         :param request: The validated subscription request.
@@ -81,35 +72,38 @@ class HostDetailsHandler(BaseSubscriptionHandler):
             logger.warning("[host_details] host_ip parameter is required but missing.")
             return None
 
-        # Resolve period: validate against whitelist, fallback to default
-        period = params.period if params.period in PERIOD_TO_SECONDS else DEFAULT_PERIOD
-        interval_str = resolve_period_interval(period)
-        period_seconds = PERIOD_TO_SECONDS[period]
+        # Resolve period_sec: use provided value or fallback to default (300 seconds = 5 minutes)
+        # Pydantic validates period_sec as float, so it's safe for SQL interpolation.
+        period_sec = params.period_sec if params.period_sec and params.period_sec > 0 else DEFAULT_PERIOD_SEC
+        interval_str = resolve_period_interval(period_sec)
 
         logger.debug(
             f"[host_details] Executing query for channel '{channel_id}', "
-            f"host '{params.host_ip}' (period: {period}, seconds: {period_seconds})."
+            f"host '{params.host_ip}' (period_sec: {period_sec}, interval: {interval_str})."
         )
 
         # --- Dynamic Parameter Tracking ---
         # ParameterizedQuery tracks $N placeholders as we add parameters dynamically.
         pq = ParameterizedQuery(start_index=1)
 
-        # Fixed parameters: channel_id ($1), interval ($2), host_ip ($3), period_seconds ($4)
+        # Fixed parameters: channel_id ($1), interval ($2), host_ip ($3)
         channel_ph = pq.add_param(channel_id)
         interval_ph = pq.add_param(interval_str)
         host_ip_ph = pq.add_param(params.host_ip)
-        pq.add_param(period_seconds)
 
         # --- Query Assembly ---
         # Simple aggregation query:
         # - Filter by channel_id and time window
         # - Find packets where host_ip is either src or dst
         # - Calculate tx/rx rates based on packet direction relative to host
+        #
+        # IMPORTANT: period_sec is used directly in division for rate calculation.
+        # Since Pydantic validates it as a numeric value (float), this is 100% safe
+        # from SQL injection and supports arbitrary custom time windows.
         query = f"""
         SELECT
-            COUNT(*) FILTER (WHERE src_ip = {host_ip_ph}::inet)::float / $4 AS tx_per_sec,
-            COUNT(*) FILTER (WHERE dst_ip = {host_ip_ph}::inet)::float / $4 AS rx_per_sec
+            COUNT(*) FILTER (WHERE src_ip = {host_ip_ph}::inet)::float / {period_sec} AS tx_per_sec,
+            COUNT(*) FILTER (WHERE dst_ip = {host_ip_ph}::inet)::float / {period_sec} AS rx_per_sec
         FROM packet_flows
         WHERE channel_id = {channel_ph}
         AND time > NOW() - ({interval_ph}::text)::interval
@@ -121,47 +115,47 @@ class HostDetailsHandler(BaseSubscriptionHandler):
             async with db_pool.acquire() as conn:
                 row = await conn.fetchrow(query, *pq.get_params())
 
-                # Handle case where no packets found for this host
-                if row is None or (row["tx_per_sec"] == 0 and row["rx_per_sec"] == 0):
-                    logger.debug(
-                        f"[host_details] No activity found for host '{params.host_ip}' "
-                        f"in channel '{channel_id}' over period '{period}'."
-                    )
-                    # Return zero rates instead of None to maintain consistent payload
-                    return {
-                        "type": "host_details_update",
-                        "channel_id": channel_id,
-                        "host_ip": params.host_ip,
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
-                        "tx_per_sec": 0.0,
-                        "rx_per_sec": 0.0,
-                    }
-
-                # --- Response Formatting ---
-                result = {
+            # Handle case where no packets found for this host
+            if row is None or (row["tx_per_sec"] == 0 and row["rx_per_sec"] == 0):
+                logger.debug(
+                    f"[host_details] No activity found for host '{params.host_ip}' "
+                    f"in channel '{channel_id}' over period {period_sec}s."
+                )
+                # Return zero rates instead of None to maintain consistent payload
+                return {
                     "type": "host_details_update",
                     "channel_id": channel_id,
                     "host_ip": params.host_ip,
                     "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "tx_per_sec": float(row["tx_per_sec"]) if row["tx_per_sec"] else 0.0,
-                    "rx_per_sec": float(row["rx_per_sec"]) if row["rx_per_sec"] else 0.0,
+                    "tx_per_sec": 0.0,
+                    "rx_per_sec": 0.0,
                 }
 
-                logger.debug(
-                    f"[host_details] Success for host '{params.host_ip}' in channel '{channel_id}': "
-                    f"tx={result['tx_per_sec']:.2f} pps, rx={result['rx_per_sec']:.2f} pps."
-                )
-                return result
+            # --- Response Formatting ---
+            result = {
+                "type": "host_details_update",
+                "channel_id": channel_id,
+                "host_ip": params.host_ip,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "tx_per_sec": float(row["tx_per_sec"]) if row["tx_per_sec"] else 0.0,
+                "rx_per_sec": float(row["rx_per_sec"]) if row["rx_per_sec"] else 0.0,
+            }
+
+            logger.debug(
+                f"[host_details] Success for host '{params.host_ip}' in channel '{channel_id}': "
+                f"tx={result['tx_per_sec']:.2f} pps, rx={result['rx_per_sec']:.2f} pps."
+            )
+            return result
 
         except asyncpg.PostgresError as e:
             logger.error(
-                f"[host_details] Database error for host '{params.host_ip}' " f"in channel '{channel_id}': {e}",
+                f"[host_details] Database error for host '{params.host_ip}' in channel '{channel_id}': {e}",
                 exc_info=True,
             )
             raise DatabaseError(message=f"Host details query failed for host '{params.host_ip}'.") from e
         except Exception as e:
             logger.error(
-                f"[host_details] Unexpected error for host '{params.host_ip}' " f"in channel '{channel_id}': {e}",
+                f"[host_details] Unexpected error for host '{params.host_ip}' in channel '{channel_id}': {e}",
                 exc_info=True,
             )
             raise DatabaseError(message=f"Unexpected host details query failure for host '{params.host_ip}'.") from e

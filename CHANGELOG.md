@@ -12,7 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- N/A
+- REST API (`/history`): Query parameter `period` (string Enum: `1h`, `24h`, etc.) has been **replaced** with `period_sec` (integer, e.g., `3600` for 1 hour). ([#247](https://github.com/SWP-47/traffic-processing-platform/issues/247))
+- WebSocket Subscriptions: `params.period` (string Enum) has been **replaced** with `params.period_sec` (number, e.g., `300` for 5 minutes). ([#247](https://github.com/SWP-47/traffic-processing-platform/issues/247))
 
 ### Deprecated
 

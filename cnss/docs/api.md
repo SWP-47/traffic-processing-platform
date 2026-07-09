@@ -217,7 +217,7 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 
 | Parameter | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `period` | string | Yes | Duration of the time window. Enum: `1h`, `24h`, `7d`, `30d`. |
+| `period_sec` | integer | Yes | Duration of the time window in seconds (e.g., `3600` for 1 hour, `86400` for 24h). |
 | `start_time` | string (ISO 8601) | No | Start of the time range. If omitted, defaults to `now - period`. |
 
 **Response 200**:
@@ -225,7 +225,7 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 ```json
 {
     "channel_id": "bridge-berlin-01",
-    "period": "24h",
+    "period_sec": 86400,
     "start_time": "2026-06-16T12:00:00Z",
     "end_time": "2026-06-17T12:00:00Z",
     "interval_sec": 60,
@@ -245,7 +245,7 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `channel_id` | string | Identifier of the channel. |
-| `period` | string | Requested period duration. |
+| `period_sec` | integer | Requested period duration in seconds. |
 | `start_time` | string (ISO 8601) | Actual start of the returned time range. |
 | `end_time` | string (ISO 8601) | Actual end of the returned time range. |
 | `interval_sec` | integer | The calculated time bucket size in seconds. |
@@ -256,7 +256,7 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 | HTTP Status | Error Code | When |
 | :--- | :--- | :--- |
 | `400` | `bad_request` | Invalid `start_time` format, or `start_time` is in the future. |
-| `400` | `bad_request` | `start_time + period` exceeds data retention |
+| `400` | `bad_request` | `start_time + period_sec` exceeds data retention |
 | `403` | `forbidden` | User lacks access to this channel. |
 | `404` | `not_found` | Channel not found. |
 
@@ -264,10 +264,10 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 
 ```bash
 # Last 24 hours (default behavior)
-GET /api/v1/channel/bridge-berlin-01/history?period=24h
+GET /api/v1/channel/bridge-berlin-01/history?period_sec=86400
 
 # Specific 24h window starting from a given timestamp
-GET /api/v1/channel/bridge-berlin-01/history?period=24h&start_time=2026-06-16T12:00:00Z
+GET /api/v1/channel/bridge-berlin-01/history?period_sec=86400&start_time=2026-06-16T12:00:00Z
 # → Returns data for [2026-06-16T12:00:00Z, 2026-06-17T12:00:00Z]
 ```
 
@@ -286,7 +286,7 @@ GET /api/v1/channel/bridge-berlin-01/history?period=24h&start_time=2026-06-16T12
 
 | Parameter | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `period` | string | Yes | Duration of the time window. Enum: `1h`, `24h`, `7d`, `30d`. |
+| `period_sec` | integer | Yes | Duration of the time window in seconds. |
 | `start_time` | string (ISO 8601) | No | Start of the time range. If omitted, defaults to `now - period`. |
 
 **Response 200**:
@@ -295,7 +295,7 @@ GET /api/v1/channel/bridge-berlin-01/history?period=24h&start_time=2026-06-16T12
 {
     "channel_id": "bridge-berlin-01",
     "host_ip": "192.168.1.100",
-    "period": "1h",
+    "period_sec": "3600",
     "start_time": "2026-06-17T10:00:00Z",
     "end_time": "2026-06-17T11:00:00Z",
     "interval_sec": 10,
@@ -315,7 +315,7 @@ GET /api/v1/channel/bridge-berlin-01/history?period=24h&start_time=2026-06-16T12
 | :--- | :--- | :--- |
 | `channel_id` | string | Identifier of the channel. |
 | `host_ip` | string | IP address of the host. |
-| `period` | string | Requested period duration. |
+| `period_sec` | integer | Requested period duration in seconds. |
 | `start_time` | string (ISO 8601) | Actual start of the returned time range. |
 | `end_time` | string (ISO 8601) | Actual end of the returned time range. |
 | `interval_sec` | integer | The calculated time bucket size in seconds. |
@@ -326,7 +326,7 @@ GET /api/v1/channel/bridge-berlin-01/history?period=24h&start_time=2026-06-16T12
 | HTTP Status | Error Code | When |
 | :--- | :--- | :--- |
 | `400` | `bad_request` | Invalid `start_time` format, or `start_time` is in the future. |
-| `400` | `bad_request` | `start_time + period` exceeds data retention (7 days). |
+| `400` | `bad_request` | `start_time + period_sec` exceeds data retention (e.g. 7 days). |
 | `403` | `forbidden` | User lacks access to this channel. |
 | `404` | `not_found` | Channel or host not found. |
 
@@ -334,10 +334,10 @@ GET /api/v1/channel/bridge-berlin-01/history?period=24h&start_time=2026-06-16T12
 
 ```bash
 # Last 1 hour (default behavior)
-GET /api/v1/channel/bridge-berlin-01/hosts/192.168.1.100/history?period=1h
+GET /api/v1/channel/bridge-berlin-01/hosts/192.168.1.100/history?period_sec=3600
 
 # Specific 1h window starting from a given timestamp
-GET /api/v1/channel/bridge-berlin-01/hosts/192.168.1.100/history?period=1h&start_time=2026-06-17T10:00:00Z
+GET /api/v1/channel/bridge-berlin-01/hosts/192.168.1.100/history?period_sec=3600&start_time=2026-06-17T10:00:00Z
 # → Returns data for [2026-06-17T10:00:00Z, 2026-06-17T11:00:00Z]
 ```
 
@@ -449,7 +449,7 @@ Aggregated table of all observed hosts with pagination and filtering.
 
 ```json
 {
-    "period": "5m",             // Enum: "5m", "15m", "1h", "24h", "7d", "30d"
+    "period_sec": 300,          // Aggregation time window in seconds (e.g., 300 for 5m, 900 for 15m)
     "location": "LAN",          // Enum: "LAN", "WAN", or null (all)
     "ip": "192.168.1.100",      // Exact match filter, or null
     "sort_by": "rx",            // Enum: "location", "ip", "unique_destinations", "tx", "rx", "last_activity"
@@ -490,7 +490,7 @@ Real-time Rx/Tx rate for a specific host (for the Host Details page header).
 ```json
 {
     "host_ip": "192.168.1.100",
-    "period": "5m"              // Aggregation window for real-time rate
+    "period_sec": 300           // Aggregation window in seconds
 }
 ```
 
@@ -516,7 +516,7 @@ Top destinations for a specific host.
 ```json
 {
     "host_ip": "192.168.1.100",
-    "period": "5m",
+    "period_sec": 300,
     "sort_by": "received",      // Enum: "ip", "location", "received", "last_seen"
     "sort_order": "desc",
     "limit": 10,
@@ -554,7 +554,7 @@ Top ports and protocols for a specific host.
 ```json
 {
     "host_ip": "192.168.1.100",
-    "period": "5m",
+    "period_sec": 300,
     "sort_by": "pps",           // Enum: "port", "protocol", "pps"
     "sort_order": "desc",
     "limit": 10,

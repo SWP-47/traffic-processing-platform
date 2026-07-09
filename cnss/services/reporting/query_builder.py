@@ -7,6 +7,7 @@
 # This module is subscription-agnostic. Each subscription handler defines its
 # own whitelist and passes it to the builder methods.
 # ==============================================================================
+
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -18,6 +19,10 @@ logger = logging.getLogger(__name__)
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 1000
 
+# --- Default Time Window ---
+# Fallback aggregation window in seconds if period_sec is missing or invalid.
+DEFAULT_PERIOD_SEC = 300.0
+
 # --- Sort Order Whitelist ---
 # Strictly limits sort direction to prevent SQL injection via ORDER BY clause.
 # This is universal across all subscription targets.
@@ -25,20 +30,6 @@ SORT_ORDER_WHITELIST: Dict[str, str] = {
     "asc": "ASC",
     "desc": "DESC",
 }
-
-# --- Period Mapping ---
-# Maps human-readable period strings to PostgreSQL INTERVAL literals.
-# Used by hosts_table, host_details, host_top_destinations, host_top_ports.
-PERIOD_TO_INTERVAL: Dict[str, str] = {
-    "5m": "5 minutes",
-    "15m": "15 minutes",
-    "1h": "1 hour",
-    "24h": "24 hours",
-    "7d": "7 days",
-    "30d": "30 days",
-}
-DEFAULT_PERIOD = "5m"
-
 
 # ==============================================================================
 # Parameterized Query Builder
@@ -206,21 +197,20 @@ def build_time_window(window_sec: Optional[float], param_index: int = 2) -> str:
 # ==============================================================================
 
 
-def resolve_period_interval(period: Optional[str]) -> str:
+def resolve_period_interval(period_sec: Optional[float]) -> str:
     """
-    Maps a human-readable period string to a PostgreSQL INTERVAL literal.
-    Falls back to DEFAULT_PERIOD if the input is invalid or None.
+    Converts a numeric period in seconds to a PostgreSQL INTERVAL literal.
+    Safe from SQL injection because Pydantic validates the input as a number.
 
-    The returned string is a hardcoded SQL literal (e.g., "5 minutes"),
-    NOT user input — it is selected from a fixed dictionary.
-
-    :param period: Period string (e.g., "5m", "1h", "7d").
-    :return: A valid PostgreSQL INTERVAL literal string.
+    :param period_sec: Aggregation window in seconds.
+    :return: A valid PostgreSQL INTERVAL literal string (e.g., "300.0 seconds").
     """
-    if period and period in PERIOD_TO_INTERVAL:
-        return PERIOD_TO_INTERVAL[period]
-    logger.debug(f"Invalid or missing period '{period}'. Using default: {DEFAULT_PERIOD}")
-    return PERIOD_TO_INTERVAL[DEFAULT_PERIOD]
+    # Fallback to default 5 minutes (300 seconds) if invalid or missing
+    if not period_sec or period_sec <= 0:
+        logger.debug(f"Invalid or missing period_sec '{period_sec}'. Using default: {DEFAULT_PERIOD_SEC}s")
+        return f"{DEFAULT_PERIOD_SEC} seconds"
+
+    return f"{period_sec} seconds"
 
 
 def build_ip_exact_filter(
@@ -232,7 +222,6 @@ def build_ip_exact_filter(
     Builds a SQL equality expression for exact IP address matching.
     Uses parameterized query placeholder to prevent SQL injection.
     The ::inet cast ensures PostgreSQL treats the value as a network address.
-
     The ip_column parameter MUST come from a handler-defined whitelist.
 
     :param ip: IP address string or None (no filter applied).

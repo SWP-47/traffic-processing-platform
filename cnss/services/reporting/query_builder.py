@@ -7,6 +7,7 @@
 # This module is subscription-agnostic. Each subscription handler defines its
 # own whitelist and passes it to the builder methods.
 # ==============================================================================
+
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -18,6 +19,10 @@ logger = logging.getLogger(__name__)
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 1000
 
+# --- Default Time Window ---
+# Fallback aggregation window in seconds if period_sec is missing or invalid.
+DEFAULT_PERIOD_SEC = 300.0
+
 # --- Sort Order Whitelist ---
 # Strictly limits sort direction to prevent SQL injection via ORDER BY clause.
 # This is universal across all subscription targets.
@@ -26,31 +31,16 @@ SORT_ORDER_WHITELIST: Dict[str, str] = {
     "desc": "DESC",
 }
 
-# --- Period Mapping ---
-# Maps human-readable period strings to PostgreSQL INTERVAL literals.
-# Used by hosts_table, host_details, host_top_destinations, host_top_ports.
-PERIOD_TO_INTERVAL: Dict[str, str] = {
-    "5m": "5 minutes",
-    "15m": "15 minutes",
-    "1h": "1 hour",
-    "24h": "24 hours",
-    "7d": "7 days",
-    "30d": "30 days",
-}
-DEFAULT_PERIOD = "5m"
-
-
 # ==============================================================================
 # Parameterized Query Builder
 # ==============================================================================
-
 
 class ParameterizedQuery:
     """
     Tracks positional parameter placeholders ($1, $2, ...) and their values
     for asyncpg queries. Enables dynamic WHERE clause construction with
     a variable number of filters while maintaining SQL injection safety.
-
+    
     Usage:
         pq = ParameterizedQuery(start_index=1)
         ph1 = pq.add_param("bridge-01")   # returns "$1"
@@ -61,7 +51,7 @@ class ParameterizedQuery:
     def __init__(self, start_index: int = 1) -> None:
         """
         Initializes the parameter tracker.
-
+        
         :param start_index: The first parameter index to use (default 1).
                             Use values > 1 when combining with pre-defined parameters.
         """
@@ -72,7 +62,7 @@ class ParameterizedQuery:
         """
         Registers a parameter value and returns its placeholder string ($N).
         Each call increments the internal index counter automatically.
-
+        
         :param value: The parameter value (string, int, float, etc.).
         :return: The asyncpg placeholder string (e.g., "$1", "$2").
         """
@@ -99,7 +89,6 @@ class ParameterizedQuery:
 # These use fixed parameter indices and are kept for backward compatibility.
 # ==============================================================================
 
-
 def build_order_by(
     sort_by: Optional[str],
     sort_order: Optional[str],
@@ -109,7 +98,7 @@ def build_order_by(
     Safely constructs an ORDER BY SQL clause using strict whitelisting.
     Returns an empty string if inputs are invalid or missing, ensuring
     no SQL injection is possible through user-controlled identifiers.
-
+    
     :param sort_by: User-provided column alias (e.g., 'received', 'total').
     :param sort_order: User-provided direction ('asc' or 'desc').
     :param sort_whitelist: Target-specific mapping of user aliases to SQL expressions.
@@ -126,7 +115,8 @@ def build_order_by(
     sql_column = sort_whitelist.get(normalized_sort_by)
     if not sql_column:
         logger.warning(
-            f"Invalid sort_by '{sort_by}'. " f"Allowed values: {list(sort_whitelist.keys())}. Skipping ORDER BY."
+            f"Invalid sort_by '{sort_by}'. "
+            f"Allowed values: {list(sort_whitelist.keys())}. Skipping ORDER BY."
         )
         return ""
 
@@ -149,7 +139,7 @@ def build_limit(
 ) -> str:
     """
     Safely constructs a LIMIT SQL clause with boundary enforcement.
-
+    
     :param limit: User-provided limit value.
     :param default_limit: Default limit if none is provided.
     :param max_limit: Hard cap to prevent excessive memory usage or DB load.
@@ -162,7 +152,8 @@ def build_limit(
         # Enforce boundaries: must be positive and not exceed max_limit
         effective_limit = max(1, min(limit, max_limit))
         if limit != effective_limit:
-            logger.debug(f"Limit {limit} adjusted to {effective_limit} " f"(bounds: 1-{max_limit})")
+            logger.debug(f"Limit {limit} adjusted to {effective_limit} "
+                         f"(bounds: 1-{max_limit})")
 
     limit_clause = f"LIMIT {effective_limit}"
     logger.debug(f"Built LIMIT clause: {limit_clause}")
@@ -173,7 +164,7 @@ def build_where_channel(channel_id: str) -> str:
     """
     Constructs a safe WHERE clause for filtering by channel_id.
     Uses parameterized query placeholder ($1) to prevent SQL injection.
-
+    
     :param channel_id: The channel identifier to filter by.
     :return: A SQL WHERE clause fragment (e.g., "WHERE channel_id = $1").
     """
@@ -189,7 +180,7 @@ def build_where_channel(channel_id: str) -> str:
 def build_time_window(window_sec: Optional[float], param_index: int = 2) -> str:
     """
     Constructs a safe time window filter using parameterized interval calculation.
-
+    
     :param window_sec: Time window in seconds. Defaults to 5.0 if not provided.
     :param param_index: The parameter index for asyncpg (e.g., $2, $3).
     :return: A SQL time filter fragment (e.g., "AND time > NOW() - ($2 * INTERVAL '1 second')").
@@ -205,22 +196,20 @@ def build_time_window(window_sec: Optional[float], param_index: int = 2) -> str:
 # These use ParameterizedQuery for flexible parameter index tracking.
 # ==============================================================================
 
-
-def resolve_period_interval(period: Optional[str]) -> str:
+def resolve_period_interval(period_sec: Optional[float]) -> str:
     """
-    Maps a human-readable period string to a PostgreSQL INTERVAL literal.
-    Falls back to DEFAULT_PERIOD if the input is invalid or None.
-
-    The returned string is a hardcoded SQL literal (e.g., "5 minutes"),
-    NOT user input — it is selected from a fixed dictionary.
-
-    :param period: Period string (e.g., "5m", "1h", "7d").
-    :return: A valid PostgreSQL INTERVAL literal string.
+    Converts a numeric period in seconds to a PostgreSQL INTERVAL literal.
+    Safe from SQL injection because Pydantic validates the input as a number.
+    
+    :param period_sec: Aggregation window in seconds.
+    :return: A valid PostgreSQL INTERVAL literal string (e.g., "300.0 seconds").
     """
-    if period and period in PERIOD_TO_INTERVAL:
-        return PERIOD_TO_INTERVAL[period]
-    logger.debug(f"Invalid or missing period '{period}'. Using default: {DEFAULT_PERIOD}")
-    return PERIOD_TO_INTERVAL[DEFAULT_PERIOD]
+    # Fallback to default 5 minutes (300 seconds) if invalid or missing
+    if not period_sec or period_sec <= 0:
+        logger.debug(f"Invalid or missing period_sec '{period_sec}'. Using default: {DEFAULT_PERIOD_SEC}s")
+        return f"{DEFAULT_PERIOD_SEC} seconds"
+    
+    return f"{period_sec} seconds"
 
 
 def build_ip_exact_filter(
@@ -232,9 +221,8 @@ def build_ip_exact_filter(
     Builds a SQL equality expression for exact IP address matching.
     Uses parameterized query placeholder to prevent SQL injection.
     The ::inet cast ensures PostgreSQL treats the value as a network address.
-
     The ip_column parameter MUST come from a handler-defined whitelist.
-
+    
     :param ip: IP address string or None (no filter applied).
     :param ip_column: Whitelisted SQL column name to compare against.
     :param pq: ParameterizedQuery instance for placeholder tracking.
@@ -256,7 +244,7 @@ def build_offset(
     """
     Builds a safe OFFSET SQL clause with parameterized value.
     Returns empty string for offset=0 (no offset needed).
-
+    
     :param offset: Pagination offset or None (defaults to 0).
     :param pq: ParameterizedQuery instance for placeholder tracking.
     :return: A SQL OFFSET fragment (e.g., "OFFSET $3") or empty string.
@@ -280,7 +268,7 @@ def build_limit_param(
     """
     Parameterized version of build_limit for use with ParameterizedQuery.
     Enforces boundary constraints and uses a placeholder instead of interpolation.
-
+    
     :param limit: User-provided limit value.
     :param pq: ParameterizedQuery instance for placeholder tracking.
     :param default_limit: Default limit if none is provided.
@@ -293,7 +281,8 @@ def build_limit_param(
     else:
         effective_limit = max(1, min(limit, max_limit))
         if limit != effective_limit:
-            logger.debug(f"Limit {limit} adjusted to {effective_limit} " f"(bounds: 1-{max_limit})")
+            logger.debug(f"Limit {limit} adjusted to {effective_limit} "
+                         f"(bounds: 1-{max_limit})")
 
     placeholder = pq.add_param(effective_limit)
     fragment = f"LIMIT {placeholder}"

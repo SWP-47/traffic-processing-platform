@@ -44,7 +44,7 @@ The CnSS is deployed as a set of Docker containers. If any container crashes, Do
    - **Atomic Flush to DB**: Every 1 second, uses a **Lua script** (or `HGETDEL` in Redis 7.4+) to atomically read and reset `dropped_delta` from Redis, preventing race conditions. It then performs a batched `UPDATE` on the `channels` table.
    - **Reactivation**: The SQL `UPDATE` **always sets `is_active = TRUE`** for channels that successfully received a flush, ensuring channels reactivate immediately upon receiving new traffic.
    - **Mass Timeout Calculation**: Executes a single SQL query to mark inactive channels: `UPDATE channels SET is_active = FALSE WHERE is_active = TRUE AND last_activity_at < NOW() - INTERVAL '5 seconds'`.
-6. **SQL Injection Prevention**: Since SQL identifiers (like column nam es in ORDER BY) cannot be parameterized, the Reporting Worker must use a strict whitelist mapping for sort_by (e.g., mapping "received" to SUM(direction=0)) and sort_order (strictly "ASC" or "DESC"). Direct string interpolation of user input into SQL queries is strictly prohibited.
+6. **SQL Injection Prevention**: Since SQL identifiers (like column nam es in ORDER BY) cannot be parameterized, the Reporting Worker must use a strict whitelist mapping for sort_by (e.g., mapping "received" to SUM(direction=0)) and sort_order (strictly "ASC" or "DESC"). Direct string interpolation of user input into SQL queries is strictly prohibited. Additionally, since `period_sec` is strictly validated by Pydantic as a numeric value (`float` or `int`), it is safely formatted directly into SQL `INTERVAL` literals (e.g., `f"{period_sec} seconds"`). This approach is 100% safe from SQL injection and allows the system to support arbitrary custom time ranges without requiring backend code modifications.
 7. **Atomic Drop Flushing (Hash-Based):** Dropped packets are accumulated in Redis using `HINCRBY channel:state:{channel_id} dropped_delta <calculated_drops>` by the Ingestion Worker. This approach is significantly more efficient than a List-based alternative (`LPUSH` + `LTRIM`) as it requires only a single atomic Redis operation per batch, avoids memory overhead of list entries, and naturally co-locates drop counters with other channel state fields (`is_active`, `last_activity_at`) in the same Hash key. The Reporting Worker atomically reads and resets the `dropped_delta` counter using a dedicated **Lua script** (`atomic_drop_flush.lua`), which executes `HGET` + `HSET 0` in a single roundtrip. This Lua-based atomicity is critical to prevent race conditions where the Ingestion Worker could increment `dropped_delta` between the Reporting Worker's read and reset operations. The Lua script returns the accumulated delta, which is then applied to the `channels` table via `UPDATE channels SET dropped = dropped + $1`. If the Lua script returns `0` (no drops accumulated), the DB update is skipped entirely to minimize unnecessary writes.
 8. **Ghost Subscription Prevention:** If the WebSocket Service container crashes, it may leave stale `client_id`s in `sub:listeners:{hash}`. Before executing the SQL query, the Reporting Worker MUST validate the listeners. It retrieves the set via `SMEMBERS sub:listeners:{hash}` and checks if the corresponding `ws:session:{client_id}` key exists in Redis (`EXISTS`). If the session key is missing (expired or crashed), the worker removes the stale `client_id` from the listener set using `SREM`. If the listener set becomes empty, the SQL query is skipped.
 9. **Channel Reactivation Lifecycle:** The Reporting Worker marks channels as `is_active = FALSE` if `last_activity_at < NOW() - 5s`. However, when the Ingestion Worker receives a new valid batch, it immediately updates the Redis state (`HSET channel:state:{channel_id} is_active TRUE`). The Reporting Worker's 1-second flush reads this Redis state and executes `UPDATE channels SET is_active = TRUE, last_activity_at = NOW()`, ensuring channels reactivate instantly upon receiving new traffic.
@@ -80,7 +80,7 @@ The CnSS is deployed as a set of Docker containers. If any container crashes, Do
 
 1. **Authentication**: Handles `POST /api/v1/auth/login`. Validates credentials using Argon2id password hashes. Issues JWTs containing `role` and `scope`.
 2. **Channel Discovery & Status**: Serves `/channels` and `/status`. Reads directly from the `channels` table for instant, zero-latency status checks (no heavy `MAX(time)` queries required).
-3. **History API**: Serves `/history`. Calculates optimal `time_bucket` intervals and queries TimescaleDB for historical line chart data.
+3. **History API**: Serves `/history`. Accepts `period_sec` (integer) to support arbitrary time windows. Dynamically calculates optimal `time_bucket` intervals based on the requested seconds to ensure smooth chart rendering.
 4. **Health Check**: Serves `/health`, verifying internal component and database connectivity.
 
 ---
@@ -208,6 +208,8 @@ The simplistic subscription model is replaced by a highly flexible, parameterize
 
 Clients send JSON control messages to subscribe or unsubscribe. The `id` field is a **required** client-generated unique identifier used to distinguish between multiple identical parallel subscriptions.
 
+#### *Example for format*
+
 ```json
 {
   "action": "subscribe",
@@ -224,6 +226,9 @@ Clients send JSON control messages to subscribe or unsubscribe. The `id` field i
     "window_sec": 5.0
   }
 }
+
+> **Note on Time Parameters:** To ensure scalability and avoid the limitations of hardcoded Enums, all time-based parameters (e.g., `window_sec`, `period_sec`) are strictly defined in **seconds** as numeric values. This allows the frontend to request custom aggregation windows (e.g., 45 minutes, 3 hours) without requiring backend code changes or schema updates.
+
 ```
 
 ### 4.2 Query Hash Generation

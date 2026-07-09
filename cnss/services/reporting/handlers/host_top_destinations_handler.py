@@ -13,7 +13,9 @@
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
+
 import asyncpg
+
 from core.contracts.subscriptions import SubscribeRequest
 from core.exceptions import DatabaseError
 from services.reporting.handlers.base import BaseSubscriptionHandler
@@ -43,6 +45,7 @@ HOST_TOP_DESTINATIONS_SORT_WHITELIST: Dict[str, str] = {
     "last_seen": "last_seen",
 }
 
+
 # --- Host Top Destinations Handler ---
 class HostTopDestinationsHandler(BaseSubscriptionHandler):
     """
@@ -66,7 +69,7 @@ class HostTopDestinationsHandler(BaseSubscriptionHandler):
            last_seen, and LAN/WAN classification.
         3. Final SELECT: Applies ORDER BY, LIMIT/OFFSET, and uses COUNT(*) OVER()
            to compute total_count for pagination metadata.
-        
+
         :param db_pool: The asyncpg connection pool.
         :param request: The validated subscription request.
         :return: Dictionary with host_top_destinations_update payload, or None if host_ip missing.

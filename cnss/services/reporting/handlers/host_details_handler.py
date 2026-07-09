@@ -13,7 +13,9 @@
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
+
 import asyncpg
+
 from core.contracts.subscriptions import SubscribeRequest
 from core.exceptions import DatabaseError
 from services.reporting.handlers.base import BaseSubscriptionHandler
@@ -29,6 +31,7 @@ logger = logging.getLogger(__name__)
 # Default aggregation window in seconds if not specified in the subscription request.
 # Set to 300 seconds (5 minutes) for a balance between responsiveness and stability.
 DEFAULT_PERIOD_SEC = 300.0
+
 
 # --- Host Details Handler ---
 class HostDetailsHandler(BaseSubscriptionHandler):
@@ -51,7 +54,7 @@ class HostDetailsHandler(BaseSubscriptionHandler):
         - Find all packets where host_ip appears as src_ip OR dst_ip
         - Calculate tx_per_sec: COUNT(src_ip = host_ip) / period_sec
         - Calculate rx_per_sec: COUNT(dst_ip = host_ip) / period_sec
-        
+
         :param db_pool: The asyncpg connection pool.
         :param request: The validated subscription request.
         :return: Dictionary with host_details_update payload, or None if host_ip missing.
@@ -155,6 +158,4 @@ class HostDetailsHandler(BaseSubscriptionHandler):
                 f"[host_details] Unexpected error for host '{params.host_ip}' in channel '{channel_id}': {e}",
                 exc_info=True,
             )
-            raise DatabaseError(
-                message=f"Unexpected host details query failure for host '{params.host_ip}'."
-            ) from e
+            raise DatabaseError(message=f"Unexpected host details query failure for host '{params.host_ip}'.") from e

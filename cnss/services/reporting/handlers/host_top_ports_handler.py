@@ -15,7 +15,9 @@
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
+
 import asyncpg
+
 from core.contracts.subscriptions import SubscribeRequest
 from core.exceptions import DatabaseError
 from services.reporting.handlers.base import BaseSubscriptionHandler
@@ -60,6 +62,7 @@ WELL_KNOWN_UDP_PORTS = {
     51820,  # WireGuard
 }
 
+
 # --- Host Top Ports Handler ---
 class HostTopPortsHandler(BaseSubscriptionHandler):
     """
@@ -82,7 +85,7 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
         2. port_stats CTE: Groups by remote_port, computes packets_per_sec.
         3. Final SELECT: Applies ORDER BY, LIMIT/OFFSET, and uses COUNT(*) OVER()
            to compute total_count for pagination metadata.
-        
+
         :param db_pool: The asyncpg connection pool.
         :param request: The validated subscription request.
         :return: Dictionary with host_top_ports_update payload, or None if host_ip missing.
@@ -210,20 +213,16 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
 
         except asyncpg.PostgresError as e:
             logger.error(
-                f"[host_top_ports] Database error for host '{params.host_ip}' "
-                f"in channel '{channel_id}': {e}",
+                f"[host_top_ports] Database error for host '{params.host_ip}' " f"in channel '{channel_id}': {e}",
                 exc_info=True,
             )
             raise DatabaseError(message=f"Host top ports query failed for host '{params.host_ip}'.") from e
         except Exception as e:
             logger.error(
-                f"[host_top_ports] Unexpected error for host '{params.host_ip}' "
-                f"in channel '{channel_id}': {e}",
+                f"[host_top_ports] Unexpected error for host '{params.host_ip}' " f"in channel '{channel_id}': {e}",
                 exc_info=True,
             )
-            raise DatabaseError(
-                message=f"Unexpected host top ports query failure for host '{params.host_ip}'."
-            ) from e
+            raise DatabaseError(message=f"Unexpected host top ports query failure for host '{params.host_ip}'.") from e
 
     def _get_protocol_by_port(self, port: int) -> str:
         """
@@ -231,7 +230,7 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
         Defaults to TCP for unrecognized ports.
         This is a pragmatic approximation since the packet_flows schema
         does not include an explicit 'protocol' field.
-        
+
         :param port: The port number to classify.
         :return: "UDP" for well-known UDP ports, "TCP" otherwise.
         """

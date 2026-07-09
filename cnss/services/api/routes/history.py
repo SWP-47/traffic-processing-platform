@@ -7,7 +7,9 @@
 # ==============================================================================
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+
 from fastapi import APIRouter, Depends, Path, Query
+
 from core.config import settings
 from core.contracts.auth import TokenPayload
 from core.database import get_db_pool
@@ -28,26 +30,28 @@ router = APIRouter(prefix="/api/v1", tags=["History"])
 # Data retention period in days (strictly matches TimescaleDB retention policy).
 RETENTION_DAYS = settings.retention_days
 
+
 # --- Helper Functions ---
 def calculate_optimal_bucket(period_sec: int, target_points: int = 1200) -> int:
     """
-    Dynamically calculates the optimal time_bucket size in seconds 
+    Dynamically calculates the optimal time_bucket size in seconds
     to return approximately `target_points` on the chart.
     Snaps to logical time steps for cleaner chart rendering.
     """
     # Calculate raw bucket size to hit the target point count
     raw_bucket = max(1, period_sec // target_points)
-    
+
     # Logical time steps (in seconds) for snapping: 1s, 5s, 10s, 30s, 1m, 5m, 10m, 30m, 1h
     logical_steps = [1, 5, 10, 30, 60, 300, 600, 1800, 3600]
-    
+
     # Find the first logical step that is >= raw_bucket
     for step in logical_steps:
         if raw_bucket <= step:
             return step
-            
+
     # For very large periods (e.g., 30 days), snap to hourly boundaries
     return max(3600, (raw_bucket // 3600) * 3600)
+
 
 def _validate_time_range(start_time: datetime, period_sec: int) -> tuple[datetime, datetime]:
     """
@@ -56,14 +60,14 @@ def _validate_time_range(start_time: datetime, period_sec: int) -> tuple[datetim
     Raises ValidationError (400) if constraints are violated.
     """
     now = datetime.now(timezone.utc)
-    
+
     # Ensure start_time is not in the future
     if start_time > now:
         raise ValidationError(error_code="bad_request", message="start_time cannot be in the future.")
-    
+
     # Calculate end_time based on the numeric period in seconds
     end_time = start_time + timedelta(seconds=period_sec)
-    
+
     # Ensure the requested range does not exceed the data retention policy
     retention_cutoff = now - timedelta(days=RETENTION_DAYS)
     if start_time < retention_cutoff:
@@ -72,6 +76,7 @@ def _validate_time_range(start_time: datetime, period_sec: int) -> tuple[datetim
             message=f"Requested time range exceeds data retention period ({RETENTION_DAYS} days).",
         )
     return start_time, end_time
+
 
 # ==============================================================================
 # GET /api/v1/channel/{channel_id}/history
@@ -90,17 +95,17 @@ async def get_channel_history(
     """
     # --- Time Range Validation & Defaults ---
     now = datetime.now(timezone.utc)
-    
+
     # Default to now - period_sec if start_time is not provided
     if start_time is None:
         start_time = now - timedelta(seconds=period_sec)
-        
+
     # Ensure start_time is timezone-aware (UTC) to prevent DB comparison errors
     if start_time.tzinfo is None:
         start_time = start_time.replace(tzinfo=timezone.utc)
-        
+
     validated_start, validated_end = _validate_time_range(start_time, period_sec)
-    
+
     # Calculate optimal bucket size dynamically based on the requested period
     interval_sec = calculate_optimal_bucket(period_sec)
 
@@ -139,7 +144,7 @@ async def get_channel_history(
     FROM aggregated a
     ORDER BY a.bucket_start;
     """
-    
+
     async with db_pool.acquire() as conn:
         rows = await conn.fetch(query, validated_start, validated_end, interval_sec, channel_id)
 
@@ -163,6 +168,7 @@ async def get_channel_history(
         points=points,
     )
 
+
 # ==============================================================================
 # GET /api/v1/channel/{channel_id}/hosts/{host_ip}/history
 # ==============================================================================
@@ -181,15 +187,15 @@ async def get_host_history(
     """
     # --- Time Range Validation & Defaults ---
     now = datetime.now(timezone.utc)
-    
+
     if start_time is None:
         start_time = now - timedelta(seconds=period_sec)
-        
+
     if start_time.tzinfo is None:
         start_time = start_time.replace(tzinfo=timezone.utc)
-        
+
     validated_start, validated_end = _validate_time_range(start_time, period_sec)
-    
+
     # Calculate optimal bucket size dynamically based on the requested period
     interval_sec = calculate_optimal_bucket(period_sec)
 
@@ -235,7 +241,7 @@ async def get_host_history(
     FROM aggregated a
     ORDER BY a.bucket_start;
     """
-    
+
     async with db_pool.acquire() as conn:
         rows = await conn.fetch(query, validated_start, validated_end, interval_sec, host_ip, channel_id)
 

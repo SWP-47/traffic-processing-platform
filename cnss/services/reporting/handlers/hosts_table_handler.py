@@ -16,7 +16,9 @@
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
+
 import asyncpg
+
 from core.contracts.subscriptions import SubscribeRequest
 from core.exceptions import DatabaseError
 from services.reporting.handlers.base import BaseSubscriptionHandler
@@ -48,6 +50,7 @@ HOSTS_TABLE_SORT_WHITELIST: Dict[str, str] = {
     "last_activity": "last_activity",
 }
 
+
 # --- Hosts Table Handler ---
 class HostsTableHandler(BaseSubscriptionHandler):
     """
@@ -71,7 +74,7 @@ class HostsTableHandler(BaseSubscriptionHandler):
            unique destinations, tx/rx per-second rates, and last activity timestamp.
         3. Final SELECT: Applies WHERE filters (location, ip), ORDER BY, LIMIT/OFFSET,
            and uses COUNT(*) OVER() to compute total_count for pagination metadata.
-        
+
         :param db_pool: The asyncpg connection pool.
         :param request: The validated subscription request.
         :return: Dictionary with hosts_table_update payload.
@@ -227,8 +230,7 @@ class HostsTableHandler(BaseSubscriptionHandler):
             }
 
             logger.debug(
-                f"[hosts_table] Success for '{channel_id}': "
-                f"{len(hosts)} hosts returned (total: {total_count})."
+                f"[hosts_table] Success for '{channel_id}': " f"{len(hosts)} hosts returned (total: {total_count})."
             )
             return result
 
@@ -243,6 +245,4 @@ class HostsTableHandler(BaseSubscriptionHandler):
                 f"[hosts_table] Unexpected error for channel '{channel_id}': {e}",
                 exc_info=True,
             )
-            raise DatabaseError(
-                message=f"Unexpected hosts table query failure for channel '{channel_id}'."
-            ) from e
+            raise DatabaseError(message=f"Unexpected hosts table query failure for channel '{channel_id}'.") from e

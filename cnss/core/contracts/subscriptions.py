@@ -99,4 +99,3 @@ class SubscribeRequest(BaseModel):
         # Exclude None values to ensure consistent hashing regardless of omitted optional fields
         params_dict = self.params.model_dump(exclude={"id"})
         return compute_query_hash(channel_id=self.channel_id, target=self.target, params=params_dict)
-    

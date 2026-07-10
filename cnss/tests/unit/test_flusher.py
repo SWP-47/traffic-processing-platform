@@ -71,7 +71,7 @@ async def test_flush_channel_happy_path(flusher, mock_lua_script, mock_db_pool):
     Architecture §2.1: Atomically pops records from Redis and executes batch INSERT.
     Verify that valid JSON records are parsed and passed to executemany.
     """
-    # Prepare mock data
+    # Prepare mock data with protocol field
     record1 = {
         "time": "2023-10-27T10:00:00+00:00",
         "channel_id": "test-ch",
@@ -80,6 +80,7 @@ async def test_flush_channel_happy_path(flusher, mock_lua_script, mock_db_pool):
         "dst_ip": "10.0.0.2",
         "src_port": 1234,
         "dst_port": 80,
+        "protocol": "TCP",
     }
     record2 = {
         "time": "2023-10-27T10:00:01+00:00",
@@ -89,6 +90,7 @@ async def test_flush_channel_happy_path(flusher, mock_lua_script, mock_db_pool):
         "dst_ip": "10.0.0.1",
         "src_port": 80,
         "dst_port": 1234,
+        "protocol": "UDP",
     }
 
     mock_lua_script.return_value = [json.dumps(record1), json.dumps(record2)]
@@ -108,15 +110,25 @@ async def test_flush_channel_happy_path(flusher, mock_lua_script, mock_db_pool):
     query = call_args[0][0]
     records = call_args[0][1]
 
+    # Verify SQL query includes protocol column
     assert "INSERT INTO packet_flows" in query
+    assert "protocol" in query
     assert len(records) == 2
 
-    # Verify first record tuple structure
-    t1, ch1, dir1, src1, dst1, sport1, dport1 = records[0]
+    # Verify first record tuple structure (now with 8 fields including protocol)
+    t1, ch1, dir1, src1, dst1, sport1, dport1, proto1 = records[0]
     assert isinstance(t1, datetime)
     assert ch1 == "test-ch"
     assert dir1 == 0
     assert src1 == "10.0.0.1"
+    assert dst1 == "10.0.0.2"
+    assert sport1 == 1234
+    assert dport1 == 80
+    assert proto1 == "TCP"
+
+    # Verify second record protocol
+    t2, ch2, dir2, src2, dst2, sport2, dport2, proto2 = records[1]
+    assert proto2 == "UDP"
 
 
 async def test_flush_channel_empty_buffer(flusher, mock_lua_script, mock_db_pool):
@@ -274,3 +286,98 @@ async def test_stop_cancels_task(flusher):
 
     assert task.cancelled() or task.done()
     assert flusher._task is None or flusher._task.done()
+
+# --- Protocol Field Tests ---
+async def test_flush_channel_extracts_protocol_from_json(flusher, mock_lua_script, mock_db_pool):
+    """
+    Verify that the protocol field is correctly extracted from JSON records
+    and included in the database insert tuple.
+    """
+    record = {
+        "time": "2023-10-27T10:00:00+00:00",
+        "channel_id": "test-ch",
+        "direction": 0,
+        "src_ip": "10.0.0.1",
+        "dst_ip": "10.0.0.2",
+        "src_port": 1234,
+        "dst_port": 80,
+        "protocol": "ICMP",
+    }
+
+    mock_lua_script.return_value = [json.dumps(record)]
+
+    await flusher._flush_channel("test-ch")
+
+    conn = mock_db_pool.acquire.return_value.__aenter__.return_value
+    conn.executemany.assert_awaited_once()
+
+    records = conn.executemany.call_args[0][1]
+    assert len(records) == 1
+
+    # Verify protocol is in the tuple
+    t, ch, dir_, src, dst, sport, dport, proto = records[0]
+    assert proto == "ICMP"
+
+
+async def test_flush_channel_protocol_defaults_to_unknown(flusher, mock_lua_script, mock_db_pool):
+    """
+    Verify backward compatibility: when protocol field is missing from JSON
+    (e.g., from older CN versions), it defaults to 'UNKNOWN'.
+    """
+    # Record WITHOUT protocol field (simulating old CN format)
+    record = {
+        "time": "2023-10-27T10:00:00+00:00",
+        "channel_id": "test-ch",
+        "direction": 0,
+        "src_ip": "10.0.0.1",
+        "dst_ip": "10.0.0.2",
+        "src_port": 1234,
+        "dst_port": 80,
+        # No "protocol" field
+    }
+
+    mock_lua_script.return_value = [json.dumps(record)]
+
+    await flusher._flush_channel("test-ch")
+
+    conn = mock_db_pool.acquire.return_value.__aenter__.return_value
+    conn.executemany.assert_awaited_once()
+
+    records = conn.executemany.call_args[0][1]
+    assert len(records) == 1
+
+    # Verify protocol defaults to 'UNKNOWN'
+    t, ch, dir_, src, dst, sport, dport, proto = records[0]
+    assert proto == "UNKNOWN"
+
+
+async def test_flush_channel_sql_query_includes_protocol(flusher, mock_lua_script, mock_db_pool):
+    """
+    Verify that the SQL INSERT query includes the protocol column
+    and has the correct number of placeholders ($1-$8).
+    """
+    record = {
+        "time": "2023-10-27T10:00:00+00:00",
+        "channel_id": "test-ch",
+        "direction": 0,
+        "src_ip": "10.0.0.1",
+        "dst_ip": "10.0.0.2",
+        "src_port": 1234,
+        "dst_port": 80,
+        "protocol": "TCP",
+    }
+
+    mock_lua_script.return_value = [json.dumps(record)]
+
+    await flusher._flush_channel("test-ch")
+
+    conn = mock_db_pool.acquire.return_value.__aenter__.return_value
+    conn.executemany.assert_awaited_once()
+
+    query = conn.executemany.call_args[0][0]
+
+    # Verify query structure
+    assert "INSERT INTO packet_flows" in query
+    assert "protocol" in query
+    assert "$8" in query  # 8th placeholder for protocol
+    assert "VALUES ($1, $2, $3, $4, $5, $6, $7, $8)" in query

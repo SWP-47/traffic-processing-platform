@@ -42,7 +42,7 @@ DEFAULT_PERIOD_SEC = 300.0
 # Strict whitelisting prevents SQL injection via ORDER BY clause.
 HOST_TOP_PORTS_SORT_WHITELIST: Dict[str, str] = {
     "port": "remote_port",
-    "protocol": "remote_port",  # Protocol is derived from port, so sorting by port is equivalent
+    "protocol": "protocol",  # Protocol is now a native column in packet_flows
     "pps": "packets_per_sec",
 }
 
@@ -68,7 +68,7 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
     """
     Executes SQL queries for the 'host_top_ports' subscription target.
     Provides a paginated, sortable list of top remote ports that a specific host
-    communicates with, including inferred protocol and traffic rates.
+    communicates with, including the actual protocol from the database and traffic rates.
     """
 
     @property
@@ -128,43 +128,39 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
         limit_sql = build_limit_param(params.limit, pq)
         offset_sql = build_offset(params.offset, pq)
 
-        # --- Query Assembly ---
+        # - Query Assembly -
         # 2-stage CTE pipeline ensures clean separation of concerns:
-        # - port_flows: filters packets where host_ip participates, extracts remote_port
-        # - port_stats: aggregates by remote_port with rate calculation
+        # - port_flows: filters packets where host_ip participates, extracts remote_port and protocol
+        # - port_stats: aggregates by (remote_port, protocol) with rate calculation
         # - final SELECT: sorting, pagination, total_count
-        #
-        # IMPORTANT: period_sec is used directly in division for rate calculation.
-        # Since Pydantic validates it as a numeric value (float), this is 100% safe
-        # from SQL injection and supports arbitrary custom time windows.
         query = f"""
         WITH port_flows AS (
-            -- Find all packets where host_ip participates
-            -- Extract the remote_port (the port of the other side)
+            -- Extract the remote_port (the port of the other side) and the actual protocol
             SELECT
                 CASE
                     WHEN direction = 0 AND dst_ip = {host_ip_ph}::inet THEN src_port
                     WHEN direction = 1 AND src_ip = {host_ip_ph}::inet THEN dst_port
                 END AS remote_port,
+                protocol,
                 time
             FROM packet_flows
             WHERE channel_id = {channel_ph}
-            AND time > NOW() - ({interval_ph}::text)::interval
-            AND (
-                (direction = 0 AND dst_ip = {host_ip_ph}::inet)
-                OR (direction = 1 AND src_ip = {host_ip_ph}::inet)
-            )
+              AND time > NOW() - ({interval_ph}::text)::interval
+              AND ((direction = 0 AND dst_ip = {host_ip_ph}::inet)
+                OR (direction = 1 AND src_ip = {host_ip_ph}::inet))
         ),
         port_stats AS (
             SELECT
                 remote_port,
+                protocol,
                 COUNT(*)::float / {period_sec} AS packets_per_sec
             FROM port_flows
             WHERE remote_port IS NOT NULL
-            GROUP BY remote_port
+            GROUP BY remote_port, protocol
         )
         SELECT
             remote_port,
+            protocol,
             packets_per_sec,
             COUNT(*) OVER() AS total_count
         FROM port_stats
@@ -177,7 +173,7 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
             async with db_pool.acquire() as conn:
                 rows = await conn.fetch(query, *pq.get_params())
 
-            # --- Result Formatting ---
+            # - Result Formatting -
             # Extract ports and total_count from the paginated result set.
             # total_count is identical across all rows (window function),
             # so we read it once from the first row.
@@ -190,7 +186,7 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
                 ports.append(
                     {
                         "port": port_num,
-                        "protocol": self._get_protocol_by_port(port_num),
+                        "protocol": row["protocol"],  # Read directly from the database
                         "packets_per_sec": float(row["packets_per_sec"]),
                     }
                 )
@@ -223,17 +219,3 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
                 exc_info=True,
             )
             raise DatabaseError(message=f"Unexpected host top ports query failure for host '{params.host_ip}'.") from e
-
-    def _get_protocol_by_port(self, port: int) -> str:
-        """
-        Determines the likely protocol based on well-known port numbers.
-        Defaults to TCP for unrecognized ports.
-        This is a pragmatic approximation since the packet_flows schema
-        does not include an explicit 'protocol' field.
-
-        :param port: The port number to classify.
-        :return: "UDP" for well-known UDP ports, "TCP" otherwise.
-        """
-        if port in WELL_KNOWN_UDP_PORTS:
-            return "UDP"
-        return "TCP"

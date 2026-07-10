@@ -47,6 +47,11 @@ class PacketFlow(Base):
 
     dst_port: Mapped[int] = mapped_column(Integer, nullable=False, comment="Destination port number")
 
+    # Network protocol (e.g., TCP, UDP, ICMP). Defaults to 'UNKNOWN' for backward compatibility.
+    protocol: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="UNKNOWN", comment="Network protocol identifier"
+    )
+
     # --- Indexes ---
     # Composite index for fast channel-specific time-series queries
     __table_args__ = (

@@ -127,6 +127,8 @@ class BackgroundFlusher:
                             record["dst_ip"],
                             record["src_port"],
                             record["dst_port"],
+                            # Fallback to 'UNKNOWN' for backward compatibility with old buffered records
+                            record.get("protocol", "UNKNOWN"),
                         )
                     )
                 except (json.JSONDecodeError, KeyError, TypeError) as e:
@@ -142,8 +144,8 @@ class BackgroundFlusher:
             async with db_pool.acquire() as conn:
                 await conn.executemany(
                     """
-                    INSERT INTO packet_flows (time, channel_id, direction, src_ip, dst_ip, src_port, dst_port)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    INSERT INTO packet_flows (time, channel_id, direction, src_ip, dst_ip, src_port, dst_port, protocol)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                     """,
                     parsed_records,
                 )

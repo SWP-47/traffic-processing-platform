@@ -1,0 +1,9 @@
+.columns {
+  display: flex;
+  gap: 20px;
+
+  width: 100%;
+
+  align-items: center;
+  justify-content: center;
+}

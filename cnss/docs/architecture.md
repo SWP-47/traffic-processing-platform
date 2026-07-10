@@ -38,16 +38,18 @@ The CnSS is deployed as a set of Docker containers. If any container crashes, Do
 
 1. **Subscription Polling**: Every 1 second, reads the active subscription hashes from a dedicated Redis Set (`SMEMBERS sub:active_hashes`)
 2. **Dynamic SQL Execution**: For each discovered `query_hash`, it retrieves the subscription JSON, identifies the `target` (e.g., `telemetry`, `lan_hosts`), and invokes a registered handler. The handler generates safe, parameterized SQL queries against TimescaleDB.
-3. **Optimization**: Before executing SQL, it checks `SMEMBERS sub:listeners:{query_hash}`. If no WebSocket clients are listening, the SQL query is skipped to save database resources.
-4. **Pub/Sub Publishing**: Formats the aggregated data according to the API schema and publishes it to Redis Pub/Sub on the channel `ws:push:{query_hash}`.
-5. **State Synchronization & Timeout Enforcement (Slow Path)**:
+3. **Continuous Aggregate Awareness & Rate Calculation**: The telemetry_1s continuous aggregate is now grouped by protocol in addition to channel_id and bucket. This means multiple rows may exist for the same second (one per active protocol). Handlers querying this aggregate MUST use COUNT(DISTINCT t.bucket) instead of COUNT(t.bucket) when calculating the actual time window for rate calculations (e.g., packets_per_sec). Failure to do so will result in mathematically incorrect, underestimated rates.
+4. **History API Compatibility**: Queries to telemetry_1s for historical data (History API) use SUM(t.packets_in) and SUM(t.packets_out). These aggregations remain completely unaffected by the new protocol grouping, as SUM() will correctly aggregate packets across all protocols within each time bucket.
+5. **Optimization**: Before executing SQL, it checks `SMEMBERS sub:listeners:{query_hash}`. If no WebSocket clients are listening, the SQL query is skipped to save database resources.
+6. **Pub/Sub Publishing**: Formats the aggregated data according to the API schema and publishes it to Redis Pub/Sub on the channel `ws:push:{query_hash}`.
+7. **State Synchronization & Timeout Enforcement (Slow Path)**:
    - **Atomic Flush to DB**: Every 1 second, uses a **Lua script** (or `HGETDEL` in Redis 7.4+) to atomically read and reset `dropped_delta` from Redis, preventing race conditions. It then performs a batched `UPDATE` on the `channels` table.
    - **Reactivation**: The SQL `UPDATE` **always sets `is_active = TRUE`** for channels that successfully received a flush, ensuring channels reactivate immediately upon receiving new traffic.
    - **Mass Timeout Calculation**: Executes a single SQL query to mark inactive channels: `UPDATE channels SET is_active = FALSE WHERE is_active = TRUE AND last_activity_at < NOW() - INTERVAL '5 seconds'`.
-6. **SQL Injection Prevention**: Since SQL identifiers (like column nam es in ORDER BY) cannot be parameterized, the Reporting Worker must use a strict whitelist mapping for sort_by (e.g., mapping "received" to SUM(direction=0)) and sort_order (strictly "ASC" or "DESC"). Direct string interpolation of user input into SQL queries is strictly prohibited. Additionally, since `period_sec` is strictly validated by Pydantic as a numeric value (`float` or `int`), it is safely formatted directly into SQL `INTERVAL` literals (e.g., `f"{period_sec} seconds"`). This approach is 100% safe from SQL injection and allows the system to support arbitrary custom time ranges without requiring backend code modifications.
-7. **Atomic Drop Flushing (Hash-Based):** Dropped packets are accumulated in Redis using `HINCRBY channel:state:{channel_id} dropped_delta <calculated_drops>` by the Ingestion Worker. This approach is significantly more efficient than a List-based alternative (`LPUSH` + `LTRIM`) as it requires only a single atomic Redis operation per batch, avoids memory overhead of list entries, and naturally co-locates drop counters with other channel state fields (`is_active`, `last_activity_at`) in the same Hash key. The Reporting Worker atomically reads and resets the `dropped_delta` counter using a dedicated **Lua script** (`atomic_drop_flush.lua`), which executes `HGET` + `HSET 0` in a single roundtrip. This Lua-based atomicity is critical to prevent race conditions where the Ingestion Worker could increment `dropped_delta` between the Reporting Worker's read and reset operations. The Lua script returns the accumulated delta, which is then applied to the `channels` table via `UPDATE channels SET dropped = dropped + $1`. If the Lua script returns `0` (no drops accumulated), the DB update is skipped entirely to minimize unnecessary writes.
-8. **Ghost Subscription Prevention:** If the WebSocket Service container crashes, it may leave stale `client_id`s in `sub:listeners:{hash}`. Before executing the SQL query, the Reporting Worker MUST validate the listeners. It retrieves the set via `SMEMBERS sub:listeners:{hash}` and checks if the corresponding `ws:session:{client_id}` key exists in Redis (`EXISTS`). If the session key is missing (expired or crashed), the worker removes the stale `client_id` from the listener set using `SREM`. If the listener set becomes empty, the SQL query is skipped.
-9. **Channel Reactivation Lifecycle:** The Reporting Worker marks channels as `is_active = FALSE` if `last_activity_at < NOW() - 5s`. However, when the Ingestion Worker receives a new valid batch, it immediately updates the Redis state (`HSET channel:state:{channel_id} is_active TRUE`). The Reporting Worker's 1-second flush reads this Redis state and executes `UPDATE channels SET is_active = TRUE, last_activity_at = NOW()`, ensuring channels reactivate instantly upon receiving new traffic.
+8. **SQL Injection Prevention**: Since SQL identifiers (like column nam es in ORDER BY) cannot be parameterized, the Reporting Worker must use a strict whitelist mapping for sort_by (e.g., mapping "received" to SUM(direction=0)) and sort_order (strictly "ASC" or "DESC"). Direct string interpolation of user input into SQL queries is strictly prohibited. Additionally, since `period_sec` is strictly validated by Pydantic as a numeric value (`float` or `int`), it is safely formatted directly into SQL `INTERVAL` literals (e.g., `f"{period_sec} seconds"`). This approach is 100% safe from SQL injection and allows the system to support arbitrary custom time ranges without requiring backend code modifications.
+9. **Atomic Drop Flushing (Hash-Based):** Dropped packets are accumulated in Redis using `HINCRBY channel:state:{channel_id} dropped_delta <calculated_drops>` by the Ingestion Worker. This approach is significantly more efficient than a List-based alternative (`LPUSH` + `LTRIM`) as it requires only a single atomic Redis operation per batch, avoids memory overhead of list entries, and naturally co-locates drop counters with other channel state fields (`is_active`, `last_activity_at`) in the same Hash key. The Reporting Worker atomically reads and resets the `dropped_delta` counter using a dedicated **Lua script** (`atomic_drop_flush.lua`), which executes `HGET` + `HSET 0` in a single roundtrip. This Lua-based atomicity is critical to prevent race conditions where the Ingestion Worker could increment `dropped_delta` between the Reporting Worker's read and reset operations. The Lua script returns the accumulated delta, which is then applied to the `channels` table via `UPDATE channels SET dropped = dropped + $1`. If the Lua script returns `0` (no drops accumulated), the DB update is skipped entirely to minimize unnecessary writes.
+10. **Ghost Subscription Prevention:** If the WebSocket Service container crashes, it may leave stale `client_id`s in `sub:listeners:{hash}`. Before executing the SQL query, the Reporting Worker MUST validate the listeners. It retrieves the set via `SMEMBERS sub:listeners:{hash}` and checks if the corresponding `ws:session:{client_id}` key exists in Redis (`EXISTS`). If the session key is missing (expired or crashed), the worker removes the stale `client_id` from the listener set using `SREM`. If the listener set becomes empty, the SQL query is skipped.
+11. **Channel Reactivation Lifecycle:** The Reporting Worker marks channels as `is_active = FALSE` if `last_activity_at < NOW() - 5s`. However, when the Ingestion Worker receives a new valid batch, it immediately updates the Redis state (`HSET channel:state:{channel_id} is_active TRUE`). The Reporting Worker's 1-second flush reads this Redis state and executes `UPDATE channels SET is_active = TRUE, last_activity_at = NOW()`, ensuring channels reactivate instantly upon receiving new traffic.
 
 ### 2.3 WebSocket Service (Client Gateway)
 
@@ -105,6 +107,7 @@ CREATE TABLE packet_flows (
     dst_ip INET NOT NULL,
     src_port INTEGER NOT NULL,
     dst_port INTEGER NOT NULL,
+    protocol VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN',
     PRIMARY KEY (id, time)
 );
 SELECT create_hypertable('packet_flows', 'time');
@@ -116,15 +119,17 @@ SELECT add_retention_policy('packet_flows', INTERVAL '7 days');
 
 ```sql
 -- 1-second bucket for real-time telemetry and host tables
+-- IMPORTANT: Now grouped by protocol. Handlers MUST use COUNT(DISTINCT bucket) for rate calculations.
 CREATE MATERIALIZED VIEW telemetry_1s
 WITH (timescaledb.continuous) AS
 SELECT 
     channel_id, 
     time_bucket('1 second', time) AS bucket,
+    protocol,
     COUNT(*) FILTER (WHERE direction = 0) AS packets_in,
     COUNT(*) FILTER (WHERE direction = 1) AS packets_out
 FROM packet_flows 
-GROUP BY channel_id, bucket;
+GROUP BY channel_id, bucket, protocol;
 
 -- Add refresh policy to run every 1 second
 SELECT add_continuous_aggregate_policy('telemetry_1s', 
@@ -134,6 +139,8 @@ SELECT add_continuous_aggregate_policy('telemetry_1s',
 ```
 
 *Note: The Reporting Worker must query `telemetry_1s` (or a 1-minute equivalent for history) instead of `packet_flows`.*
+
+- **Storage Impact Note**: Grouping by protocol increases the number of rows in telemetry_1s. If a channel has 3 active protocols (TCP, UDP, ICMP), the aggregate will store 3 rows per second instead of 1. This is an acceptable trade-off for protocol-level granularity, and TimescaleDB's native compression will mitigate storage growth.
 
 #### **`channels` (Persistent Registry)**
 
@@ -283,8 +290,8 @@ The core `telemetry_update` stream is now unified under this mechanic.
 Communication Nodes (CN) are not cryptographically authenticated. The `channel_id` in the UDP payload is a trusted assertion.
 
 - **Mitigation**: CnSS must be deployed behind network-level ACLs, accepting UDP traffic only from known CN IP addresses.
-
 - **Sequence Data Type**: CN **must** implement the `sequence` field as a 64-bit integer. Using 32-bit integers will lead to silent data loss and incorrect drop calculations once the counter wraps around (approx. every 50 days at high traffic).
+- **Protocol Field Backward Compatibility**: The protocol field in TelemetryBatch is treated as optional at the ingestion boundary. If an older CN does not provide this field, the Ingestion Worker's Pydantic model will default it to "UNKNOWN". This ensures backward compatibility and prevents batch rejections during rolling upgrades.
 
 ### 5.3 Logging & Transport Security
 

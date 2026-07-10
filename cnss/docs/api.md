@@ -41,7 +41,8 @@ The Control and Status Server (CnSS) provides a decoupled API for the Management
             "src_ip": "192.168.1.100",
             "dst_ip": "8.8.8.8",
             "src_port": 12345,
-            "dst_port": 53
+            "dst_port": 53,
+            "protocol": "UDP"
         }
     ]
 }
@@ -51,6 +52,7 @@ The Control and Status Server (CnSS) provides a decoupled API for the Management
 
 - **MTU Limit**: CN must ensure the serialized JSON payload does not exceed **1400 bytes** to prevent IP fragmentation.
 - **Sequence Data Type**: CN **MUST** implement the `sequence` field as a **64-bit integer**. Using 32-bit integers will lead to silent data loss and incorrect drop calculations once the counter wraps around.
+- MTU & Payload Size: The addition of the protocol string field increases the payload size. CN must ensure the total serialized JSON does not exceed 1400 bytes. Batches may need to hold fewer packets per UDP datagram to accommodate the new field.
 
 ---
 
@@ -581,8 +583,6 @@ Top ports and protocols for a specific host.
     ]
 }
 ```
-
-> **Backend Note for `host_top_ports`**: To accurately provide the `protocol` field, the `packet_flows` schema and CN `TelemetryBatch` payload must be extended to include a `protocol` (e.g., TCP/UDP) field, or the backend must rely on well-known port mappings.
 
 ---
 

@@ -1,12 +1,12 @@
 import { getChannels } from '@/services/channels';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './ChannelSelector.module.css';
-import websocket from '@/services/websocket';
+import websocket, { ConnectionStatus } from '@/services/websocket';
 import selectIcon from '@/assets/select.svg';
 import infoIcon from '@/assets/info.svg';
 import loadingIcon from '@/assets/loading.svg';
 import { useWebSocket } from '@/hooks/useWebSocket';
-import { useTelemetrySelector } from '@/hooks/useTelemetry';
+import { useTelemetry } from '@/hooks/useTelemetry';
 import useDelayedVisibility from '@/hooks/useDelayedVisibility';
 
 type Channel = { id: string; active: boolean };
@@ -66,8 +66,10 @@ function ChannelSelector() {
 
   const { connectionStatus, message } = useWebSocket();
 
-  const channelIsActive = useTelemetrySelector((tel) => tel?.is_active);
-  const batchesLoss = useTelemetrySelector((tel) => tel?.dropped_batches);
+  const telemetry = useTelemetry();
+
+  const channelIsActive = telemetry?.is_active;
+  const batchesLoss = telemetry?.dropped_batches;
 
   const selectorRef = useRef<HTMLDivElement>(null);
 
@@ -130,8 +132,8 @@ function ChannelSelector() {
   }, [isOpened]);
 
   // ---- Render helpers ----
-  const hasConnection = connectionStatus !== 'idle';
-  const isConnected = connectionStatus === 'connected';
+  const hasConnection = connectionStatus !== ConnectionStatus.Disconnected;
+  const isConnected = connectionStatus === ConnectionStatus.Connected;
 
   let badgeClass: string;
   let badgeLabel: string;
@@ -170,7 +172,7 @@ function ChannelSelector() {
 
         {hasConnection && (
           <>
-            {connectionStatus === 'connecting' || connectionStatus === 'disconnecting' ? (
+            {connectionStatus === ConnectionStatus.Connecting || connectionStatus === ConnectionStatus.Disconnecting ? (
               <span className={`${styles.activity_badge} ${styles.inactive_badge}`}>
                 <img src={loadingIcon} className={styles.connecting_icon} alt="Connecting..." />
               </span>

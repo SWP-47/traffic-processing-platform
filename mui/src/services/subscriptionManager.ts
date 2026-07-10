@@ -1,158 +1,189 @@
-import websocket from "./websocket";
+import websocket, { ActivityStatus, ConnectionStatus } from "./websocket";
 import type { components } from '@/api/schema';
 
-type Callback = (update: Record<string, unknown>) => void;
 type WSControlMessage = components["schemas"]["WSControlMessage"];
+export type Update = Record<string, unknown>;
 export type SubscriptionTarget = WSControlMessage["target"];
-export type SubscriptionParams = WSControlMessage["params"];
+export type SubscriptionParams = Record<string, unknown>;
 
-/**
- * This class is responsive for subscription system
- * 1. If totally new subscription is requested, service need to create it and add listener
- * 2. If existing subscription is requested, service need to just add listener (no subscription recreation)
- * 3. If all listeners of specific update are unsubscribed, service must unsubscribe it.
- */
+export interface SubscriptionData {
+    id: WSControlMessage["id"]
+    target: WSControlMessage["target"]
+    params: WSControlMessage["params"]
+    updateCallbacks: Set<(update: Update) => void>,
+    inactivityCallbacks: Set<() => void>,
+    lastUpdate: Update | null
+};
+
 class SubscriptionManager {
-   // Mappings
-   private keyToId: Record<string, string> = {};
-   private idToCallbacks: Record<string, Set<Callback>> = {};
-   private idToParams: Record<string, Record<string, unknown>> = {};
+    private subscriptions: Record<string, SubscriptionData> = {};
+    private keyToId: Record<string, string> = {};
 
-   constructor() {
-      websocket.subscribeMessages(this.onUpdate.bind(this));
-      // websocket.subscribeState(() => {
-      //    const status = websocket.getState().connectionStatus;
-      //    if (status === 'disconnected') {
-      //       this.needReconnection = true;
-      //    }
+    constructor() {
+        websocket.subscribeState(() => {
+            const state = websocket.getState();
 
-      //    if (status === 'connected' && this.needReconnection) {
-      //       Object.keys(this.idToParams).forEach(id => {
-      //          this._createSubscription(id, this.idToParams[id]!);
-      //       })
-      //       this.needReconnection = false;
-      //    }
-      // })
-   }
+            // If new WebSocket state is Connected, reconnect all active subscriptions
+            if (state.connectionStatus === ConnectionStatus.Connected) {
+                Object.values(this.subscriptions).forEach(sub => this.requestWebsocketAction('subscribe', sub));
+            }
 
-   /**
-    * This function routes updates from websocket to callbacks
-    */
-   private onUpdate(message: string): void {
-      try {
-         const update = JSON.parse(message);
+            // Otherwise there will be no new updates until connection is restored, notify listeners about inactivity
+            if (state.connectionStatus !== ConnectionStatus.Connected || state.activityStatus === ActivityStatus.Inactive) {
+                Object.values(this.subscriptions).forEach(sub => {
+                    sub.inactivityCallbacks.forEach(cb => cb());
+                });
+            }
+        });
 
-         if (!update.type || typeof update.type !== 'string') return;
-         if (!update.id || typeof update.id !== 'string') return;
+        websocket.subscribeMessages(message => {
+            try {
+                const update = JSON.parse(message) as Update;
 
-         this.idToCallbacks[update.id]?.forEach(callback => callback(update));
-      } catch (error) {
-         console.error("[SubscriptionManager] Error occur while parsing an update, " + error);
-      }
-   }
+                if (!update.type || typeof update.type !== 'string') return;
+                if (!update.id || typeof update.id !== 'string') return;
 
-   getKeyFromParams(obj: unknown): string {
-      // Primitives and null
-      if (obj === null || obj === undefined) {
-         return JSON.stringify(obj);
-      }
-      
-      if (typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean') {
-         return JSON.stringify(obj);
-      }
-      
-      // Arrays
-      if (Array.isArray(obj)) {
-         return '[' + obj.map(item => this.getKeyFromParams(item)).join(',') + ']';
-      }
-      
-      // Objects
-      if (typeof obj === 'object') {
-         const record = obj as Record<string, unknown>;
-         const sortedKeys = Object.keys(record).sort();
-         const sortedObj: Record<string, unknown> = {};
-         
-         for (const key of sortedKeys) {
-            sortedObj[key] = this.getKeyFromParams(record[key]);
-         }
-         
-         return JSON.stringify(sortedObj);
-      }
-      
-      // Fallback for other types
-      return '';
-   }
+                if (this.subscriptions[update.id] === undefined) {
+                    console.warn("[SubscriptionManager] Cannot route the update, such ID is not registered!");
+                    return;
+                }
+                
+                this.subscriptions[update.id]!.lastUpdate = update;
+                this.subscriptions[update.id]!.updateCallbacks.forEach(cb => cb(update));
+            } catch (error) {
+                if (error instanceof Error) {
+                    console.error("[SubscriptionManager] Error occur while parsing an update: " + error.message, error.stack);
+                }
+            }
+        })
+    }
 
-   /**
-    * Subscribe to new WebSocket update
-    * @param params subscription parameters
-    * @param callback callback function (executed on new update)
-    */
-   subscribe(params: Record<string, unknown>, callback: Callback): void {
-      const key = this.getKeyFromParams(params);
+    subscribe(
+        target: SubscriptionTarget,
+        params: SubscriptionParams,
+        updateCallback: (update: Update) => void,
+        inactivityCallback: () => void
+    ): () => void {
+        const key = this.getKey(target, params);
+        const webSocketState = websocket.getState();
 
-      // If subscription with this parameters is not exist
-      if (this.keyToId[key] === undefined) {
-         // Create a new subscrition
-         const id = crypto.randomUUID();
-         this._createSubscription(id, params);
+        let id = this.keyToId[key];
 
-         this.keyToId[key] = id;
-         this.idToParams[id] = params;
-         if (this.idToCallbacks[id] === undefined) {
-            this.idToCallbacks[id] = new Set();
-         }
-      }
+        if (id === undefined) {
+            id = crypto.randomUUID();
+            this.keyToId[key] = id;
+        }
 
-      const id = this.keyToId[key];
+        let sub = this.subscriptions[id];
 
-      // Set up a callback
-      this.idToCallbacks[id]!.add(callback);
-   }
+        if (sub === undefined) {
+            sub = {
+                id: id,
+                target: target,
+                params: params as WSControlMessage["params"],
+                updateCallbacks: new Set(),
+                inactivityCallbacks: new Set(),
+                lastUpdate: null
+            };
 
-   private _createSubscription(id: string, params: Record<string, unknown>) {
-      const subscribePayload = {
-         action: 'subscribe',
-         id: id,
-         channel_id: websocket.getState().channelId,
-         ...params
-      };
-      websocket.send(JSON.stringify(subscribePayload));
-   }
+            this.subscriptions[id] = sub;
 
-   private _deleteSubscription(id: string, params: Record<string, unknown>) {
-      const unsubscribePayload = {
-         action: 'unsubscribe',
-         id: id,
-         channel_id: websocket.getState().channelId,
-         ...params
-      };
-      websocket.send(JSON.stringify(unsubscribePayload));
-   }
+            // Request a subscription if WebSocket conenction is established.
+            if (webSocketState.connectionStatus === ConnectionStatus.Connected) {
+                this.requestWebsocketAction('subscribe', sub);
+            }
+        }
 
-   /**
-    * Usubscribe from a webSocket update
-    * @param params subscription parameters
-    * @param callback callback function to remove from subscribers
-    */
-   unsubscribe(params: Record<string, unknown>, callback: Callback): void {
-      const key = this.getKeyFromParams(params);
-      const id = this.keyToId[key];
+        sub.updateCallbacks.add(updateCallback);
 
-      if (!id || ! this.idToCallbacks[id]) return;
+        // If lastUpdate exist, send it to updateCallback to prevent delays
+        if (sub.lastUpdate !== null) {
+            updateCallback(sub.lastUpdate);
+        }
 
-      this.idToCallbacks[id].delete(callback);
+        // Subscription is inactive, call inactivity callback
+        if (webSocketState.connectionStatus !== ConnectionStatus.Connected) {
+            inactivityCallback();
+        }
 
-      // If no one listens this subscription
-      if (this.idToCallbacks[id].size === 0) {
-         // Delete it
-         this._deleteSubscription(id, params);
+        const unsubscribe = () => {
+            const currentSub = this.subscriptions[id];
+            if (currentSub === undefined) return;
 
-         delete this.idToCallbacks[id];
-         delete this.keyToId[key];
-         delete this.idToParams[id];
-      }
-   }
+            currentSub.updateCallbacks.delete(updateCallback);
+            currentSub.inactivityCallbacks.delete(inactivityCallback);
+
+            // If no one listens, clear subscription
+            if (currentSub.updateCallbacks.size === 0) {
+                const webSocketState = websocket.getState();
+                if (webSocketState.connectionStatus === ConnectionStatus.Connected) {
+                    this.requestWebsocketAction('unsubscribe', currentSub);
+                }
+
+                delete this.subscriptions[id];
+                delete this.keyToId[key];
+
+                console.debug(`[SubscriptionManager] Subscription ${key.slice(0, 10)}... is removed as there is no listeners.`);
+            }
+        };
+
+        return unsubscribe; 
+    }
+
+    getKey(target: SubscriptionTarget, params: SubscriptionParams): string {
+        return this.getObjectHash({ target, params });
+    }
+
+    private getObjectHash(obj: unknown): string {
+        // Primitives and null
+        if (obj === null || obj === undefined) {
+            return JSON.stringify(obj);
+        }
+    
+        if (typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean') {
+            return JSON.stringify(obj);
+        }
+    
+        // Arrays
+        if (Array.isArray(obj)) {
+            return '[' + obj.map(item => this.getObjectHash(item)).join(',') + ']';
+        }
+    
+        // Objects
+        if (typeof obj === 'object') {
+            const record = obj as Record<string, unknown>;
+            const sortedKeys = Object.keys(record).sort();
+            const sortedObj: Record<string, unknown> = {};
+        
+            for (const key of sortedKeys) {
+                sortedObj[key] = this.getObjectHash(record[key]);
+            }
+        
+            return JSON.stringify(sortedObj);
+        }
+    
+        // Fallback for other types
+        return '';
+    }
+
+    private requestWebsocketAction(action: WSControlMessage["action"], data: SubscriptionData): void {
+        const webSocketState = websocket.getState();
+
+        if (webSocketState.connectionStatus !== ConnectionStatus.Connected || !webSocketState.params) {
+            console.warn(`[SubscriptionManager] Cannot request a ${action} action until the WebSocket connection is established!`);
+            return;
+        }
+
+        const payload: WSControlMessage = {
+            action: action,
+            id: data.id,
+            channel_id: webSocketState.params.channel_id,
+            target: data.target,
+            params: data.params
+        }
+
+        websocket.send(JSON.stringify(payload));
+    }
 }
 
 export default new SubscriptionManager();

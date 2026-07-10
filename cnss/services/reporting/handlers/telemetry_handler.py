@@ -120,16 +120,19 @@ class TelemetryHandler(BaseSubscriptionHandler):
         # Upper bound: NOW() - end_offset (1s) → reads only CLOSED buckets
         # Lower bound: NOW() - window_sec - end_offset → ensures approximately window_sec duration
         #
-        # IMPORTANT: We also COUNT(*) to get the actual number of buckets read.
-        # This is critical for accurate rate calculation when window_sec is not a whole number.
-        # Example: window_sec=1.5 reads 2 buckets (2s actual), so we divide by 2, not 1.5.
+        # IMPORTANT: We use COUNT(DISTINCT t.bucket) to get the actual number of unique seconds.
+        # Since telemetry_1s is now grouped by protocol, multiple rows may exist for the same bucket
+        # (one per active protocol). Using COUNT(DISTINCT) ensures accurate rate calculation
+        # by counting unique time buckets, not total rows across all protocols.
+        # Example: If 3 protocols are active in a 2-second window, COUNT(*) would return 6,
+        # but COUNT(DISTINCT bucket) correctly returns 2.
         query = """
             SELECT
                 c.is_active,
                 c.dropped,
                 COALESCE(SUM(t.packets_in), 0) AS total_in,
                 COALESCE(SUM(t.packets_out), 0) AS total_out,
-                COUNT(t.bucket) AS bucket_count,
+                COUNT(DISTINCT t.bucket) AS bucket_count,
                 MAX(t.bucket) AS latest_bucket
             FROM channels c
             LEFT JOIN telemetry_1s t

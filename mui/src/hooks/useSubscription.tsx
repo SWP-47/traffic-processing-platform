@@ -1,27 +1,31 @@
 import subscriptionManager from "@/services/subscriptionManager";
-import { useEffect, useState } from "react";
-import { useWebSocket } from "./useWebSocket";
+import type { SubscriptionParams, SubscriptionTarget, Update } from "@/services/subscriptionManager";
+import { useEffect, useRef } from "react";
 
-type Validator<T> = (data: unknown) => data is T;
+export function useSubscription(
+    target: SubscriptionTarget,
+    params: SubscriptionParams,
+    updateCallback: (update: Update) => void,
+    inactivityCallback: () => void
+): void {
+    const key = subscriptionManager.getKey(target, params);
 
-export function useSubscription<T>(params: Record<string, unknown>, validator?: Validator<T>): T | null {
-    const [data, setData] = useState<T | null>(null);
-    const { connectionStatus } = useWebSocket();
+    const updateCallbackRef = useRef(updateCallback);
+    const inactivityCallbackRef = useRef(inactivityCallback);
 
-    const key = subscriptionManager.getKeyFromParams(params);
-    
     useEffect(() => {
-        if (connectionStatus !== 'connected') return;
-        const handleUpdate = (update: unknown) => {
-            if (validator && !validator(update)) return;
-            setData(update as T);
-        }
+        updateCallbackRef.current = updateCallback;
+        inactivityCallbackRef.current = inactivityCallback;
+    }, [updateCallback, inactivityCallback]);
 
-        subscriptionManager.subscribe(params, handleUpdate);
-        return () => subscriptionManager.unsubscribe(params, handleUpdate);
-
+    useEffect(() => {
+        const unsubscribe = subscriptionManager.subscribe(
+            target,
+            params,
+            (update) => updateCallbackRef.current(update),
+            () => inactivityCallbackRef.current()
+        );
+        return () => unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [key, connectionStatus]); // Key - is an object hash, it will change if object fields changed.
-
-    return data;
+    }, [key]); // Key - is an object hash, it will change if object fields changed.
 }

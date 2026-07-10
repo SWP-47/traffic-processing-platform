@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "generate:api": "openapi-typescript ../api/openapi.yaml -o ./src/api/schema.d.ts  --properties-required-by-default",
-    "test:ts": "tsc --noEmit"
+    "test:ts": "tsc --noEmit",
+    "test": "vitest"
   },
   "dependencies": {
     "echarts": "^6.1.0",
@@ -27,11 +28,13 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "jsdom": "^29.1.1",
     "openapi-fetch": "^0.17.0",
     "openapi-typescript": "^7.13.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.12"
+    "vite": "^8.0.12",
+    "vitest": "^4.1.10"
   },
   "overrides": {
     "openapi-fetch": {

@@ -27,6 +27,9 @@ class PacketMeta(BaseModel):
     src_port: int = Field(..., ge=0, le=65535, description="Source port number.")
     dst_port: int = Field(..., ge=0, le=65535, description="Destination port number.")
 
+    # Network protocol (e.g., TCP, UDP, ICMP). Defaults to 'UNKNOWN' for backward compatibility with older CNs.
+    protocol: str = Field(default="UNKNOWN", max_length=20, description="Network protocol identifier.")
+
 
 # --- Telemetry Batch Model ---
 # Represents a batch of packets sent from a CN to the CnSS Ingestion Worker.

@@ -1,80 +1,58 @@
 import auth from '@/services/authentication';
 
-export interface ConnectionData {
-    channel_id: string
-};
+export interface ConnectionParams { channel_id: string };
 
-export type ConnectionStatus = 
-  | 'idle'
-  | 'connecting'
-  | 'connected'
-  | 'disconnecting'
-  | 'disconnected';
+export const ConnectionStatus = {
+    Connecting:    "CONNECTING",
+    Connected:     "CONNECTED",
+    Disconnecting: "DISCONNECTING",
+    Disconnected:  "DISCONNECTED",
+    Reconnecting:  "RECONNECTING"
+} as const;
+export type ConnectionStatus = typeof ConnectionStatus[keyof typeof ConnectionStatus];
+
+export const ActivityStatus = {
+    Active:   "ACTIVE",
+    Inactive: "INACTIVE"
+} as const;
+export type ActivityStatus = typeof ActivityStatus[keyof typeof ActivityStatus];
 
 export type ConnectionState = {
+    params?: ConnectionParams,
     connectionStatus: ConnectionStatus,
-    message: string | null,
-    channelId: string | null
+    activityStatus?: ActivityStatus,
+    message?: string
 };
 
-const WS_ERROR_CODE = {
-    'invalid_token': 4001,
-    'missing_channel': 4002,
-    'channel_forbidden': 4003,
-    'channel_not_found': 4004,
-    'internal_error': 1011
-}
+// This error codes will cause WebSocket reconnection process
+const ReconnectionCodes: number[] = [
+    1001, // Going Away
+    1005, // No Status Rcvd
+    1006, // Abnormal Closure
+    1011, // Internal Server Error
+] as const;
 
+const AutenticationErrorCode = 4001;
+
+const InactivityDelay = 6000; // in ms
+
+/**
+ * This singleton service is responsible for WebSocket connection lifecycle 
+ */
 class WebSocketConnectionService {
-    private stateListeners = new Set<() => void>();
-    private messagesListeners = new Set<(message: string) => void>;
-    private updatesListeners: { [index: string]: Set<(update: unknown) => void> } = {};
-    
-    subscribeState(callback: () => void): () => void {
-        this.stateListeners.add(callback);
-        return () => this.stateListeners.delete(callback);
-    }
-
-    subscribeUpdate(updateType: string, callback: (update: unknown) => void): () => void {
-        if (this.updatesListeners[updateType] === undefined) {
-            this.updatesListeners[updateType] = new Set<(update: unknown) => void>;
-        }
-
-        this.updatesListeners[updateType].add(callback);
-        return () => this.updatesListeners[updateType]?.delete(callback);
-    }
-
-    subscribeMessages(callback: (update: string) => void): () => void {
-        this.messagesListeners.add(callback);
-        return () => this.messagesListeners.delete(callback);
-    }
-    
-    getState(): ConnectionState {
-        return this.state;
-    }
-    
-    private notifyAllStateListeners(): void {
-        this.stateListeners.forEach((callback) => callback());
-    }
-
-    private notifyAllUpdateListeners(updateType: string, update: unknown): void {
-        this.updatesListeners[updateType]?.forEach((callback) => callback(update));
-    }
-
 
     // Connection
     private connection: WebSocket | null = null;
-    private lastConnectionData: ConnectionData | null = null;
-    private followingConnectionData: ConnectionData | null = null;
+    private scheduledConnectionData: ConnectionParams | null = null;
 
     private reconnectionAttempt: number = 0;
-    private reconnectionTimeout: number | undefined;
+    private reconnectionTimeout?: number;
+
+    private inactivityTimeout?: number;
 
     private state: ConnectionState = {
-        connectionStatus: 'idle',
-        message: null,
-        channelId: null
-    }
+        connectionStatus: ConnectionStatus.Disconnected,
+    };
 
     /**
      * Connect to WebSocket
@@ -82,33 +60,56 @@ class WebSocketConnectionService {
      * If new connection was initiated, previous closes.
      * @param data connection data
      */
-    connect(data: ConnectionData): void {
+    connect(data: ConnectionParams): void {
         // If connection is already established OR is not fully closed
         // Schedule new connection after closing of the current one.
         if (this.connection) {
-            this.followingConnectionData = data;
-            if (this.connection.readyState != WebSocket.CLOSING && this.connection.readyState != WebSocket.CLOSED)
-                this.disconnect();    
+            this.scheduledConnectionData = data;
+            if (this.connection.readyState !== WebSocket.CLOSING && this.connection.readyState !== WebSocket.CLOSED)
+                this.disconnect();
             return;
         }
         
-        this._connect(data);
+        this.stopReconnection();
+        this._connect(data, true);
     }
 
-    private _connect(data: ConnectionData) {
-        console.debug("[WebSocketService] Connecting to a WebSocket.", data);
-        this.lastConnectionData = data;
+    /**
+     * Helper function to websocket state and notify its listeners
+     * @param state Partial state object
+     */
+    private updateState(state: Partial<ConnectionState>) {
+        this.state = {
+            ...this.state,
+            ...state
+        };
+        this.stateUpdateListeners.forEach((callback) => callback());
+    }
+
+    /**
+     * Helper function to create WebSocket connection.
+     * @param data connectip parameters
+     * @param manually set true whenever connection is requested manually
+     */
+    private _connect(data: ConnectionParams, manually: boolean = false) {
+        console.debug("[WebSocketService] Creating WebSocket connection...");
         this.connection = new WebSocket(`/api/v1/ws/telemetry?channel_id=${data.channel_id}&token=${auth.getToken()}`);
         this.setListeners();
 
-        this.state = {
-            ...this.state,
-            connectionStatus: 'connecting',
-            channelId: data.channel_id
-        };
-        this.notifyAllStateListeners();
+        const newStatus = this.state.connectionStatus === ConnectionStatus.Reconnecting && !manually
+                          ? ConnectionStatus.Reconnecting : ConnectionStatus.Connecting;
+
+        this.updateState({
+            params: data,
+            connectionStatus: newStatus,
+            activityStatus: undefined,
+            message: undefined
+        });
     }
 
+    /**
+     * Set listeners for WebSocket connection
+     */
     private setListeners() {
         if (!this.connection) return;
         
@@ -116,22 +117,33 @@ class WebSocketConnectionService {
         this.connection.onclose = (event) => this.onClose(event);
         this.connection.onmessage = (event) => this.onMessage(event);
         this.connection.onerror = (error) => {
-            console.error('[WebSocketService] WebSocket error:', error);
+            if (error instanceof Error) {
+                console.error('[WebSocketService] Error: ' + error.message, error.stack);
+            }
         };
     }
 
     private onOpen() {
-        console.debug("[WebSocketService] Connected!");
+        console.debug(`[WebSocketService] WebSocket conencted to ${this.state.params?.channel_id}!`);
         this.stopReconnection();
+        this.setInactivityTimeout();
 
-        this.state = {
-            ...this.state,
-            connectionStatus: 'connected'
-        };
-        this.notifyAllStateListeners();
+        this.updateState({
+            connectionStatus: ConnectionStatus.Connected,
+            activityStatus: ActivityStatus.Active,
+            message: undefined
+        });
     }
 
+    /**
+     * Initiate reconnection
+     */
     private reconnect() {
+        this.updateState({
+            connectionStatus: ConnectionStatus.Reconnecting,
+            activityStatus: undefined,
+        });
+
         this.reconnectionAttempt++;
 
         const getBackoffDelay = () => {
@@ -143,88 +155,87 @@ class WebSocketConnectionService {
 
         this.reconnectionTimeout = setTimeout(() => {
             console.debug(`[WebSocketService] Reconnection attempt #${this.reconnectionAttempt}.`);
-            this._connect(this.lastConnectionData!);
+            this._connect(this.state.params!);
         }, getBackoffDelay());
     }
 
     /**
-     * Disconenct from WebSocket
+     * Disconnect from a WebSocket
      * @returns 
      */
     disconnect(): void {
+        const isReconnecting = this.state.connectionStatus === ConnectionStatus.Reconnecting;
+
+        // If servies is in the reconnection process but connection is still not initiated
+        if (isReconnecting && !this.connection) {
+            this.stopReconnection();
+            this.updateState({
+                connectionStatus: ConnectionStatus.Disconnecting,
+                activityStatus: undefined,
+                message: undefined
+            });
+            return;
+        }
+
         if (!this.connection) return;
-        console.debug("[WebSocketService] Disconnecting from a WebSocket.", this.lastConnectionData);
+
+        console.debug("[WebSocketService] Disconnecting from a WebSocket...");
 
         this.stopReconnection();
         this.connection.close();
 
-        this.state = {
-            ...this.state,
-            connectionStatus: 'disconnecting'
-        };
-        this.notifyAllStateListeners();
+        this.updateState({
+            connectionStatus: ConnectionStatus.Disconnecting,
+            activityStatus: undefined,
+            message: undefined
+        });
     }
     
     private onClose(event: CloseEvent) {
-        console.debug(`[WebSocketService] WebSocket closed with code ${event.code}.`, this.lastConnectionData);
+        console.debug(`[WebSocketService] WebSocket conenction closed with reason ${event.code}: ${event.reason}.`);
 
         this.connection = null;
-
-        // If the user manually disconnected, set IDLE satus, otherwise DISCONNECTED
-        this.state = {
-            connectionStatus: this.state.connectionStatus === 'disconnecting' ? 'idle' : 'disconnected',
-            message: event.reason || null,
-            channelId: null
-        };
-        this.notifyAllStateListeners();
+        this.clearInactivityTimeout();
 
         // If new connection is scheduled, connect.
-        if (this.followingConnectionData) {
+        if (this.scheduledConnectionData) {
             this.stopReconnection();
-            this._connect(this.followingConnectionData);
-            this.followingConnectionData = null;
+            this._connect(this.scheduledConnectionData);
+            this.scheduledConnectionData = null;
             return;
         }
 
-        // If connection failed before handshake, try to reconnect.
-        if (!event.wasClean) {
+        // If reconnection is required, reconnect.
+        if (!event.wasClean || ReconnectionCodes.includes(event.code)) {
             this.reconnect();
             return;
         }
 
-        if (event.code === WS_ERROR_CODE.invalid_token) {
+        // Otherwise update state to "Disconnected"
+        this.updateState({
+            params: undefined,
+            connectionStatus: ConnectionStatus.Disconnected,
+            activityStatus: undefined,
+            message: event.reason
+        });
+
+        if (event.code === AutenticationErrorCode)
             auth.requestTokenRenewal();
-            // this.reconnect();
-            return;
-        }
-
-        // Reconnect on server error
-        const NOT_RECONNECT_CODES = [4001, 4002, 4003, 4004]
-        if (!NOT_RECONNECT_CODES.includes(event.code)) {
-            this.reconnect();
-            return;
-        }
     }
 
     private onMessage(event: MessageEvent<string>) {
+        if (!this.connection) return;
+
+        this.setInactivityTimeout();
+
         // Ping/pong
         if (event.data === "ping") {
-            this.connection!.send("pong");
+            this.connection.send("pong");
             return;
         }
 
         console.debug(`[WebSocketService] WebSocket received a message.`);
-        this.messagesListeners.forEach((callback) => callback(event.data));
-
-        try {
-            console.debug(`[WebSocketService] WebSocket received an update.`);
-            const data = JSON.parse(event.data);
-            if (!data.type) return;
-
-            this.notifyAllUpdateListeners(data.type, data);
-        } catch (e) {
-            console.error('[WebSocketService] Failed to parse an update:', e);
-        }
+        this.messageListeners.forEach((callback) => callback(event.data));
     }
 
     private stopReconnection() {
@@ -237,11 +248,57 @@ class WebSocketConnectionService {
 
     send(payload: string) {
         if (!this.connection) {
-            console.error("[WebSocketService] Failed to sent payload through WS connection! Connection is not established.");
+            console.error("[WebSocketService] Failed to send payload through WebSocket connection! Connection is not established.");
             return;
         }
-        this.connection?.send(payload);
-        console.debug("[WebSocketService] Sent payload through WS connection. Payload: " + payload);
+        this.connection.send(payload);
+        console.debug("[WebSocketService] Sent payload through WebSocket connection. Payload: " + payload);
+    }
+
+    private setInactivityTimeout() {
+        this.clearInactivityTimeout();
+
+        this.inactivityTimeout = setTimeout(() => {
+            console.debug(`[WebSocketService] Connection was idle for ${Math.floor(InactivityDelay / 1000)}s!`);
+            this.updateState({ activityStatus: ActivityStatus.Inactive });
+        }, InactivityDelay);
+    }
+
+    private clearInactivityTimeout() {
+        if (this.inactivityTimeout) clearTimeout(this.inactivityTimeout);
+    }
+
+
+    // Update listeners
+
+    private stateUpdateListeners = new Set<() => void>();
+    private messageListeners = new Set<(message: string) => void>;
+    
+    /**
+     * Add listener to WebSocket state updates
+     * @param callback Callback function (will be called)
+     * @returns Function to unsubscribe
+     */
+    subscribeState(callback: () => void): () => void {
+        this.stateUpdateListeners.add(callback);
+        return () => this.stateUpdateListeners.delete(callback);
+    }
+
+    /**
+     * Add listener to WebSocket message updates
+     * @param callback Callback function (will be called) with `message` parameter
+     * @returns Function to unsubscribe
+     */
+    subscribeMessages(callback: (message: string) => void): () => void {
+        this.messageListeners.add(callback);
+        return () => this.messageListeners.delete(callback);
+    }
+    
+    /**
+     * @returns ConnectionState object
+     */
+    getState(): ConnectionState {
+        return this.state;
     }
 }
 

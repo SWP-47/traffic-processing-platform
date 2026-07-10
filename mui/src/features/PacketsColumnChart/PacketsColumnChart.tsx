@@ -1,5 +1,5 @@
 import ColumnChart from "@/components/ColumnChart";
-import { useTelemetrySelector } from "@/hooks/useTelemetry";
+import { useTelemetry } from "@/hooks/useTelemetry";
 import styles from './PacketsColumnChart.module.css';
 import numerical_mode from '@/assets/numerical_mode.svg';
 import bars_mode from '@/assets/bars_mode.svg';
@@ -9,8 +9,10 @@ import { useState } from "react";
 
 function PacketsColumnChart() {
   const [mode, setMode] = useState<'numerical' | 'bars'>('numerical');
-  const packets_in = useTelemetrySelector((tel) => tel?.metrics?.direction_in?.packets_per_sec);
-  const packets_out = useTelemetrySelector((tel) => tel?.metrics?.direction_out?.packets_per_sec);
+  const telemetry = useTelemetry();
+  
+  const packets_in = telemetry?.metrics?.direction_in?.packets_per_sec;
+  const packets_out = telemetry?.metrics?.direction_out?.packets_per_sec;
 
   return (
     <div className={`card ${styles.chart}`}>

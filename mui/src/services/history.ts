@@ -14,5 +14,5 @@ export async function getHistory(channelId: string, period: HistoryPeriod): Prom
     
     if (error) throw error;
     
-    return data!;
+    return data;
 }

@@ -2,12 +2,14 @@ import styles from './PacketsLineChart.module.css';
 import { useEffect, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { init, type EChartsType } from 'echarts';
-import telemetry from '@/services/telemetry';
 import chartOptions from './chartOptions';
 import { getHistory, type HistoryPeriod } from '@/services/history';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import loadingIcon from '@/assets/loading.svg';
 import useDelayedVisibility from '@/hooks/useDelayedVisibility';
+import { ConnectionStatus } from '@/services/websocket';
+import subscriptionManager from '@/services/subscriptionManager';
+import { validateTelemetryUpdate } from '@/hooks/useTelemetry';
 
 const timeScaleMap: { [index: number]: HistoryPeriod } = {
   [3600]: '1h',
@@ -22,15 +24,16 @@ function PacketsLineChart() {
   const chartRef = useRef<EChartsType>(null);
   const [ selectedSeries, setSelectedSeries ] = useState<{ [index: string] : boolean }>({ "Received": true, "Sent": true });
   const [ timeScale, setTimeScale ] = useState<number>(3600);
-  const { connectionStatus, channelId } = useWebSocket();
-  const [ isDataFetches, setIsDataFetches ] = useState<boolean>(false); 
+  const { connectionStatus, params: connectionParams } = useWebSocket();
+  const [ isDataFetches, setIsDataFetches ] = useState<boolean>(false);
 
-  const showLoading = useDelayedVisibility(connectionStatus === 'connecting' || isDataFetches, 200);
+  const showLoading = useDelayedVisibility(connectionStatus === ConnectionStatus.Connecting || isDataFetches, 200);
 
   // Init chart
   useEffect(() => {
     if (!chartElementRef.current) return;
-    if (!channelId) return;
+    if (connectionStatus !== ConnectionStatus.Connected) return;
+    if (connectionParams) return;
 
     const chart = init(chartElementRef.current);
     chartRef.current = chart;
@@ -74,7 +77,7 @@ function PacketsLineChart() {
 
     const loadHistoryData = async () => {
       setIsDataFetches(true);
-      const response = await getHistory(channelId, timeScaleMap[timeScale]!);
+      const response = await getHistory(connectionParams!.channel_id, timeScaleMap[timeScale]!);
       bucketSizeMs = response.interval_sec! * 1000;
 
       response.points?.forEach(point => {
@@ -101,13 +104,12 @@ function PacketsLineChart() {
 
     loadHistoryData();
 
-    const unsubscribeTelemetry = telemetry.subscribe(() => {
+    const onTelemetryUpdate = (update: Record<string, unknown>) => {
       if (isLoading) return;
       if (!chartRef.current) return;
       if (!data.Received || !data.Sent) return;
 
-      const snapshot = telemetry.getLastUpdate();
-      if (!snapshot) return;
+      if (!validateTelemetryUpdate(update)) return;
 
       const min = Date.now() - timeScale * 1000;
 
@@ -118,19 +120,19 @@ function PacketsLineChart() {
       }
 
       // Collect data
-      const date = Date.parse(snapshot.timestamp!);
-      const packetsIn = snapshot.metrics?.direction_in?.packets_per_sec;
-      const packetsOut = snapshot.metrics?.direction_out?.packets_per_sec;
-      const channelActivity = snapshot.is_active ? 1 : 0;
-      const windowSize = snapshot.window_ms;
+      const date = Date.parse(update.timestamp!);
+      const packetsIn = update.metrics?.direction_in?.packets_per_sec;
+      const packetsOut = update.metrics?.direction_out?.packets_per_sec;
+      const channelActivity = update.is_active ? 1 : 0;
+      const windowSize = update.window_ms;
 
       data.Received.push({
-        name: snapshot.timestamp!,
+        name: update.timestamp!,
         value: [date, packetsIn!, channelActivity!, windowSize!]
       })
 
       data.Sent.push({
-        name: snapshot.timestamp!,
+        name: update.timestamp!,
         value: [date, packetsOut!, channelActivity!, windowSize!]
       })
 
@@ -153,14 +155,21 @@ function PacketsLineChart() {
           xAxis: { dataMin: Date.now() - timeScale * 1000, dataMax: Date.now() }
         });
       }
-    })
+    };
+
+    const unsubscribeTelemetry = subscriptionManager.subscribe(
+      "telemetry",
+      { window_sec: 5.0 },
+      onTelemetryUpdate,
+      () => {}
+    );
 
     return () => {
       unsubscribeTelemetry();
       resizeObserver.disconnect();
       chart.dispose();
     }
-  }, [channelId, timeScale])
+  }, [connectionStatus, connectionParams, timeScale])
 
   // Configure selection
   const toggleLegend = (event: MouseEvent<HTMLSpanElement>) => {
@@ -195,7 +204,7 @@ function PacketsLineChart() {
   };
   
   return (
-    <div className={`${styles.component} card ${(connectionStatus !== 'connected' || showLoading) && styles.inactive}`}>
+    <div className={`${styles.component} card ${(connectionStatus !== ConnectionStatus.Connected || showLoading) && styles.inactive}`}>
       <div className={styles.header}>
         <div className={styles.left}>
           <h1>RX/TX Rate over time</h1>

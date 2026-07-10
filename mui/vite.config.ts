@@ -12,6 +12,9 @@ export default defineConfig(({ mode }) => {
         '@': fileURLToPath(new URL('./src', import.meta.url))
       }
     },
+    test: {
+      environment: 'jsdom',
+    },
     server: {
       port: 5173,
       watch: {
@@ -22,10 +25,12 @@ export default defineConfig(({ mode }) => {
           target: env.CNSS_WS_BASE_URL,
           ws: true,
           changeOrigin: true,
+          secure: false,
         },
         '/api': {
           target: env.CNSS_API_BASE_URL,
           changeOrigin: true,
+          secure: false,
         }
       }
     },

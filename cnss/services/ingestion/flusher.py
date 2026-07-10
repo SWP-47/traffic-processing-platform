@@ -151,8 +151,7 @@ class BackgroundFlusher:
                 )
 
             logger.debug(
-                f"Channel '{channel_id}': Successfully flushed {len(parsed_records)} "
-                f"packets to TimescaleDB."
+                f"Channel '{channel_id}': Successfully flushed {len(parsed_records)} " f"packets to TimescaleDB."
             )
 
         except RedisError as e:

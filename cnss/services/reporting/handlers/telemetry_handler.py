@@ -114,7 +114,7 @@ class TelemetryHandler(BaseSubscriptionHandler):
             f"(window: {window_sec}s, end_offset: {CONTINUOUS_AGG_END_OFFSET_SEC}s)."
         )
 
-                # --- Query Assembly ---
+        # --- Query Assembly ---
         # The query uses $1 for window_sec and $2 for channel_id.
         # Time window logic:
         # Upper bound: NOW() - end_offset (1s) → reads only CLOSED buckets

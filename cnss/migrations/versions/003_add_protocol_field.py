@@ -2,14 +2,14 @@
 # Protocol Field Addition and Telemetry View Recreate Migration
 # Adds the 'protocol' column to packet_flows and recreates the telemetry_1s
 # continuous aggregate to group by protocol for protocol-level granularity.
-# 
+#
 # IMPORTANT: This migration causes ~1-2 seconds of downtime when dropping
 # the materialized view. Execute during a maintenance window or low-traffic period.
 # ==============================================================================
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 # --- Migration Identity ---
 # Unique revision identifier and dependency chain
@@ -53,8 +53,7 @@ def upgrade() -> None:
     # The new view groups by (channel_id, bucket, protocol) to enable
     # protocol-level telemetry granularity. Multiple rows may exist per second
     # (one per active protocol), requiring COUNT(DISTINCT bucket) in handlers.
-    op.execute(
-        """
+    op.execute("""
         CREATE MATERIALIZED VIEW telemetry_1s
         WITH (timescaledb.continuous) AS
         SELECT
@@ -65,21 +64,18 @@ def upgrade() -> None:
             COUNT(*) FILTER (WHERE direction = 1) AS packets_out
         FROM packet_flows
         GROUP BY channel_id, bucket, protocol
-        """
-    )
+        """)
 
     # --- Step 4: Re-establish Continuous Aggregate Policy ---
     # Refresh policy runs every 1 second with a 1-second end offset
     # to ensure only closed buckets are queried (preventing partial data)
-    op.execute(
-        """
+    op.execute("""
         SELECT add_continuous_aggregate_policy('telemetry_1s',
             start_offset => INTERVAL '5 seconds',
             end_offset => INTERVAL '1 second',
             schedule_interval => INTERVAL '1 second'
         )
-        """
-    )
+        """)
 
 
 # ==============================================================================
@@ -98,8 +94,7 @@ def downgrade() -> None:
 
     # --- Step 2: Recreate Original View (Without Protocol) ---
     # Restores the pre-protocol schema for rollback scenarios
-    op.execute(
-        """
+    op.execute("""
         CREATE MATERIALIZED VIEW telemetry_1s
         WITH (timescaledb.continuous) AS
         SELECT
@@ -109,19 +104,16 @@ def downgrade() -> None:
             COUNT(*) FILTER (WHERE direction = 1) AS packets_out
         FROM packet_flows
         GROUP BY channel_id, bucket
-        """
-    )
+        """)
 
     # --- Step 3: Re-establish Original Policy ---
-    op.execute(
-        """
+    op.execute("""
         SELECT add_continuous_aggregate_policy('telemetry_1s',
             start_offset => INTERVAL '5 seconds',
             end_offset => INTERVAL '1 second',
             schedule_interval => INTERVAL '1 second'
         )
-        """
-    )
+        """)
 
     # --- Step 4: Remove Protocol Column ---
     op.drop_column("packet_flows", "protocol")

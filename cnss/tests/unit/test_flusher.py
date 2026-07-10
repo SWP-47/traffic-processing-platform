@@ -287,6 +287,7 @@ async def test_stop_cancels_task(flusher):
     assert task.cancelled() or task.done()
     assert flusher._task is None or flusher._task.done()
 
+
 # --- Protocol Field Tests ---
 async def test_flush_channel_extracts_protocol_from_json(flusher, mock_lua_script, mock_db_pool):
     """

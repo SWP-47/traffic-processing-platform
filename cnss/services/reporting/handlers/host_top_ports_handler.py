@@ -128,7 +128,7 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
         limit_sql = build_limit_param(params.limit, pq)
         offset_sql = build_offset(params.offset, pq)
 
-                # - Query Assembly -
+        # - Query Assembly -
         # 2-stage CTE pipeline ensures clean separation of concerns:
         # - port_flows: filters packets where host_ip participates, extracts remote_port and protocol
         # - port_stats: aggregates by (remote_port, protocol) with rate calculation
@@ -183,11 +183,13 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
             for row in rows:
                 total_count = int(row["total_count"])
                 port_num = int(row["remote_port"])
-                ports.append({
-                    "port": port_num,
-                    "protocol": row["protocol"],  # Read directly from the database
-                    "packets_per_sec": float(row["packets_per_sec"]),
-                })
+                ports.append(
+                    {
+                        "port": port_num,
+                        "protocol": row["protocol"],  # Read directly from the database
+                        "packets_per_sec": float(row["packets_per_sec"]),
+                    }
+                )
 
             result = {
                 "type": "host_top_ports_update",

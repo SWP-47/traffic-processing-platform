@@ -28,6 +28,10 @@ SEND_INTERVAL_SEC = 0.05  # Send interval (50ms = 20 batches/sec)
 LAN_IP_POOL = ["192.168.1.10", "192.168.1.20", "192.168.1.30", "10.0.0.1", "10.0.0.2"]
 WAN_IP_POOL = ["8.8.8.8", "1.1.1.1", "172.217.0.1", "151.101.1.140", "93.184.216.34"]
 
+# Protocol pool with weights for realistic distribution
+# TCP and UDP dominate real traffic, ICMP is rare
+PROTOCOL_POOL = ["TCP", "TCP", "TCP", "TCP", "TCP", "UDP", "UDP", "UDP", "ICMP"]
+
 
 def create_packet_meta(direction: int = 0) -> Dict[str, Any]:
     # Гарантируем, что IP LAN и WAN не будут пересекаться
@@ -40,6 +44,9 @@ def create_packet_meta(direction: int = 0) -> Dict[str, Any]:
 
     src_port = random.randint(1024, 65535)
     dst_port = random.choice([53, 80, 443, 123, 514, 8080, 3306])
+    
+    # Randomly select protocol with weighted distribution
+    protocol = random.choice(PROTOCOL_POOL)
 
     return {
         "direction": direction,
@@ -47,6 +54,7 @@ def create_packet_meta(direction: int = 0) -> Dict[str, Any]:
         "dst_ip": dst_ip,
         "src_port": src_port,
         "dst_port": dst_port,
+        "protocol": protocol,
     }
 
 

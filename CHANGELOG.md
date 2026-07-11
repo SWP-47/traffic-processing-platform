@@ -8,12 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- N/A
+- Centralized database query module `core/db.py` consolidating SQL query definitions for all microservices. ([#263](https://github.com/SWP-47/traffic-processing-platform/issues/263))
+- New database query module integration tests in `tests/unit/test_db.py` to cover all centralized SQL query helpers. ([#227](https://github.com/SWP-47/traffic-processing-platform/issues/227))
+- Comprehensive end-to-end integration tests in `tests/integration/test_reporting.py` simulating active traffic and multi-target subscriptions validation. ([#227](https://github.com/SWP-47/traffic-processing-platform/issues/227))
+- Interactive end-to-end system verification scripts `scripts/verify_system.py` and `scripts/verify_all_subscriptions.py` to test websocket push updates under concurrent stress load. ([#227](https://github.com/SWP-47/traffic-processing-platform/issues/227))
 
 ### Changed
 
 - REST API (`/history`): Query parameter `period` (string Enum: `1h`, `24h`, etc.) has been **replaced** with `period_sec` (integer, e.g., `3600` for 1 hour). ([#247](https://github.com/SWP-47/traffic-processing-platform/issues/247))
 - WebSocket Subscriptions: `params.period` (string Enum) has been **replaced** with `params.period_sec` (number, e.g., `300` for 5 minutes). ([#247](https://github.com/SWP-47/traffic-processing-platform/issues/247))
+- Refactored REST API endpoints (`auth.py`, `channels.py`, `health.py`, `history.py`), WebSocket server (`server.py`, `snapshot.py`), and all Reporting Worker handlers to call the centralized functions in `core/db.py` instead of executing inline raw SQL queries. ([#263](https://github.com/SWP-47/traffic-processing-platform/issues/263))
 
 ### Deprecated
 

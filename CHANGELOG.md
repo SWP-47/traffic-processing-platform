@@ -40,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Upload unreleased necessary changes for v2.0.0 ([#256](https://github.com/SWP-47/traffic-processing-platform/issues/256))
+- Upload unreleased necessary changes for v2.0.0 ([#256](https://github.com/SWP-47/traffic-processing-platform/pull/256))
 
 ## [2.0.0] - 2026-07-05
 

@@ -6,7 +6,7 @@ import loadingIcon from '@/assets/loading.svg';
 import useDelayedVisibility from '@/hooks/useDelayedVisibility';
 import type { ChartDataProvider, DataPoint } from './types';
 
-interface PacketsLineChartOptions {
+export interface PacketsLineChartOptions {
   dataProvider: ChartDataProvider,
   timeScale: number,
   selectedSeries: {
@@ -50,7 +50,6 @@ function PacketsLineChart({ dataProvider, timeScale, selectedSeries } : PacketsL
     chartElementCopy.addEventListener('mouseenter', handleMouseEnter);
     chartElementCopy.addEventListener('mouseleave', handleMouseLeave);
 
-
     chart.on('datazoom', function (params) {
       // @ts-expect-error Type is not defined
       const zoomData = params.batch[0];
@@ -84,19 +83,25 @@ function PacketsLineChart({ dataProvider, timeScale, selectedSeries } : PacketsL
         // Zoom mode: show visible range
         const startIdx = allData.findIndex(p => p.timestamp >= (zoomStartRef.current ?? 0));
         const endIdx = allData.findIndex(p => p.timestamp > (zoomEndRef.current ?? Infinity));
-        const safeEnd = endIdx !== -1 ? endIdx : allData.length;
-        dataToRender = startIdx !== -1 ? allData.slice(startIdx, safeEnd) : [];
+
+        const padding = 10;
+        const paddedStart = Math.max(0, startIdx - padding);
+        const paddedEnd = endIdx !== -1 
+            ? Math.min(allData.length, endIdx + padding)
+            : allData.length;
+        
+        dataToRender = allData.slice(paddedStart, paddedEnd);
       }
 
       // Map to ECharts format with incomplete point styling
       const receivedData = dataToRender.map(p => ({
-        name: new Date(p.timestamp).toISOString(),
+        name: p.timestamp,
         value: [p.timestamp, p.packetsInPerSec, p.isActive ? 1 : 0, p.windowMs],
         itemStyle: p.complete ? undefined : { opacity: 0.4 }
       }));
 
       const sentData = dataToRender.map(p => ({
-        name: new Date(p.timestamp).toISOString(),
+        name: p.timestamp,
         value: [p.timestamp, p.packetsOutPerSec, p.isActive ? 1 : 0, p.windowMs],
         itemStyle: p.complete ? undefined : { opacity: 0.4 }
       }));

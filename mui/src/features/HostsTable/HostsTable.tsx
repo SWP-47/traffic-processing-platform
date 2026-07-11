@@ -72,18 +72,7 @@ function HostsTable() {
       <input type="text" className={styles.filter} onChange={(e) => setFilter(e.target.value)} />
       <FullTable
         columns={columns}
-        // data={[
-        //   ['LAN', '255.255.255.255', '100', '100 pkt/s', '100 pkt/s', '1 second ago'],
-        //   ['LAN', '255.255.255.255', '100', '100 pkt/s', '100 pkt/s', '1 second ago'],
-        //   ['LAN', '255.255.255.255', '100', '100 pkt/s', '100 pkt/s', '1 second ago'],
-        //   ['LAN', '255.255.255.255', '100', '100 pkt/s', '100 pkt/s', '1 second ago'],
-        //   ['LAN', '255.255.255.255', '100', '100 pkt/s', '100 pkt/s', '1 second ago'],
-        //   ['LAN', '255.255.255.255', '100', '100 pkt/s', '100 pkt/s', '1 second ago'],
-        //   ['LAN', '255.255.255.255', '100', '100 pkt/s', '100 pkt/s', '1 second ago'],
-        //   ['LAN', '255.255.255.255', '100', '100 pkt/s', '100 pkt/s', '1 second ago'],
-        //   ['LAN', '255.255.255.255', '100', '100 pkt/s', '100 pkt/s', '1 second ago'],
-        //   ['LAN', '255.255.255.255', '100', '100 pkt/s', '100 pkt/s', '1 second ago'],
-        // ]}
+        
         data={data}
         sortColumnId={sortColumn}
         sortDirection={sortDir}

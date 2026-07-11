@@ -61,9 +61,7 @@ make prod
 
 ### 3.3. Frontend Deployment (MUI)
 1. Navigate to the frontend directory: `cd mui/`
-2. Create the environment file: `cp .env.example .env`
-3. Ensure `CNSS_API_BASE_URL` and `CNSS_WS_BASE_URL` point to the correct CnSS backend addresses.
-4. Start the production environment: `make prod`
+2. Start the production environment: `make prod`
 
 ### 3.4. Infrastructure Layer (Edge Nginx)
 1. Navigate to the infrastructure directory: `cd infrastructure/`

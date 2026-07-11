@@ -80,13 +80,12 @@ make prod
 3. Build and run the containers using the command: `docker-compose up --build`
 
 **Hardware Part (FPGA Programming):**
-*Note: Ensure you have AMD Vivado Design Suite installed on your system. The folder contains `*.sv` and `*.xdc` files which are expected to be used to program the ARTIX-7 FPGA Development Board AX7201.*
-1. Run Vivado IDE and create a new project for the board **ARTIX-7 FPGA Development Board AX7201**.
-2. Add all `*.sv` files from the `./hardware-part/` folder to the project as source code files.
-3. Add the `top.xdc` file from the `./hardware-part/` folder to the project as the constraint file.
-4. Run the Synthesis and Implementation processes, then generate the bitstream.
-5. Connect the FPGA board to your computer using a JTAG programmer.
-6. Open "Hardware Manager" and program the connected device using the corresponding button.
+*Note: Ensure you have AMD Vivado Design Suite installed on your system. The folder `viva.zip` contains compiled Vivado project which is expected to be used to program the ARTIX-7 FPGA Development Board AX7201.*
+0. Download `viva.zip` file and extract all files from it into `viva` (for example) folder.
+1. Run Vivado IDE and open project. Navigate to `viva` folder and choose `ax7201-ethernet-loopback.xpr` file.
+2. Connect the FPGA board to your computer using a JTAG programmer.
+3. Open "Hardware Manager" and program the connected device using the corresponding button.
+4. Connect LAN to Ethernet1, OUT sniffering interface of TP-CN device to Ethernet2, IN sniffering interface of TP-CN device to Ethernet3, WAN to Ethernet4. These Ethernets are phisical Ethernet chips on FPGA board, their names are printed on the board
 
 ## 4. Required Configuration and Secrets Handling
 * **Environment Variables:** All components use `.env` files (which are strictly ignored by Git). Templates are provided as `.env.example`.

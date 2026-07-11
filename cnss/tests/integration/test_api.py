@@ -376,26 +376,29 @@ async def test_api_channel_history_and_validation(redis_setup, db_pool_setup, ap
             "INSERT INTO user_channel_scopes (user_id, channel_id) VALUES ($1, $2)", viewer_id, TEST_CHANNEL_API_1
         )
 
-        # Seed 10 packets across 2 seconds in packet_flows
-        # NOW() - 2 seconds: 5 packets IN
-        # NOW() - 3 seconds: 5 packets OUT
+        # Seed 10 packets well within the refresh window per architecture §3.1.
+        # The telemetry_1s refresh policy has start_offset=5s, so data must be
+        # older than 5 seconds to be safely within a refreshed aggregate bucket.
+        # Seeds at NOW()-10s / NOW()-11s to avoid any boundary timing issues.
+        # direction=0 → IN (packets_in), direction=1 → OUT (packets_out)
         await conn.execute(
             """
             INSERT INTO packet_flows (time, channel_id, direction, src_ip, dst_ip, src_port, dst_port, protocol)
-            VALUES (NOW() - INTERVAL '2 seconds', $1, 0, '192.168.1.10', '8.8.8.8', 12345, 80, 'TCP'),
-                   (NOW() - INTERVAL '2 seconds', $1, 0, '192.168.1.10', '8.8.8.8', 12345, 80, 'TCP'),
-                   (NOW() - INTERVAL '2 seconds', $1, 0, '192.168.1.10', '8.8.8.8', 12345, 80, 'TCP'),
-                   (NOW() - INTERVAL '2 seconds', $1, 0, '192.168.1.10', '8.8.8.8', 12345, 80, 'TCP'),
-                   (NOW() - INTERVAL '2 seconds', $1, 0, '192.168.1.10', '8.8.8.8', 12345, 80, 'TCP'),
-                   (NOW() - INTERVAL '3 seconds', $1, 1, '8.8.8.8', '192.168.1.10', 80, 12345, 'TCP'),
-                   (NOW() - INTERVAL '3 seconds', $1, 1, '8.8.8.8', '192.168.1.10', 80, 12345, 'TCP'),
-                   (NOW() - INTERVAL '3 seconds', $1, 1, '8.8.8.8', '192.168.1.10', 80, 12345, 'TCP'),
-                   (NOW() - INTERVAL '3 seconds', $1, 1, '8.8.8.8', '192.168.1.10', 80, 12345, 'TCP'),
-                   (NOW() - INTERVAL '3 seconds', $1, 1, '8.8.8.8', '192.168.1.10', 80, 12345, 'TCP')
+            VALUES (NOW() - INTERVAL '10 seconds', $1, 0, '192.168.1.10', '8.8.8.8', 12345, 80, 'TCP'),
+                   (NOW() - INTERVAL '10 seconds', $1, 0, '192.168.1.10', '8.8.8.8', 12345, 80, 'TCP'),
+                   (NOW() - INTERVAL '10 seconds', $1, 0, '192.168.1.10', '8.8.8.8', 12345, 80, 'TCP'),
+                   (NOW() - INTERVAL '10 seconds', $1, 0, '192.168.1.10', '8.8.8.8', 12345, 80, 'TCP'),
+                   (NOW() - INTERVAL '10 seconds', $1, 0, '192.168.1.10', '8.8.8.8', 12345, 80, 'TCP'),
+                   (NOW() - INTERVAL '11 seconds', $1, 1, '8.8.8.8', '192.168.1.10', 80, 12345, 'TCP'),
+                   (NOW() - INTERVAL '11 seconds', $1, 1, '8.8.8.8', '192.168.1.10', 80, 12345, 'TCP'),
+                   (NOW() - INTERVAL '11 seconds', $1, 1, '8.8.8.8', '192.168.1.10', 80, 12345, 'TCP'),
+                   (NOW() - INTERVAL '11 seconds', $1, 1, '8.8.8.8', '192.168.1.10', 80, 12345, 'TCP'),
+                   (NOW() - INTERVAL '11 seconds', $1, 1, '8.8.8.8', '192.168.1.10', 80, 12345, 'TCP')
             """,
             TEST_CHANNEL_API_1,
         )
-        # Refresh the telemetry aggregate view
+        # Refresh the continuous aggregate. Per architecture §3.1, end_offset=1s
+        # means the upper bound must be at least NOW()-1s to include 10s/11s old data.
         await conn.execute(
             "CALL refresh_continuous_aggregate('telemetry_1s', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 second')"
         )
@@ -408,21 +411,25 @@ async def test_api_channel_history_and_validation(redis_setup, db_pool_setup, ap
     headers = {"Authorization": f"Bearer {viewer_token}"}
 
     # Case 1: Valid History Query (Success 200)
-    resp = await api_client.get(f"/api/v1/channel/{TEST_CHANNEL_API_1}/history?period_sec=5", headers=headers)
+    # Use period_sec=15 so data seeded at 10s/11s ago is within [NOW()-15s, NOW()-1s].
+    # Per architecture §3.1, telemetry_1s refresh start_offset=5s guarantees data
+    # older than 5s is always in the aggregate — 10s/11s old data is safely included.
+    resp = await api_client.get(f"/api/v1/channel/{TEST_CHANNEL_API_1}/history?period_sec=15", headers=headers)
     assert resp.status_code == 200
     data = resp.json()
     assert data["channel_id"] == TEST_CHANNEL_API_1
-    assert data["period_sec"] == 5
+    assert data["period_sec"] == 15
     assert data["interval_sec"] == 1
 
-    # Verify points zero-filling
+    # Verify zero-filling: 15 x 1s buckets should be returned
     points = data["points"]
-    assert len(points) >= 5
+    assert len(points) >= 15
 
     active_points_in = [p for p in points if p["packets_in_per_sec"] > 0]
     active_points_out = [p for p in points if p["packets_out_per_sec"] > 0]
     assert len(active_points_in) > 0
     assert len(active_points_out) > 0
+    # 5 packets in a 1s bucket → 5.0 per sec
     assert active_points_in[0]["packets_in_per_sec"] == 5.0
     assert active_points_out[0]["packets_out_per_sec"] == 5.0
 

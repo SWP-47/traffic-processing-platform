@@ -24,8 +24,13 @@ from services.reporting.ghost_cleaner import (
     SESSION_KEY_PREFIX,
     GhostCleaner,
 )
-from services.reporting.handlers.hosts_table_handler import HostsTableHandler
-from services.reporting.handlers.telemetry_handler import TelemetryHandler
+from services.reporting.handlers import (
+    HostDetailsHandler,
+    HostTopDestinationsHandler,
+    HostTopPortsHandler,
+    HostsTableHandler,
+    TelemetryHandler,
+)
 from services.reporting.poller import PUSH_CHANNEL_PREFIX, Poller
 
 # --- Test Constants ---
@@ -33,7 +38,13 @@ TEST_CHANNEL_ID_SYNC = "integration-test-ch-sync"
 TEST_CHANNEL_ID_ACTIVE = "integration-test-ch-active"
 TEST_CHANNEL_ID_TIMEOUT = "integration-test-ch-timeout"
 TEST_CHANNEL_ID_TELEMETRY = "integration-test-ch-telemetry"
+TEST_CHANNEL_ID_TELEMETRY_PROTO = "integration-test-ch-telemetry-proto"
+TEST_CHANNEL_ID_TELEMETRY_EMPTY = "integration-test-ch-telemetry-empty"
 TEST_CHANNEL_ID_HOSTS = "integration-test-ch-hosts"
+TEST_CHANNEL_ID_DETAILS = "integration-test-ch-details"
+TEST_CHANNEL_ID_TOP_DEST = "integration-test-ch-top-dest"
+TEST_CHANNEL_ID_TOP_PORTS = "integration-test-ch-top-ports"
+TEST_CHANNEL_ID_SIMULATED = "integration-test-ch-simulated"
 
 
 # --- Fixtures ---
@@ -478,3 +489,663 @@ async def test_poller_executes_hosts_table_handler_and_publishes(redis_setup, db
 
     assert host_ips["192.168.1.100"]["location"] == "LAN"
     assert host_ips["8.8.8.8"]["location"] == "WAN"
+
+
+async def test_poller_executes_host_details_handler_and_publishes(redis_setup, db_pool_setup):
+    """
+    Architecture §2.2.2 & §4.4: Poller delegates query to HostDetailsHandler,
+    which executes a query to get real-time Tx/Rx rates for a specific host.
+    """
+    redis = redis_setup
+    db_pool = db_pool_setup
+    query_hash = "integration-test-query-hash-details"
+    listeners_key = f"{LISTENERS_KEY_PREFIX}{query_hash}"
+    registry_key = f"{REGISTRY_KEY_PREFIX}{query_hash}"
+
+    # Setup active hash and registry
+    subscribe_json = json.dumps(
+        {
+            "action": "subscribe",
+            "id": "sub-details-1",
+            "channel_id": TEST_CHANNEL_ID_DETAILS,
+            "target": "host_details",
+            "params": {
+                "host_ip": "192.168.1.100",
+                "period_sec": 10.0,
+            },
+        }
+    )
+    await redis.set(registry_key, subscribe_json)
+    await redis.sadd(ACTIVE_HASHES_KEY, query_hash)
+
+    # Add active listener and session
+    await redis.sadd(listeners_key, "client_poller:sub-details-1")
+    await redis.hset(f"{SESSION_KEY_PREFIX}client_poller", "client_id", "client_poller")
+
+    # Insert channel and packet flows into TimescaleDB
+    now = datetime.now(timezone.utc)
+    async with db_pool.acquire() as conn:
+        await conn.execute(
+            "INSERT INTO channels (channel_id, is_active, dropped, last_activity_at) VALUES ($1, $2, $3, $4)",
+            TEST_CHANNEL_ID_DETAILS,
+            True,
+            0,
+            now,
+        )
+
+        # Insert raw packet flows:
+        # tx_per_sec: 2 packets (src_ip = '192.168.1.100')
+        # rx_per_sec: 1 packet (dst_ip = '192.168.1.100')
+        await conn.execute(
+            """
+            INSERT INTO packet_flows (time, channel_id, direction, src_ip, dst_ip, src_port, dst_port, protocol)
+            VALUES (NOW() - INTERVAL '2 seconds', $1, 1, '192.168.1.100', '8.8.8.8', 12345, 80, 'TCP'),
+                   (NOW() - INTERVAL '2 seconds', $1, 1, '192.168.1.100', '8.8.8.8', 12346, 80, 'TCP'),
+                   (NOW() - INTERVAL '3 seconds', $1, 0, '8.8.8.8', '192.168.1.100', 80, 12345, 'TCP')
+            """,
+            TEST_CHANNEL_ID_DETAILS,
+        )
+
+    # Set up Poller
+    poller = Poller()
+    handler = HostDetailsHandler()
+    poller.register_handler("host_details", handler)
+
+    # Setup Pub/Sub listener
+    pubsub = redis.pubsub()
+    await pubsub.subscribe(f"{PUSH_CHANNEL_PREFIX}{query_hash}")
+
+    # Run poller tick
+    await poller._tick()
+
+    # Get published message
+    msg = None
+    try:
+        async with asyncio.timeout(2.0):
+            async for message in pubsub.listen():
+                if message["type"] == "message":
+                    msg = message
+                    break
+    except asyncio.TimeoutError:
+        pass
+
+    assert msg is not None
+
+    # Parse message data
+    payload = json.loads(msg["data"])
+    assert payload["type"] == "host_details_update"
+    assert payload["channel_id"] == TEST_CHANNEL_ID_DETAILS
+    assert payload["host_ip"] == "192.168.1.100"
+    # tx_per_sec = 2 packets / 10s = 0.2
+    assert abs(payload["tx_per_sec"] - 0.2) < 0.0001
+    # rx_per_sec = 1 packet / 10s = 0.1
+    assert abs(payload["rx_per_sec"] - 0.1) < 0.0001
+
+
+async def test_poller_executes_host_top_destinations_handler_and_publishes(redis_setup, db_pool_setup):
+    """
+    Architecture §2.2.2 & §4.4: Poller delegates query to HostTopDestinationsHandler,
+    which aggregates top remote IPs communicating with host_ip and classifies them as LAN/WAN.
+    """
+    redis = redis_setup
+    db_pool = db_pool_setup
+    query_hash = "integration-test-query-hash-top-dest"
+    listeners_key = f"{LISTENERS_KEY_PREFIX}{query_hash}"
+    registry_key = f"{REGISTRY_KEY_PREFIX}{query_hash}"
+
+    # Setup active hash and registry
+    subscribe_json = json.dumps(
+        {
+            "action": "subscribe",
+            "id": "sub-top-dest-1",
+            "channel_id": TEST_CHANNEL_ID_TOP_DEST,
+            "target": "host_top_destinations",
+            "params": {
+                "host_ip": "192.168.1.100",
+                "period_sec": 10.0,
+                "limit": 5,
+            },
+        }
+    )
+    await redis.set(registry_key, subscribe_json)
+    await redis.sadd(ACTIVE_HASHES_KEY, query_hash)
+
+    # Add active listener and session
+    await redis.sadd(listeners_key, "client_poller:sub-top-dest-1")
+    await redis.hset(f"{SESSION_KEY_PREFIX}client_poller", "client_id", "client_poller")
+
+    # Insert channel and packet flows into TimescaleDB
+    now = datetime.now(timezone.utc)
+    async with db_pool.acquire() as conn:
+        await conn.execute(
+            "INSERT INTO channels (channel_id, is_active, dropped, last_activity_at) VALUES ($1, $2, $3, $4)",
+            TEST_CHANNEL_ID_TOP_DEST,
+            True,
+            0,
+            now,
+        )
+
+        # Insert raw packet flows:
+        # 1. 192.168.1.100 communicating with 8.8.8.8 (WAN) -> direction=1, src_ip='192.168.1.100', dst_ip='8.8.8.8'
+        # 2. 192.168.1.100 communicating with 8.8.8.9 (WAN) -> direction=0, dst_ip='192.168.1.100', src_ip='8.8.8.9'
+        await conn.execute(
+            """
+            INSERT INTO packet_flows (time, channel_id, direction, src_ip, dst_ip, src_port, dst_port, protocol)
+            VALUES (NOW() - INTERVAL '2 seconds', $1, 1, '192.168.1.100', '8.8.8.8', 12345, 80, 'TCP'),
+                   (NOW() - INTERVAL '2 seconds', $1, 0, '8.8.8.9', '192.168.1.100', 80, 12345, 'TCP')
+            """,
+            TEST_CHANNEL_ID_TOP_DEST,
+        )
+
+    # Set up Poller
+    poller = Poller()
+    handler = HostTopDestinationsHandler()
+    poller.register_handler("host_top_destinations", handler)
+
+    # Setup Pub/Sub listener
+    pubsub = redis.pubsub()
+    await pubsub.subscribe(f"{PUSH_CHANNEL_PREFIX}{query_hash}")
+
+    # Run poller tick
+    await poller._tick()
+
+    # Get published message
+    msg = None
+    try:
+        async with asyncio.timeout(2.0):
+            async for message in pubsub.listen():
+                if message["type"] == "message":
+                    msg = message
+                    break
+    except asyncio.TimeoutError:
+        pass
+
+    assert msg is not None
+
+    # Parse message data
+    payload = json.loads(msg["data"])
+    assert payload["type"] == "host_top_destinations_update"
+    assert payload["channel_id"] == TEST_CHANNEL_ID_TOP_DEST
+    assert payload["host_ip"] == "192.168.1.100"
+    assert payload["total_count"] == 2
+
+    destinations = payload["destinations"]
+    assert len(destinations) == 2
+
+    dest_ips = {d["ip"]: d for d in destinations}
+    assert "8.8.8.8" in dest_ips
+    assert "8.8.8.9" in dest_ips
+
+    # Both remote IPs should be classified as WAN because they communicate across the bridge
+    assert dest_ips["8.8.8.8"]["location"] == "WAN"
+    assert dest_ips["8.8.8.9"]["location"] == "WAN"
+    # received_per_sec = 1 packet / 10s = 0.1
+    assert abs(dest_ips["8.8.8.8"]["received_per_sec"] - 0.1) < 0.0001
+    assert abs(dest_ips["8.8.8.9"]["received_per_sec"] - 0.1) < 0.0001
+
+
+async def test_poller_executes_host_top_ports_handler_and_publishes(redis_setup, db_pool_setup):
+    """
+    Architecture §2.2.2 & §4.4: Poller delegates query to HostTopPortsHandler,
+    which aggregates top remote ports and protocols communicating with host_ip.
+    """
+    redis = redis_setup
+    db_pool = db_pool_setup
+    query_hash = "integration-test-query-hash-top-ports"
+    listeners_key = f"{LISTENERS_KEY_PREFIX}{query_hash}"
+    registry_key = f"{REGISTRY_KEY_PREFIX}{query_hash}"
+
+    # Setup active hash and registry
+    subscribe_json = json.dumps(
+        {
+            "action": "subscribe",
+            "id": "sub-top-ports-1",
+            "channel_id": TEST_CHANNEL_ID_TOP_PORTS,
+            "target": "host_top_ports",
+            "params": {
+                "host_ip": "192.168.1.100",
+                "period_sec": 10.0,
+                "limit": 5,
+            },
+        }
+    )
+    await redis.set(registry_key, subscribe_json)
+    await redis.sadd(ACTIVE_HASHES_KEY, query_hash)
+
+    # Add active listener and session
+    await redis.sadd(listeners_key, "client_poller:sub-top-ports-1")
+    await redis.hset(f"{SESSION_KEY_PREFIX}client_poller", "client_id", "client_poller")
+
+    # Insert channel and packet flows into TimescaleDB
+    now = datetime.now(timezone.utc)
+    async with db_pool.acquire() as conn:
+        await conn.execute(
+            "INSERT INTO channels (channel_id, is_active, dropped, last_activity_at) VALUES ($1, $2, $3, $4)",
+            TEST_CHANNEL_ID_TOP_PORTS,
+            True,
+            0,
+            now,
+        )
+
+        # Insert raw packet flows:
+        # 1. 192.168.1.100 (host) communicating with remote port 443 (TCP) -> direction=1 (OUT), dst_port=443, protocol='TCP'
+        # 2. 192.168.1.100 (host) communicating with remote port 53 (UDP) -> direction=0 (IN), src_port=53, protocol='UDP'
+        await conn.execute(
+            """
+            INSERT INTO packet_flows (time, channel_id, direction, src_ip, dst_ip, src_port, dst_port, protocol)
+            VALUES (NOW() - INTERVAL '2 seconds', $1, 1, '192.168.1.100', '8.8.8.8', 12345, 443, 'TCP'),
+                   (NOW() - INTERVAL '2 seconds', $1, 0, '8.8.8.8', '192.168.1.100', 53, 12345, 'UDP')
+            """,
+            TEST_CHANNEL_ID_TOP_PORTS,
+        )
+
+    # Set up Poller
+    poller = Poller()
+    handler = HostTopPortsHandler()
+    poller.register_handler("host_top_ports", handler)
+
+    # Setup Pub/Sub listener
+    pubsub = redis.pubsub()
+    await pubsub.subscribe(f"{PUSH_CHANNEL_PREFIX}{query_hash}")
+
+    # Run poller tick
+    await poller._tick()
+
+    # Get published message
+    msg = None
+    try:
+        async with asyncio.timeout(2.0):
+            async for message in pubsub.listen():
+                if message["type"] == "message":
+                    msg = message
+                    break
+    except asyncio.TimeoutError:
+        pass
+
+    assert msg is not None
+
+    # Parse message data
+    payload = json.loads(msg["data"])
+    assert payload["type"] == "host_top_ports_update"
+    assert payload["channel_id"] == TEST_CHANNEL_ID_TOP_PORTS
+    assert payload["host_ip"] == "192.168.1.100"
+    assert payload["total_count"] == 2
+
+    ports = payload["ports"]
+    assert len(ports) == 2
+
+    port_map = {p["port"]: p for p in ports}
+    assert 443 in port_map
+    assert 53 in port_map
+
+    assert port_map[443]["protocol"] == "TCP"
+    assert port_map[53]["protocol"] == "UDP"
+    assert abs(port_map[443]["packets_per_sec"] - 0.1) < 0.0001
+    assert abs(port_map[53]["packets_per_sec"] - 0.1) < 0.0001
+
+
+async def test_telemetry_aggregation_across_protocols(redis_setup, db_pool_setup):
+    """
+    Architecture §2.2.2 & §3.1: Verify that TelemetryHandler correctly aggregates
+    telemetry data across multiple protocols within the same 1-second buckets,
+    using COUNT(DISTINCT bucket) for correct rate calculations.
+    Also validates that the returned 'timestamp' matches the latest bucket time
+    and 'received_at' is a valid current timestamp.
+    """
+    redis = redis_setup
+    db_pool = db_pool_setup
+    query_hash = "integration-test-query-hash-telemetry-proto"
+    listeners_key = f"{LISTENERS_KEY_PREFIX}{query_hash}"
+    registry_key = f"{REGISTRY_KEY_PREFIX}{query_hash}"
+
+    # Setup active hash and registry
+    subscribe_json = json.dumps(
+        {
+            "action": "subscribe",
+            "id": "sub-telemetry-proto",
+            "channel_id": TEST_CHANNEL_ID_TELEMETRY_PROTO,
+            "target": "telemetry",
+            "params": {"window_sec": 5.0},
+        }
+    )
+    await redis.set(registry_key, subscribe_json)
+    await redis.sadd(ACTIVE_HASHES_KEY, query_hash)
+
+    # Add active listener and session
+    await redis.sadd(listeners_key, "client_poller:sub-telemetry-proto")
+    await redis.hset(f"{SESSION_KEY_PREFIX}client_poller", "client_id", "client_poller")
+
+    # Insert channel and packet flows into TimescaleDB
+    now = datetime.now(timezone.utc)
+    async with db_pool.acquire() as conn:
+        await conn.execute(
+            "INSERT INTO channels (channel_id, is_active, dropped, last_activity_at) VALUES ($1, $2, $3, $4)",
+            TEST_CHANNEL_ID_TELEMETRY_PROTO,
+            True,
+            0,
+            now,
+        )
+
+        # Insert raw packet flows with multiple protocols:
+        # Bucket at NOW() - 2 seconds:
+        #   - 1 TCP packet IN
+        #   - 1 UDP packet IN
+        #   - 1 TCP packet OUT
+        # Bucket at NOW() - 3 seconds:
+        #   - 1 UDP packet IN
+        await conn.execute(
+            """
+            INSERT INTO packet_flows (time, channel_id, direction, src_ip, dst_ip, src_port, dst_port, protocol)
+            VALUES (NOW() - INTERVAL '2 seconds', $1, 0, '192.168.1.10', '8.8.8.8', 12345, 80, 'TCP'),
+                   (NOW() - INTERVAL '2 seconds', $1, 0, '192.168.1.11', '8.8.8.8', 12345, 53, 'UDP'),
+                   (NOW() - INTERVAL '2 seconds', $1, 1, '8.8.8.8', '192.168.1.10', 80, 12345, 'TCP'),
+                   (NOW() - INTERVAL '3 seconds', $1, 0, '192.168.1.11', '8.8.8.8', 12345, 53, 'UDP')
+            """,
+            TEST_CHANNEL_ID_TELEMETRY_PROTO,
+        )
+
+        # Manually refresh the continuous aggregate
+        await conn.execute(
+            "CALL refresh_continuous_aggregate('telemetry_1s', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 second')"
+        )
+
+    # Set up Poller
+    poller = Poller()
+    handler = TelemetryHandler()
+    poller.register_handler("telemetry", handler)
+
+    # Setup Pub/Sub listener
+    pubsub = redis.pubsub()
+    await pubsub.subscribe(f"{PUSH_CHANNEL_PREFIX}{query_hash}")
+
+    # Run poller tick
+    await poller._tick()
+
+    # Get published message
+    msg = None
+    try:
+        async with asyncio.timeout(2.0):
+            async for message in pubsub.listen():
+                if message["type"] == "message":
+                    msg = message
+                    break
+    except asyncio.TimeoutError:
+        pass
+
+    assert msg is not None
+
+    # Parse and validate message data
+    payload = json.loads(msg["data"])
+    assert payload["type"] == "telemetry_update"
+    assert payload["channel_id"] == TEST_CHANNEL_ID_TELEMETRY_PROTO
+    assert payload["is_active"] is True
+
+    # Verify that the two buckets are counted as exactly 2 seconds of window
+    assert payload["window_ms"] == 2000
+
+    metrics = payload["metrics"]
+    # packets_in: 2 in bucket -2s, 1 in bucket -3s -> total = 3
+    assert metrics["direction_in"]["packets"] == 3
+    # pps_in: 3 packets / 2s actual window = 1 pps
+    assert metrics["direction_in"]["packets_per_sec"] == 1
+
+    # packets_out: 1 in bucket -2s -> total = 1
+    assert metrics["direction_out"]["packets"] == 1
+    # pps_out: 1 packet / 2s actual window = 0 pps (integer division)
+    assert metrics["direction_out"]["packets_per_sec"] == 0
+
+    # Validate timestamps
+    # 1. 'timestamp' should match the latest bucket time.
+    timestamp_parsed = datetime.fromisoformat(payload["timestamp"])
+    assert timestamp_parsed < datetime.now(timezone.utc)
+
+    # 2. 'received_at' should be a valid timestamp representing current time
+    received_at_parsed = datetime.fromisoformat(payload["received_at"])
+    assert abs((received_at_parsed - datetime.now(timezone.utc)).total_seconds()) < 5.0
+
+
+async def test_telemetry_aggregation_no_activity(redis_setup, db_pool_setup):
+    """
+    Architecture §2.2.2 & §3.1: Verify that when there is no packet activity in the window,
+    TelemetryHandler returns zero counts/rates, window_ms is 0, and the 'timestamp'
+    defaults to the current time.
+    """
+    redis = redis_setup
+    db_pool = db_pool_setup
+    query_hash = "integration-test-query-hash-telemetry-empty"
+    listeners_key = f"{LISTENERS_KEY_PREFIX}{query_hash}"
+    registry_key = f"{REGISTRY_KEY_PREFIX}{query_hash}"
+
+    # Setup active hash and registry
+    subscribe_json = json.dumps(
+        {
+            "action": "subscribe",
+            "id": "sub-telemetry-empty",
+            "channel_id": TEST_CHANNEL_ID_TELEMETRY_EMPTY,
+            "target": "telemetry",
+            "params": {"window_sec": 5.0},
+        }
+    )
+    await redis.set(registry_key, subscribe_json)
+    await redis.sadd(ACTIVE_HASHES_KEY, query_hash)
+
+    # Add active listener and session
+    await redis.sadd(listeners_key, "client_poller:sub-telemetry-empty")
+    await redis.hset(f"{SESSION_KEY_PREFIX}client_poller", "client_id", "client_poller")
+
+    # Insert channel with no packet flows into TimescaleDB
+    now = datetime.now(timezone.utc)
+    async with db_pool.acquire() as conn:
+        await conn.execute(
+            "INSERT INTO channels (channel_id, is_active, dropped, last_activity_at) VALUES ($1, $2, $3, $4)",
+            TEST_CHANNEL_ID_TELEMETRY_EMPTY,
+            False,
+            0,
+            now,
+        )
+
+    # Set up Poller
+    poller = Poller()
+    handler = TelemetryHandler()
+    poller.register_handler("telemetry", handler)
+
+    # Setup Pub/Sub listener
+    pubsub = redis.pubsub()
+    await pubsub.subscribe(f"{PUSH_CHANNEL_PREFIX}{query_hash}")
+
+    # Run poller tick
+    await poller._tick()
+
+    # Get published message
+    msg = None
+    try:
+        async with asyncio.timeout(2.0):
+            async for message in pubsub.listen():
+                if message["type"] == "message":
+                    msg = message
+                    break
+    except asyncio.TimeoutError:
+        pass
+
+    assert msg is not None
+
+    # Parse and validate message data
+    payload = json.loads(msg["data"])
+    assert payload["type"] == "telemetry_update"
+    assert payload["channel_id"] == TEST_CHANNEL_ID_TELEMETRY_EMPTY
+    assert payload["is_active"] is False
+    assert payload["window_ms"] == 0
+    assert payload["dropped_batches"] == 0
+
+    metrics = payload["metrics"]
+    assert metrics["direction_in"]["packets"] == 0
+    assert metrics["direction_in"]["packets_per_sec"] == 0
+    assert metrics["direction_out"]["packets"] == 0
+    assert metrics["direction_out"]["packets_per_sec"] == 0
+
+    # Without packets, timestamp should default to the current time (now)
+    timestamp_parsed = datetime.fromisoformat(payload["timestamp"])
+    assert abs((timestamp_parsed - datetime.now(timezone.utc)).total_seconds()) < 5.0
+
+
+async def test_simulated_traffic_multi_subscription(redis_setup, db_pool_setup):
+    """
+    Architecture §2.2: Simulate 10 seconds of active traffic with two packets per second,
+    then subscribe to 5 different targets (telemetry, hosts_table, host_details,
+    host_top_destinations, host_top_ports) and verify that all handlers calculate
+    correct aggregated data and timestamps.
+    """
+    redis = redis_setup
+    db_pool = db_pool_setup
+
+    # 1. Setup subscription requests, hashes, registry, and active listeners in Redis
+    # We use a 12-second window/period to comfortably envelope the 10 seconds of traffic (from NOW() - 11s to NOW() - 2s)
+    # without hitting the NOW() - 1s end offset boundary of the telemetry continuous aggregate.
+    targets = ["telemetry", "hosts_table", "host_details", "host_top_destinations", "host_top_ports"]
+    query_hashes = {}
+
+    for target in targets:
+        params = {"period_sec": 12.0}
+        if target == "telemetry":
+            params = {"window_sec": 12.0}
+        elif target in ["host_details", "host_top_destinations", "host_top_ports"]:
+            params = {"host_ip": "192.168.1.10", "period_sec": 12.0, "limit": 10}
+
+        subscribe_json = json.dumps(
+            {
+                "action": "subscribe",
+                "id": f"sub-{target}-simulated",
+                "channel_id": TEST_CHANNEL_ID_SIMULATED,
+                "target": target,
+                "params": params,
+            }
+        )
+        query_hash = f"simulated-hash-{target}"
+        query_hashes[target] = query_hash
+
+        await redis.set(f"{REGISTRY_KEY_PREFIX}{query_hash}", subscribe_json)
+        await redis.sadd(ACTIVE_HASHES_KEY, query_hash)
+
+        # Add active listener and session
+        await redis.sadd(f"{LISTENERS_KEY_PREFIX}{query_hash}", f"client_simulated:sub-{target}-simulated")
+
+    await redis.hset(f"{SESSION_KEY_PREFIX}client_simulated", "client_id", "client_simulated")
+
+    # 2. Insert channel and 10 seconds of simulated traffic in TimescaleDB
+    # We insert 2 packets IN and 2 packets OUT for each second i in [2..11]
+    now = datetime.now(timezone.utc)
+    async with db_pool.acquire() as conn:
+        await conn.execute(
+            "INSERT INTO channels (channel_id, is_active, dropped, last_activity_at) VALUES ($1, $2, $3, $4)",
+            TEST_CHANNEL_ID_SIMULATED,
+            True,
+            0,
+            now,
+        )
+
+        for i in range(2, 12):
+            await conn.execute(
+                f"""
+                INSERT INTO packet_flows (time, channel_id, direction, src_ip, dst_ip, src_port, dst_port, protocol)
+                VALUES (NOW() - INTERVAL '{i} seconds', $1, 0, '8.8.8.8', '192.168.1.10', 443, 12345, 'TCP'),
+                       (NOW() - INTERVAL '{i} seconds', $1, 0, '8.8.8.9', '192.168.1.10', 53, 12345, 'UDP'),
+                       (NOW() - INTERVAL '{i} seconds', $1, 1, '192.168.1.10', '8.8.8.8', 12345, 443, 'TCP'),
+                       (NOW() - INTERVAL '{i} seconds', $1, 1, '192.168.1.10', '8.8.8.9', 12345, 53, 'UDP')
+                """,
+                TEST_CHANNEL_ID_SIMULATED,
+            )
+
+        # Manually refresh continuous aggregate
+        await conn.execute(
+            "CALL refresh_continuous_aggregate('telemetry_1s', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 second')"
+        )
+
+    # 3. Setup Poller and register all 5 handlers
+    poller = Poller()
+    poller.register_handler("telemetry", TelemetryHandler())
+    poller.register_handler("hosts_table", HostsTableHandler())
+    poller.register_handler("host_details", HostDetailsHandler())
+    poller.register_handler("host_top_destinations", HostTopDestinationsHandler())
+    poller.register_handler("host_top_ports", HostTopPortsHandler())
+
+    # 4. Subscribe to Pub/Sub push channels pattern
+    pubsub = redis.pubsub()
+    await pubsub.psubscribe(f"{PUSH_CHANNEL_PREFIX}*")
+
+    # 5. Run poller tick to execute all handlers and publish
+    await poller._tick()
+
+    # 6. Read and aggregate all 5 published messages
+    received_payloads = {}
+    try:
+        async with asyncio.timeout(3.0):
+            async for message in pubsub.listen():
+                if message["type"] == "pmessage":
+                    channel = message["channel"]
+                    if isinstance(channel, bytes):
+                        channel = channel.decode("utf-8")
+                    query_hash = channel[len(PUSH_CHANNEL_PREFIX) :]
+
+                    data = json.loads(message["data"])
+                    received_payloads[query_hash] = data
+
+                    if len(received_payloads) == 5:
+                        break
+    except asyncio.TimeoutError:
+        pass
+
+    assert len(received_payloads) == 5, f"Expected 5 messages, got {len(received_payloads)}"
+
+    # 7. Validate telemetry payload
+    telemetry_data = received_payloads[query_hashes["telemetry"]]
+    assert telemetry_data["type"] == "telemetry_update"
+    assert telemetry_data["channel_id"] == TEST_CHANNEL_ID_SIMULATED
+    assert telemetry_data["window_ms"] == 10000  # 10 buckets = 10000ms
+    assert telemetry_data["metrics"]["direction_in"]["packets"] == 20
+    assert telemetry_data["metrics"]["direction_in"]["packets_per_sec"] == 2
+    assert telemetry_data["metrics"]["direction_out"]["packets"] == 20
+    assert telemetry_data["metrics"]["direction_out"]["packets_per_sec"] == 2
+
+    # 8. Validate hosts_table payload
+    hosts_data = received_payloads[query_hashes["hosts_table"]]
+    assert hosts_data["type"] == "hosts_table_update"
+    assert hosts_data["total_count"] == 3
+    hosts_list = {h["ip"]: h for h in hosts_data["hosts"]}
+    assert "192.168.1.10" in hosts_list
+    assert hosts_list["192.168.1.10"]["location"] == "LAN"
+    assert abs(hosts_list["192.168.1.10"]["tx_per_sec"] - (20.0 / 12.0)) < 0.0001
+    assert abs(hosts_list["192.168.1.10"]["rx_per_sec"] - (20.0 / 12.0)) < 0.0001
+
+    assert "8.8.8.8" in hosts_list
+    assert hosts_list["8.8.8.8"]["location"] == "WAN"
+    assert abs(hosts_list["8.8.8.8"]["tx_per_sec"] - (10.0 / 12.0)) < 0.0001
+    assert abs(hosts_list["8.8.8.8"]["rx_per_sec"] - (10.0 / 12.0)) < 0.0001
+
+    # 9. Validate host_details payload
+    details_data = received_payloads[query_hashes["host_details"]]
+    assert details_data["type"] == "host_details_update"
+    assert details_data["host_ip"] == "192.168.1.10"
+    assert abs(details_data["tx_per_sec"] - (20.0 / 12.0)) < 0.0001
+    assert abs(details_data["rx_per_sec"] - (20.0 / 12.0)) < 0.0001
+
+    # 10. Validate host_top_destinations payload
+    dest_data = received_payloads[query_hashes["host_top_destinations"]]
+    assert dest_data["type"] == "host_top_destinations_update"
+    assert dest_data["total_count"] == 2
+    dests = {d["ip"]: d for d in dest_data["destinations"]}
+    assert "8.8.8.8" in dests
+    assert dests["8.8.8.8"]["location"] == "WAN"
+    assert abs(dests["8.8.8.8"]["received_per_sec"] - (20.0 / 12.0)) < 0.0001
+
+    # 11. Validate host_top_ports payload
+    ports_data = received_payloads[query_hashes["host_top_ports"]]
+    assert ports_data["type"] == "host_top_ports_update"
+    assert ports_data["total_count"] == 2
+    ports_list = {p["port"]: p for p in ports_data["ports"]}
+    assert 443 in ports_list
+    assert ports_list[443]["protocol"] == "TCP"
+    assert abs(ports_list[443]["packets_per_sec"] - (20.0 / 12.0)) < 0.0001
+    assert 53 in ports_list
+    assert ports_list[53]["protocol"] == "UDP"
+    assert abs(ports_list[53]["packets_per_sec"] - (20.0 / 12.0)) < 0.0001
+

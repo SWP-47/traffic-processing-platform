@@ -553,9 +553,9 @@ async def test_api_health_check_unhealthy(redis_setup, db_pool_setup, api_client
     token = login_response.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
-    # Mock get_db_pool to throw exception
+    # Mock db_ping to return False
     from unittest.mock import patch
-    with patch("services.api.routes.health.get_db_pool", side_effect=Exception("DB pool failure")):
+    with patch("services.api.routes.health.db_ping", return_value=False):
         response = await api_client.get("/api/v1/health", headers=headers)
         assert response.status_code == 503
         data = response.json()

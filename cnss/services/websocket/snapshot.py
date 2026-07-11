@@ -8,8 +8,10 @@
 import logging
 from typing import Any, Dict
 
-from core.contracts.subscriptions import SubscriptionParams
+from core.contracts.subscriptions import SubscribeRequest, SubscriptionParams
+from core.database import get_db_pool
 from core.exceptions import ResourceNotFoundError
+from services.reporting.handlers import HANDLER_REGISTRY
 
 # --- Module Logger ---
 logger = logging.getLogger(__name__)
@@ -19,7 +21,7 @@ logger = logging.getLogger(__name__)
 class SnapshotFetcher:
     """
     Executes target-specific SQL queries to generate the initial state snapshot.
-    Each subscription target (e.g., 'telemetry', 'lan_hosts') has a dedicated handler.
+    Uses the same concrete handlers as the Reporting Worker to ensure DRY query code.
     """
 
     async def fetch_snapshot(self, channel_id: str, target: str, params: SubscriptionParams) -> Dict[str, Any]:
@@ -27,15 +29,26 @@ class SnapshotFetcher:
         Routes the snapshot request to the appropriate target-specific handler.
 
         :param channel_id: The channel identifier to query.
-        :param target: The data stream type (e.g., 'telemetry', 'lan_hosts').
+        :param target: The data stream type (e.g., 'telemetry', 'hosts_table').
         :param params: The subscription parameters (filters, limits, windows).
         :return: A dictionary containing the initial snapshot data.
         :raises ResourceNotFoundError: If the target type is not supported.
         """
-        # if target == "telemetry":
-        #     return await self._fetch_telemetry_snapshot(channel_id, params)
-        # elif target == "lan_hosts":
-        #     return await self._fetch_lan_hosts_snapshot(channel_id, params)
-        # else:
-        logger.warning(f"Unsupported snapshot target: '{target}'")
-        raise ResourceNotFoundError(message=f"Target '{target}' is not supported for snapshots.")
+        handler = HANDLER_REGISTRY.get(target)
+        if not handler:
+            logger.warning(f"Unsupported snapshot target: '{target}'")
+            raise ResourceNotFoundError(message=f"Target '{target}' is not supported for snapshots.")
+
+        # Re-construct a validated SubscribeRequest
+        request = SubscribeRequest(
+            action="subscribe",
+            channel_id=channel_id,
+            target=target,
+            params=params
+        )
+
+        db_pool = get_db_pool()
+        snapshot = await handler.execute(db_pool, request)
+        if snapshot is None:
+            return {}
+        return snapshot

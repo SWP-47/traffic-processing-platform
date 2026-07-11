@@ -4,12 +4,18 @@
 
 ## Project Overview
 
-This is a monorepo containing minimally intrusive network traffic monitoring system. It consists of four distinct components designed to capture, process, forward, and visualize network telemetry in real-time without degrading network performance:
+This is a monorepo containing a minimally intrusive network traffic monitoring system. It consists of four distinct components designed to capture, process, forward, and visualize network telemetry in real-time without degrading network performance:
 
 - **`traffic-processor/`**: Core packet counting and telemetry engine (transparent inline bridge).
 - **`communication-node/`**: Local data forwarding node.
 - **`cnss/`**: Control and Status Server (Backend) aggregating data via API/WebSocket.
 - **`mui/`**: Management User Interface (Frontend) for real-time visualization.
+
+## Product Access & Handover
+
+- **Live Deployment**: [http://10.93.26.186](http://10.93.26.186) *(Accessible via Innopolis University "UniversityStudent" Network)*
+- **Customer Handover Guide**: [docs/customer-handover.md](docs/customer-handover.md) *(Full installation, deployment, and operational instructions)*
+- **Hosted Documentation Site**: [https://swp-47.github.io/traffic-processing-platform/](https://swp-47.github.io/traffic-processing-platform/)
 
 ## Local Setup Instructions
 
@@ -154,19 +160,16 @@ make logs
 make stop
 ```
 
-## Documentation
+## Maintained Documentation
 
-- **Hosted Documentation Site**: [https://swp-47.github.io/traffic-processing-platform/](https://swp-47.github.io/traffic-processing-platform/)
-- **System Documentation**: [docs/system-documentation.md](docs/system-documentation.md)
-- **API Documentation**: [api/README.md](api/README.md)
+- **Architecture**: [docs/architecture/README.md](docs/architecture/README.md)
+- **System & API Docs**: [docs/system-documentation.md](docs/system-documentation.md) | [api/README.md](api/README.md)
 - **Development Process**: [docs/development-process.md](docs/development-process.md)
-- **Architecture Documentation**: [docs/architecture/README.md](docs/architecture/README.md)
+- **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Agent Guidance**: [AGENTS.md](AGENTS.md)
 
-## Links and Reports
+## Reports & Changelog
 
-- **Current Deployment**: [Runnable Artifact](http://10.93.26.186)
+- **Changelog**: [CHANGELOG.md](CHANGELOG.md)
 - **Weekly Reports**:
-  - [Week 2 Report](reports/week2/README.md)
-  - [Week 3 Report](reports/week3/README.md)
-  - [Week 4 Report](reports/week4/README.md)
-  - [Week 5 Report](reports/week5/README.md)
+  - [Week 5](reports/week5/README.md) | [Week 4](reports/week4/README.md) | [Week 3](reports/week3/README.md) | [Week 2](reports/week2/README.md)

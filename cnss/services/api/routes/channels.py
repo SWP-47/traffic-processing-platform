@@ -5,12 +5,11 @@
 # to provide instant, zero-latency status checks as per Architecture §2.4.
 # ==============================================================================
 
-from typing import Any, List
 
 from fastapi import APIRouter, Depends
 
 from core.contracts.auth import TokenPayload
-from core.db import db_list_channels, db_fetch_channel_status
+from core.db import db_fetch_channel_status, db_list_channels
 from core.exceptions import ResourceNotFoundError
 from core.security.scopes import verify_channel_access
 from services.api.deps import get_current_user

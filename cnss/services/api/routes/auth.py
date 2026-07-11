@@ -12,9 +12,9 @@ from fastapi import APIRouter, Cookie, Response
 from core.config import settings
 from core.contracts.auth import RefreshTokenPayload
 from core.db import (
+    db_fetch_all_channels,
     db_fetch_user_by_username,
     db_fetch_user_scopes,
-    db_fetch_all_channels,
 )
 from core.exceptions import AuthError, InvalidCredentialsError
 from core.redis.client import get_redis_client

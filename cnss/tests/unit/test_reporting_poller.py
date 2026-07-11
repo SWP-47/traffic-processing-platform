@@ -12,8 +12,8 @@ import pytest
 
 from services.reporting.poller import ACTIVE_HASHES_KEY, LISTENERS_KEY_PREFIX, Poller
 
-
 # --- Test Fixtures ---
+
 
 @pytest.fixture
 def mock_redis():
@@ -34,8 +34,9 @@ def mock_db_pool():
 @pytest.fixture
 def poller(mock_redis, mock_db_pool):
     """Provides a Poller instance with mocked Redis and DB dependencies."""
-    with patch("services.reporting.poller.get_redis_client", return_value=mock_redis), patch(
-        "services.reporting.poller.get_db_pool", return_value=mock_db_pool
+    with (
+        patch("services.reporting.poller.get_redis_client", return_value=mock_redis),
+        patch("services.reporting.poller.get_db_pool", return_value=mock_db_pool),
     ):
         yield Poller()
 
@@ -49,6 +50,7 @@ def telemetry_handler():
 
 
 # --- Poller Lifecycle Tests ---
+
 
 async def test_tick_skips_when_no_active_hashes(poller, mock_redis):
     """

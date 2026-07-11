@@ -6,10 +6,8 @@
 # Requires Redis and TimescaleDB to be running (e.g., via `make dev`).
 # ==============================================================================
 
-import asyncio
-import json
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -86,6 +84,7 @@ async def api_client():
 
 # --- Integration Tests ---
 
+
 async def test_api_login_success_viewer(redis_setup, db_pool_setup, api_client):
     """
     Architecture §2.4 & §5.1: Test successful login for a viewer.
@@ -101,23 +100,27 @@ async def test_api_login_success_viewer(redis_setup, db_pool_setup, api_client):
         pwd_hash = hash_password(TEST_PASSWORD)
         await conn.execute(
             "INSERT INTO users (id, username, password_hash, role) VALUES ($1, $2, $3, $4)",
-            viewer_id, TEST_VIEWER_USERNAME, pwd_hash, "viewer"
+            viewer_id,
+            TEST_VIEWER_USERNAME,
+            pwd_hash,
+            "viewer",
         )
         # Create channels
         await conn.execute(
             "INSERT INTO channels (channel_id, is_active) VALUES ($1, $2), ($3, $4)",
-            TEST_CHANNEL_API_1, True, TEST_CHANNEL_API_2, False
+            TEST_CHANNEL_API_1,
+            True,
+            TEST_CHANNEL_API_2,
+            False,
         )
         # Grant scope for channel 1 only
         await conn.execute(
-            "INSERT INTO user_channel_scopes (user_id, channel_id) VALUES ($1, $2)",
-            viewer_id, TEST_CHANNEL_API_1
+            "INSERT INTO user_channel_scopes (user_id, channel_id) VALUES ($1, $2)", viewer_id, TEST_CHANNEL_API_1
         )
 
     # Call Login Endpoint
     response = await api_client.post(
-        "/api/v1/auth/login",
-        json={"username": TEST_VIEWER_USERNAME, "password": TEST_PASSWORD}
+        "/api/v1/auth/login", json={"username": TEST_VIEWER_USERNAME, "password": TEST_PASSWORD}
     )
     assert response.status_code == 200
     data = response.json()
@@ -147,16 +150,21 @@ async def test_api_login_success_admin(redis_setup, db_pool_setup, api_client):
         pwd_hash = hash_password(TEST_PASSWORD)
         await conn.execute(
             "INSERT INTO users (id, username, password_hash, role) VALUES ($1, $2, $3, $4)",
-            admin_id, TEST_ADMIN_USERNAME, pwd_hash, "admin"
+            admin_id,
+            TEST_ADMIN_USERNAME,
+            pwd_hash,
+            "admin",
         )
         await conn.execute(
             "INSERT INTO channels (channel_id, is_active) VALUES ($1, $2), ($3, $4)",
-            TEST_CHANNEL_API_1, True, TEST_CHANNEL_API_2, False
+            TEST_CHANNEL_API_1,
+            True,
+            TEST_CHANNEL_API_2,
+            False,
         )
 
     response = await api_client.post(
-        "/api/v1/auth/login",
-        json={"username": TEST_ADMIN_USERNAME, "password": TEST_PASSWORD}
+        "/api/v1/auth/login", json={"username": TEST_ADMIN_USERNAME, "password": TEST_PASSWORD}
     )
     assert response.status_code == 200
     data = response.json()
@@ -172,14 +180,10 @@ async def test_api_login_invalid_credentials(redis_setup, db_pool_setup, api_cli
     """
     # Try logging in with user that doesn't exist
     response = await api_client.post(
-        "/api/v1/auth/login",
-        json={"username": "non-existent-user", "password": TEST_PASSWORD}
+        "/api/v1/auth/login", json={"username": "non-existent-user", "password": TEST_PASSWORD}
     )
     assert response.status_code == 401
-    assert response.json() == {
-        "error": "invalid_credentials",
-        "message": "Invalid username or password."
-    }
+    assert response.json() == {"error": "invalid_credentials", "message": "Invalid username or password."}
 
 
 async def test_api_token_refresh_lifecycle(redis_setup, db_pool_setup, api_client):
@@ -195,13 +199,15 @@ async def test_api_token_refresh_lifecycle(redis_setup, db_pool_setup, api_clien
         pwd_hash = hash_password(TEST_PASSWORD)
         await conn.execute(
             "INSERT INTO users (id, username, password_hash, role) VALUES ($1, $2, $3, $4)",
-            viewer_id, TEST_VIEWER_USERNAME, pwd_hash, "viewer"
+            viewer_id,
+            TEST_VIEWER_USERNAME,
+            pwd_hash,
+            "viewer",
         )
 
     # 1. Login to get cookies
     login_response = await api_client.post(
-        "/api/v1/auth/login",
-        json={"username": TEST_VIEWER_USERNAME, "password": TEST_PASSWORD}
+        "/api/v1/auth/login", json={"username": TEST_VIEWER_USERNAME, "password": TEST_PASSWORD}
     )
     assert login_response.status_code == 200
     initial_access_token = login_response.json()["access_token"]
@@ -240,22 +246,29 @@ async def test_api_channels_scope_filtering(redis_setup, db_pool_setup, api_clie
         pwd_hash = hash_password(TEST_PASSWORD)
         await conn.execute(
             "INSERT INTO users (id, username, password_hash, role) VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)",
-            viewer_id, TEST_VIEWER_USERNAME, pwd_hash, "viewer",
-            admin_id, TEST_ADMIN_USERNAME, pwd_hash, "admin"
+            viewer_id,
+            TEST_VIEWER_USERNAME,
+            pwd_hash,
+            "viewer",
+            admin_id,
+            TEST_ADMIN_USERNAME,
+            pwd_hash,
+            "admin",
         )
         await conn.execute(
             "INSERT INTO channels (channel_id, is_active) VALUES ($1, $2), ($3, $4)",
-            TEST_CHANNEL_API_1, True, TEST_CHANNEL_API_2, False
+            TEST_CHANNEL_API_1,
+            True,
+            TEST_CHANNEL_API_2,
+            False,
         )
         await conn.execute(
-            "INSERT INTO user_channel_scopes (user_id, channel_id) VALUES ($1, $2)",
-            viewer_id, TEST_CHANNEL_API_1
+            "INSERT INTO user_channel_scopes (user_id, channel_id) VALUES ($1, $2)", viewer_id, TEST_CHANNEL_API_1
         )
 
     # 1. Login as Viewer
     login_viewer = await api_client.post(
-        "/api/v1/auth/login",
-        json={"username": TEST_VIEWER_USERNAME, "password": TEST_PASSWORD}
+        "/api/v1/auth/login", json={"username": TEST_VIEWER_USERNAME, "password": TEST_PASSWORD}
     )
     viewer_token = login_viewer.json()["access_token"]
 
@@ -269,8 +282,7 @@ async def test_api_channels_scope_filtering(redis_setup, db_pool_setup, api_clie
 
     # 2. Login as Admin
     login_admin = await api_client.post(
-        "/api/v1/auth/login",
-        json={"username": TEST_ADMIN_USERNAME, "password": TEST_PASSWORD}
+        "/api/v1/auth/login", json={"username": TEST_ADMIN_USERNAME, "password": TEST_PASSWORD}
     )
     admin_token = login_admin.json()["access_token"]
 
@@ -298,21 +310,28 @@ async def test_api_channel_status_access_control(redis_setup, db_pool_setup, api
         pwd_hash = hash_password(TEST_PASSWORD)
         await conn.execute(
             "INSERT INTO users (id, username, password_hash, role) VALUES ($1, $2, $3, $4)",
-            viewer_id, TEST_VIEWER_USERNAME, pwd_hash, "viewer"
+            viewer_id,
+            TEST_VIEWER_USERNAME,
+            pwd_hash,
+            "viewer",
         )
         await conn.execute(
             "INSERT INTO channels (channel_id, is_active) VALUES ($1, $2), ($3, $4)",
-            TEST_CHANNEL_API_1, True, TEST_CHANNEL_API_2, False
+            TEST_CHANNEL_API_1,
+            True,
+            TEST_CHANNEL_API_2,
+            False,
         )
         await conn.execute(
             "INSERT INTO user_channel_scopes (user_id, channel_id) VALUES ($1, $2), ($1, $3)",
-            viewer_id, TEST_CHANNEL_API_1, non_existent_channel
+            viewer_id,
+            TEST_CHANNEL_API_1,
+            non_existent_channel,
         )
 
     # Login as Viewer
     login_viewer = await api_client.post(
-        "/api/v1/auth/login",
-        json={"username": TEST_VIEWER_USERNAME, "password": TEST_PASSWORD}
+        "/api/v1/auth/login", json={"username": TEST_VIEWER_USERNAME, "password": TEST_PASSWORD}
     )
     viewer_token = login_viewer.json()["access_token"]
     headers = {"Authorization": f"Bearer {viewer_token}"}
@@ -347,15 +366,14 @@ async def test_api_channel_history_and_validation(redis_setup, db_pool_setup, ap
         pwd_hash = hash_password(TEST_PASSWORD)
         await conn.execute(
             "INSERT INTO users (id, username, password_hash, role) VALUES ($1, $2, $3, $4)",
-            viewer_id, TEST_VIEWER_USERNAME, pwd_hash, "viewer"
+            viewer_id,
+            TEST_VIEWER_USERNAME,
+            pwd_hash,
+            "viewer",
         )
+        await conn.execute("INSERT INTO channels (channel_id, is_active) VALUES ($1, $2)", TEST_CHANNEL_API_1, True)
         await conn.execute(
-            "INSERT INTO channels (channel_id, is_active) VALUES ($1, $2)",
-            TEST_CHANNEL_API_1, True
-        )
-        await conn.execute(
-            "INSERT INTO user_channel_scopes (user_id, channel_id) VALUES ($1, $2)",
-            viewer_id, TEST_CHANNEL_API_1
+            "INSERT INTO user_channel_scopes (user_id, channel_id) VALUES ($1, $2)", viewer_id, TEST_CHANNEL_API_1
         )
 
         # Seed 10 packets across 2 seconds in packet_flows
@@ -375,7 +393,7 @@ async def test_api_channel_history_and_validation(redis_setup, db_pool_setup, ap
                    (NOW() - INTERVAL '3 seconds', $1, 1, '8.8.8.8', '192.168.1.10', 80, 12345, 'TCP'),
                    (NOW() - INTERVAL '3 seconds', $1, 1, '8.8.8.8', '192.168.1.10', 80, 12345, 'TCP')
             """,
-            TEST_CHANNEL_API_1
+            TEST_CHANNEL_API_1,
         )
         # Refresh the telemetry aggregate view
         await conn.execute(
@@ -384,8 +402,7 @@ async def test_api_channel_history_and_validation(redis_setup, db_pool_setup, ap
 
     # Login as Viewer
     login_viewer = await api_client.post(
-        "/api/v1/auth/login",
-        json={"username": TEST_VIEWER_USERNAME, "password": TEST_PASSWORD}
+        "/api/v1/auth/login", json={"username": TEST_VIEWER_USERNAME, "password": TEST_PASSWORD}
     )
     viewer_token = login_viewer.json()["access_token"]
     headers = {"Authorization": f"Bearer {viewer_token}"}
@@ -411,19 +428,21 @@ async def test_api_channel_history_and_validation(redis_setup, db_pool_setup, ap
 
     # Case 2: Validation Error - Future Start Time (400)
     # Format timezone as 'Z' to prevent url-decoding parsing issues (e.g. '+' interpreted as space)
-    future_time = (datetime.now(timezone.utc) + timedelta(hours=1)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    future_time = (
+        (datetime.now(timezone.utc) + timedelta(hours=1)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    )
     resp_err1 = await api_client.get(
-        f"/api/v1/channel/{TEST_CHANNEL_API_1}/history?period_sec=5&start_time={future_time}",
-        headers=headers
+        f"/api/v1/channel/{TEST_CHANNEL_API_1}/history?period_sec=5&start_time={future_time}", headers=headers
     )
     assert resp_err1.status_code == 400
     assert resp_err1.json()["error"] == "bad_request"
 
     # Case 3: Validation Error - Exceed retention cutoff (400)
-    old_time = (datetime.now(timezone.utc) - timedelta(days=50)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    old_time = (
+        (datetime.now(timezone.utc) - timedelta(days=50)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    )
     resp_err2 = await api_client.get(
-        f"/api/v1/channel/{TEST_CHANNEL_API_1}/history?period_sec=5&start_time={old_time}",
-        headers=headers
+        f"/api/v1/channel/{TEST_CHANNEL_API_1}/history?period_sec=5&start_time={old_time}", headers=headers
     )
     assert resp_err2.status_code == 400
     assert resp_err2.json()["error"] == "bad_request"
@@ -443,15 +462,14 @@ async def test_api_host_history(redis_setup, db_pool_setup, api_client):
         pwd_hash = hash_password(TEST_PASSWORD)
         await conn.execute(
             "INSERT INTO users (id, username, password_hash, role) VALUES ($1, $2, $3, $4)",
-            viewer_id, TEST_VIEWER_USERNAME, pwd_hash, "viewer"
+            viewer_id,
+            TEST_VIEWER_USERNAME,
+            pwd_hash,
+            "viewer",
         )
+        await conn.execute("INSERT INTO channels (channel_id, is_active) VALUES ($1, $2)", TEST_CHANNEL_API_1, True)
         await conn.execute(
-            "INSERT INTO channels (channel_id, is_active) VALUES ($1, $2)",
-            TEST_CHANNEL_API_1, True
-        )
-        await conn.execute(
-            "INSERT INTO user_channel_scopes (user_id, channel_id) VALUES ($1, $2)",
-            viewer_id, TEST_CHANNEL_API_1
+            "INSERT INTO user_channel_scopes (user_id, channel_id) VALUES ($1, $2)", viewer_id, TEST_CHANNEL_API_1
         )
 
         # Seed host traffic in raw packet_flows
@@ -461,21 +479,20 @@ async def test_api_host_history(redis_setup, db_pool_setup, api_client):
             VALUES (NOW() - INTERVAL '2 seconds', $1, 0, '8.8.8.8', $2, 443, 12345, 'TCP'),
                    (NOW() - INTERVAL '3 seconds', $1, 1, $2, '8.8.8.8', 12345, 443, 'TCP')
             """,
-            TEST_CHANNEL_API_1, host_ip
+            TEST_CHANNEL_API_1,
+            host_ip,
         )
 
     # Login as Viewer
     login_viewer = await api_client.post(
-        "/api/v1/auth/login",
-        json={"username": TEST_VIEWER_USERNAME, "password": TEST_PASSWORD}
+        "/api/v1/auth/login", json={"username": TEST_VIEWER_USERNAME, "password": TEST_PASSWORD}
     )
     viewer_token = login_viewer.json()["access_token"]
     headers = {"Authorization": f"Bearer {viewer_token}"}
 
     # Query host history
     resp = await api_client.get(
-        f"/api/v1/channel/{TEST_CHANNEL_API_1}/hosts/{host_ip}/history?period_sec=5",
-        headers=headers
+        f"/api/v1/channel/{TEST_CHANNEL_API_1}/hosts/{host_ip}/history?period_sec=5", headers=headers
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -508,13 +525,15 @@ async def test_api_health_check_healthy(redis_setup, db_pool_setup, api_client):
         pwd_hash = hash_password(TEST_PASSWORD)
         await conn.execute(
             "INSERT INTO users (id, username, password_hash, role) VALUES ($1, $2, $3, $4)",
-            viewer_id, TEST_VIEWER_USERNAME, pwd_hash, "viewer"
+            viewer_id,
+            TEST_VIEWER_USERNAME,
+            pwd_hash,
+            "viewer",
         )
 
     # Login
     login_response = await api_client.post(
-        "/api/v1/auth/login",
-        json={"username": TEST_VIEWER_USERNAME, "password": TEST_PASSWORD}
+        "/api/v1/auth/login", json={"username": TEST_VIEWER_USERNAME, "password": TEST_PASSWORD}
     )
     token = login_response.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
@@ -542,19 +561,22 @@ async def test_api_health_check_unhealthy(redis_setup, db_pool_setup, api_client
         pwd_hash = hash_password(TEST_PASSWORD)
         await conn.execute(
             "INSERT INTO users (id, username, password_hash, role) VALUES ($1, $2, $3, $4)",
-            viewer_id, TEST_VIEWER_USERNAME, pwd_hash, "viewer"
+            viewer_id,
+            TEST_VIEWER_USERNAME,
+            pwd_hash,
+            "viewer",
         )
 
     # Login
     login_response = await api_client.post(
-        "/api/v1/auth/login",
-        json={"username": TEST_VIEWER_USERNAME, "password": TEST_PASSWORD}
+        "/api/v1/auth/login", json={"username": TEST_VIEWER_USERNAME, "password": TEST_PASSWORD}
     )
     token = login_response.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     # Mock db_ping to return False
     from unittest.mock import patch
+
     with patch("services.api.routes.health.db_ping", return_value=False):
         response = await api_client.get("/api/v1/health", headers=headers)
         assert response.status_code == 503
@@ -576,19 +598,18 @@ async def test_api_login_wrong_password(redis_setup, db_pool_setup, api_client):
         pwd_hash = hash_password(TEST_PASSWORD)
         await conn.execute(
             "INSERT INTO users (id, username, password_hash, role) VALUES ($1, $2, $3, $4)",
-            viewer_id, TEST_VIEWER_USERNAME, pwd_hash, "viewer"
+            viewer_id,
+            TEST_VIEWER_USERNAME,
+            pwd_hash,
+            "viewer",
         )
 
     # Try logging in with incorrect password
     response = await api_client.post(
-        "/api/v1/auth/login",
-        json={"username": TEST_VIEWER_USERNAME, "password": "wrong-password"}
+        "/api/v1/auth/login", json={"username": TEST_VIEWER_USERNAME, "password": "wrong-password"}
     )
     assert response.status_code == 401
-    assert response.json() == {
-        "error": "invalid_credentials",
-        "message": "Invalid username or password."
-    }
+    assert response.json() == {"error": "invalid_credentials", "message": "Invalid username or password."}
 
 
 async def test_api_logout_malformed_cookie(redis_setup, db_pool_setup, api_client):
@@ -619,19 +640,22 @@ async def test_api_health_check_redis_unhealthy(redis_setup, db_pool_setup, api_
         pwd_hash = hash_password(TEST_PASSWORD)
         await conn.execute(
             "INSERT INTO users (id, username, password_hash, role) VALUES ($1, $2, $3, $4)",
-            viewer_id, TEST_VIEWER_USERNAME, pwd_hash, "viewer"
+            viewer_id,
+            TEST_VIEWER_USERNAME,
+            pwd_hash,
+            "viewer",
         )
 
     # Login
     login_response = await api_client.post(
-        "/api/v1/auth/login",
-        json={"username": TEST_VIEWER_USERNAME, "password": TEST_PASSWORD}
+        "/api/v1/auth/login", json={"username": TEST_VIEWER_USERNAME, "password": TEST_PASSWORD}
     )
     token = login_response.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     # Mock get_redis_client to throw exception
     from unittest.mock import patch
+
     with patch("services.api.routes.health.get_redis_client") as mock_redis:
         # Mock client to raise exception on ping
         client_mock = mock_redis.return_value
@@ -640,5 +664,3 @@ async def test_api_health_check_redis_unhealthy(redis_setup, db_pool_setup, api_
         assert response.status_code == 503
         data = response.json()
         assert data["error"] == "unhealthy"
-
-

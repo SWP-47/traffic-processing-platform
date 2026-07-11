@@ -10,10 +10,8 @@ import json
 import time
 from datetime import datetime, timedelta, timezone
 
-import asyncpg
 import pytest
 
-from core.config import settings
 from core.database import close_db_pool, get_db_pool, init_db_pool
 from core.redis.client import close_redis_client, get_redis_client, init_redis_client
 from services.reporting.channel_state_syncer import STATE_KEY_PREFIX, ChannelStateSyncer
@@ -26,9 +24,9 @@ from services.reporting.ghost_cleaner import (
 )
 from services.reporting.handlers import (
     HostDetailsHandler,
+    HostsTableHandler,
     HostTopDestinationsHandler,
     HostTopPortsHandler,
-    HostsTableHandler,
     TelemetryHandler,
 )
 from services.reporting.poller import PUSH_CHANNEL_PREFIX, Poller
@@ -728,8 +726,10 @@ async def test_poller_executes_host_top_ports_handler_and_publishes(redis_setup,
         )
 
         # Insert raw packet flows:
-        # 1. 192.168.1.100 (host) communicating with remote port 443 (TCP) -> direction=1 (OUT), dst_port=443, protocol='TCP'
-        # 2. 192.168.1.100 (host) communicating with remote port 53 (UDP) -> direction=0 (IN), src_port=53, protocol='UDP'
+        # 1. 192.168.1.100 (host) communicating with remote port 443 (TCP)
+        # -> direction=1 (OUT), dst_port=443, protocol='TCP'
+        # 2. 192.168.1.100 (host) communicating with remote port 53 (UDP)
+        # -> direction=0 (IN), src_port=53, protocol='UDP'
         await conn.execute(
             """
             INSERT INTO packet_flows (time, channel_id, direction, src_ip, dst_ip, src_port, dst_port, protocol)
@@ -999,7 +999,8 @@ async def test_simulated_traffic_multi_subscription(redis_setup, db_pool_setup):
     db_pool = db_pool_setup
 
     # 1. Setup subscription requests, hashes, registry, and active listeners in Redis
-    # We use a 12-second window/period to comfortably envelope the 10 seconds of traffic (from NOW() - 11s to NOW() - 2s)
+    # We use a 12-second window/period to comfortably envelope the 10 seconds of traffic
+    # (from NOW() - 11s to NOW() - 2s)
     # without hitting the NOW() - 1s end offset boundary of the telemetry continuous aggregate.
     targets = ["telemetry", "hosts_table", "host_details", "host_top_destinations", "host_top_ports"]
     query_hashes = {}
@@ -1148,4 +1149,3 @@ async def test_simulated_traffic_multi_subscription(redis_setup, db_pool_setup):
     assert 53 in ports_list
     assert ports_list[53]["protocol"] == "UDP"
     assert abs(ports_list[53]["packets_per_sec"] - (20.0 / 12.0)) < 0.0001
-

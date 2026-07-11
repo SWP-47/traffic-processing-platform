@@ -103,6 +103,7 @@ class HostDetailsHandler(BaseSubscriptionHandler):
         # --- Execution ---
         try:
             from core.db import db_fetch_host_details_data
+
             row = await db_fetch_host_details_data(
                 host_ip_ph,
                 channel_ph,

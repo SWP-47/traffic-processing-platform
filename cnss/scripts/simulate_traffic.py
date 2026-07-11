@@ -44,7 +44,7 @@ def create_packet_meta(direction: int = 0) -> Dict[str, Any]:
 
     src_port = random.randint(1024, 65535)
     dst_port = random.choice([53, 80, 443, 123, 514, 8080, 3306])
-    
+
     # Randomly select protocol with weighted distribution
     protocol = random.choice(PROTOCOL_POOL)
 

@@ -124,6 +124,7 @@ class HostTopDestinationsHandler(BaseSubscriptionHandler):
         # --- Execution ---
         try:
             from core.db import db_fetch_host_top_destinations_data
+
             rows = await db_fetch_host_top_destinations_data(
                 host_ip_ph,
                 channel_ph,

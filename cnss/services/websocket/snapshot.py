@@ -39,12 +39,12 @@ class SnapshotFetcher:
             logger.warning(f"Unsupported snapshot target: '{target}'")
             raise ResourceNotFoundError(message=f"Target '{target}' is not supported for snapshots.")
 
-        # Re-construct a validated SubscribeRequest
         request = SubscribeRequest(
+            id="snapshot-placeholder",
             action="subscribe",
             channel_id=channel_id,
             target=target,
-            params=params
+            params=params,
         )
 
         db_pool = get_db_pool()

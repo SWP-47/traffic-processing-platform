@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends
 
 from core.contracts.auth import TokenPayload
-from core.db import db_ping, db_fetch_channel_counts
+from core.db import db_fetch_channel_counts, db_ping
 from core.exceptions import UnhealthyError
 from core.redis.client import get_redis_client
 from services.api.deps import get_current_user

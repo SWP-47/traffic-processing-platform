@@ -131,6 +131,7 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
         # --- Execution ---
         try:
             from core.db import db_fetch_host_top_ports_data
+
             rows = await db_fetch_host_top_ports_data(
                 host_ip_ph,
                 channel_ph,

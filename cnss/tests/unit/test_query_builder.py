@@ -4,17 +4,16 @@
 # and PostgreSQL dynamic filter construction functions in query_builder.
 # ==============================================================================
 
-import pytest
 from services.reporting.query_builder import (
     ParameterizedQuery,
-    build_order_by,
-    build_limit,
-    build_where_channel,
-    build_time_window,
-    resolve_period_interval,
     build_ip_exact_filter,
-    build_offset,
+    build_limit,
     build_limit_param,
+    build_offset,
+    build_order_by,
+    build_time_window,
+    build_where_channel,
+    resolve_period_interval,
 )
 
 # Whitelist map for testing sorting functions
@@ -31,17 +30,17 @@ def test_parameterized_query_tracker():
     index placeholders, and supports retrieval in insertion order.
     """
     pq = ParameterizedQuery(start_index=1)
-    
+
     assert pq.next_index == 1
-    
+
     ph1 = pq.add_param("bridge-01")
     assert ph1 == "$1"
     assert pq.next_index == 2
-    
+
     ph2 = pq.add_param(42)
     assert ph2 == "$2"
     assert pq.next_index == 3
-    
+
     assert pq.get_params() == ["bridge-01", 42]
 
 
@@ -132,7 +131,7 @@ def test_build_ip_exact_filter():
     Verify exact IP comparison clause with ParameterizedQuery.
     """
     pq = ParameterizedQuery(start_index=1)
-    
+
     # 1. Valid filter
     clause = build_ip_exact_filter("192.168.1.1", "src_ip", pq)
     assert clause == "src_ip = $1::inet"

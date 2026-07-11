@@ -27,7 +27,7 @@ import asyncpg
 
 from core.config import settings
 from core.database import get_db_pool
-from core.db import db_upsert_channel, db_deactivate_timed_out_channels
+from core.db import db_deactivate_timed_out_channels, db_upsert_channel
 from core.exceptions import DatabaseError, RedisError
 from core.redis.client import get_lua_script, get_redis_client
 

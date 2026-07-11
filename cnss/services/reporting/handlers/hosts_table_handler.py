@@ -132,6 +132,7 @@ class HostsTableHandler(BaseSubscriptionHandler):
         # --- Execution ---
         try:
             from core.db import db_fetch_hosts_table_data
+
             rows = await db_fetch_hosts_table_data(
                 channel_ph,
                 interval_ph,

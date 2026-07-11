@@ -5,11 +5,10 @@
 # ==============================================================================
 
 import logging
-import sys
+
 import pytest
 
 from core.logging import TokenMaskingFilter, setup_logging
-from core.logging_patch import _install_logging_patch
 
 
 def test_token_masking_filter_message_redaction():
@@ -18,14 +17,24 @@ def test_token_masking_filter_message_redaction():
     and replaces sensitive token parameters in the log msg string.
     """
     filt = TokenMaskingFilter()
-    
+
     # 1. URL with token as first param
-    record = logging.LogRecord("test", logging.INFO, "src", 10, "GET /api/v1/auth/refresh?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test", (), None)
+    record = logging.LogRecord(
+        "test",
+        logging.INFO,
+        "src",
+        10,
+        "GET /api/v1/auth/refresh?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test",
+        (),
+        None,
+    )
     assert filt.filter(record)
     assert record.msg == "GET /api/v1/auth/refresh?token=[REDACTED]"
 
     # 2. URL with token as subsequent param
-    record2 = logging.LogRecord("test", logging.INFO, "src", 10, "GET /api/v1/channels?active=true&token=abcdef123", (), None)
+    record2 = logging.LogRecord(
+        "test", logging.INFO, "src", 10, "GET /api/v1/channels?active=true&token=abcdef123", (), None
+    )
     assert filt.filter(record2)
     assert record2.msg == "GET /api/v1/channels?active=true&token=[REDACTED]"
 
@@ -67,7 +76,7 @@ def test_logging_patch_format_coercion():
         lineno=42,
         msg="Format error number: %d",
         args=("123",),  # String instead of int
-        exc_info=None
+        exc_info=None,
     )
 
     # Calling getMessage should pass without raise, converting '123' to 123
@@ -90,7 +99,7 @@ def test_logging_patch_unrelated_type_error_propagation():
             lineno=42,
             msg="Expected float: %f",
             args=("not-a-float",),  # Should raise TypeError: %f format: a real number is required, not str
-            exc_info=None
+            exc_info=None,
         )
         record2.getMessage()
     assert exc.value is not None
@@ -108,7 +117,7 @@ def test_logging_patch_conversion_failure():
         lineno=42,
         msg="Format error: %d",
         args=("not-an-integer",),
-        exc_info=None
+        exc_info=None,
     )
     with pytest.raises(TypeError):
         record.getMessage()

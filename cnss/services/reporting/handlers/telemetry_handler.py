@@ -117,6 +117,7 @@ class TelemetryHandler(BaseSubscriptionHandler):
         # --- Execution ---
         try:
             from core.db import db_fetch_telemetry_data
+
             row = await db_fetch_telemetry_data(channel_id, window_sec, pool=db_pool)
 
             if row is None:

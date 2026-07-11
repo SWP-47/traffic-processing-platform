@@ -7,15 +7,14 @@
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional
-import asyncpg
+from typing import Any, Optional
 
 from core.database import get_db_pool
-from core.config import settings
 
 logger = logging.getLogger(__name__)
 
 # --- Health check queries ---
+
 
 async def db_ping(pool: Optional[Any] = None) -> bool:
     """Verifies that the database pool is healthy and responsive."""
@@ -46,7 +45,8 @@ async def db_fetch_channel_counts(pool: Optional[Any] = None) -> tuple[int, int]
 
 # --- Authentication queries ---
 
-async def db_fetch_user_by_username(username: str, pool: Optional[Any] = None) -> Optional[dict]:
+
+async def db_fetch_user_by_username(username: str, pool: Optional[Any] = None) -> Optional[dict[str, Any]]:
     """Fetches a user profile by username."""
     db_p = pool or get_db_pool()
     async with db_p.acquire() as conn:
@@ -78,7 +78,8 @@ async def db_fetch_all_channels(pool: Optional[Any] = None) -> list[str]:
 
 # --- Channel & Discovery queries ---
 
-async def db_fetch_channel_status(channel_id: str, pool: Optional[Any] = None) -> Optional[dict]:
+
+async def db_fetch_channel_status(channel_id: str, pool: Optional[Any] = None) -> Optional[dict[str, Any]]:
     """Fetches active status and last activity timestamp for a channel."""
     db_p = pool or get_db_pool()
     async with db_p.acquire() as conn:
@@ -89,7 +90,7 @@ async def db_fetch_channel_status(channel_id: str, pool: Optional[Any] = None) -
         return dict(row) if row else None
 
 
-async def db_list_channels(channel_ids: Optional[list[str]] = None, pool: Optional[Any] = None) -> list[dict]:
+async def db_list_channels(channel_ids: Optional[list[str]] = None, pool: Optional[Any] = None) -> list[dict[str, Any]]:
     """
     Lists registered channels. If channel_ids list is provided,
     filters the results to only include those channel IDs.
@@ -108,6 +109,7 @@ async def db_list_channels(channel_ids: Optional[list[str]] = None, pool: Option
 
 # --- History queries ---
 
+
 async def db_channel_exists(channel_id: str, pool: Optional[Any] = None) -> bool:
     """Returns True if the channel exists in the database registry."""
     row = await db_fetch_channel_status(channel_id, pool=pool)
@@ -116,7 +118,7 @@ async def db_channel_exists(channel_id: str, pool: Optional[Any] = None) -> bool
 
 async def db_fetch_channel_history(
     channel_id: str, start_time: datetime, end_time: datetime, interval_sec: int, pool: Optional[Any] = None
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Lazy-loads historical telemetry data for a channel."""
     query = """
     WITH time_buckets AS (
@@ -149,8 +151,13 @@ async def db_fetch_channel_history(
 
 
 async def db_fetch_host_history(
-    channel_id: str, host_ip: str, start_time: datetime, end_time: datetime, interval_sec: int, pool: Optional[Any] = None
-) -> list[dict]:
+    channel_id: str,
+    host_ip: str,
+    start_time: datetime,
+    end_time: datetime,
+    interval_sec: int,
+    pool: Optional[Any] = None,
+) -> list[dict[str, Any]]:
     """Lazy-loads historical telemetry Rx/Tx data for a specific host."""
     query = """
     WITH time_buckets AS (
@@ -184,7 +191,14 @@ async def db_fetch_host_history(
 
 # --- Ingestion / State syncing queries ---
 
-async def db_upsert_channel(channel_id: str, is_active: bool, dropped_delta: int, last_activity_at: Optional[datetime], pool: Optional[Any] = None) -> None:
+
+async def db_upsert_channel(
+    channel_id: str,
+    is_active: bool,
+    dropped_delta: int,
+    last_activity_at: Optional[datetime],
+    pool: Optional[Any] = None,
+) -> None:
     """Inserts or updates a channel's activity status and accumulated packet drop count."""
     db_p = pool or get_db_pool()
     async with db_p.acquire() as conn:
@@ -226,7 +240,8 @@ async def db_deactivate_timed_out_channels(activity_timeout_ms: int, pool: Optio
 
 # --- Dynamic Reporting / WebSocket snapshot queries ---
 
-async def db_execute_fetch(query: str, params: list[Any], pool: Optional[Any] = None) -> list[dict]:
+
+async def db_execute_fetch(query: str, params: list[Any], pool: Optional[Any] = None) -> list[dict[str, Any]]:
     """General helper to execute dynamic SELECT queries with parameters."""
     db_p = pool or get_db_pool()
     async with db_p.acquire() as conn:
@@ -234,7 +249,7 @@ async def db_execute_fetch(query: str, params: list[Any], pool: Optional[Any] = 
         return [dict(row) for row in rows]
 
 
-async def db_execute_fetchrow(query: str, params: list[Any], pool: Optional[Any] = None) -> Optional[dict]:
+async def db_execute_fetchrow(query: str, params: list[Any], pool: Optional[Any] = None) -> Optional[dict[str, Any]]:
     """General helper to execute dynamic SELECT query returning a single row."""
     db_p = pool or get_db_pool()
     async with db_p.acquire() as conn:
@@ -244,7 +259,10 @@ async def db_execute_fetchrow(query: str, params: list[Any], pool: Optional[Any]
 
 # --- Target-Specific Reporting / Snapshot Query Functions ---
 
-async def db_fetch_telemetry_data(channel_id: str, window_sec: float, pool: Optional[Any] = None) -> Optional[dict]:
+
+async def db_fetch_telemetry_data(
+    channel_id: str, window_sec: float, pool: Optional[Any] = None
+) -> Optional[dict[str, Any]]:
     """Queries aggregated telemetry packet rates for a channel over a given window."""
     query = """
         SELECT
@@ -275,7 +293,7 @@ async def db_fetch_hosts_table_data(
     offset_sql: str,
     params: list[Any],
     pool: Optional[Any] = None,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Queries and aggregates host flow traffic statistics for a channel."""
     query = f"""
     WITH host_flows AS (
@@ -341,7 +359,7 @@ async def db_fetch_host_top_destinations_data(
     offset_sql: str,
     params: list[Any],
     pool: Optional[Any] = None,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Queries top destination IPs for a specific host in a channel."""
     query = f"""
     WITH host_flows AS (
@@ -404,7 +422,7 @@ async def db_fetch_host_details_data(
     period_sec: float,
     params: list[Any],
     pool: Optional[Any] = None,
-) -> Optional[dict]:
+) -> Optional[dict[str, Any]]:
     """Queries detailed packet rates (Rx/Tx) for a specific host in a channel."""
     query = f"""
     SELECT
@@ -428,7 +446,7 @@ async def db_fetch_host_top_ports_data(
     offset_sql: str,
     params: list[Any],
     pool: Optional[Any] = None,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Queries top remote ports and protocols for a specific host in a channel."""
     query = f"""
     WITH port_flows AS (

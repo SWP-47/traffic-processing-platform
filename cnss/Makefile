@@ -30,16 +30,16 @@ install:
 
 ## dev: Start infrastructure services (TimescaleDB, Redis, pgAdmin) for local development
 dev:
-	docker-compose -f docker-compose.dev.yml up -d
+	docker compose -f docker-compose.dev.yml up -d
 
 ## prod: Build and start all services (including microservices) for production
 prod:
-	docker-compose -f docker-compose.yml up -d --build
+	docker compose -f docker-compose.yml up -d --build
 
 ## down: Stop all running services (dev or prod)
 down:
-	docker-compose -f docker-compose.dev.yml down 2>/dev/null || true
-	docker-compose -f docker-compose.yml down 2>/dev/null || true
+	docker compose -f docker-compose.dev.yml down 2>/dev/null || true
+	docker compose -f docker-compose.yml down 2>/dev/null || true
 
 ## test: Run the test suite
 test:

@@ -8,6 +8,7 @@ import logging
 
 import pytest
 
+import core.logging_patch  # noqa: F401 — installs the logging monkey-patch
 from core.logging import TokenMaskingFilter, setup_logging
 
 

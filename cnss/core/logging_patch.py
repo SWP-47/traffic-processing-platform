@@ -6,18 +6,11 @@
 # ==============================================================================
 
 import logging
-import sys
 from typing import Any
 
 
 def _install_logging_patch() -> None:
-    """
-    Monkey-patches logging.LogRecord.getMessage to coerce strings to numbers
-    for integer format specifiers (%d, %x, %o, %i, %u).
-    """
-    if sys.version_info < (3, 13):
-        return  # No patch needed for older Python versions
-
+    """Monkey-patches logging.LogRecord.getMessage to coerce strings to numbers."""
     # Save the original getMessage method
     original_get_message = logging.LogRecord.getMessage
 

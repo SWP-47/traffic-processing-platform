@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends
 
 from core.contracts.auth import TokenPayload
-from core.database import get_db_pool
+from core.db import db_fetch_channel_counts, db_ping
 from core.exceptions import UnhealthyError
 from core.redis.client import get_redis_client
 from services.api.deps import get_current_user
@@ -39,12 +39,9 @@ async def health_check(
     # --- Database Connectivity Check ---
     # Executes a lightweight query to verify the asyncpg connection pool is healthy
     # and TimescaleDB is responsive.
-    try:
-        db_pool = get_db_pool()
-        async with db_pool.acquire() as conn:
-            await conn.fetchval("SELECT 1;")
+    if await db_ping():
         components["database"] = "active"
-    except Exception:
+    else:
         components["database"] = "error"
 
     # --- Redis Connectivity Check ---
@@ -62,16 +59,7 @@ async def health_check(
     channels_active = 0
     channels_total = 0
     try:
-        db_pool = get_db_pool()
-        async with db_pool.acquire() as conn:
-            row = await conn.fetchrow("""
-                SELECT
-                    COUNT(*) AS total,
-                    COUNT(*) FILTER (WHERE is_active = TRUE) AS active
-                FROM channels;
-                """)
-            channels_total = row["total"]
-            channels_active = row["active"]
+        channels_total, channels_active = await db_fetch_channel_counts()
         components["channels"] = "active"
     except Exception:
         components["channels"] = "error"

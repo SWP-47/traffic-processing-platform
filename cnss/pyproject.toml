@@ -70,6 +70,7 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 filterwarnings = [
     "ignore::DeprecationWarning:websockets.*",
+    "ignore::DeprecationWarning:passlib.*",
 ]
 
 [build-system]

@@ -128,50 +128,21 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
         limit_sql = build_limit_param(params.limit, pq)
         offset_sql = build_offset(params.offset, pq)
 
-        # - Query Assembly -
-        # 2-stage CTE pipeline ensures clean separation of concerns:
-        # - port_flows: filters packets where host_ip participates, extracts remote_port and protocol
-        # - port_stats: aggregates by (remote_port, protocol) with rate calculation
-        # - final SELECT: sorting, pagination, total_count
-        query = f"""
-        WITH port_flows AS (
-            -- Extract the remote_port (the port of the other side) and the actual protocol
-            SELECT
-                CASE
-                    WHEN direction = 0 AND dst_ip = {host_ip_ph}::inet THEN src_port
-                    WHEN direction = 1 AND src_ip = {host_ip_ph}::inet THEN dst_port
-                END AS remote_port,
-                protocol,
-                time
-            FROM packet_flows
-            WHERE channel_id = {channel_ph}
-              AND time > NOW() - ({interval_ph}::text)::interval
-              AND ((direction = 0 AND dst_ip = {host_ip_ph}::inet)
-                OR (direction = 1 AND src_ip = {host_ip_ph}::inet))
-        ),
-        port_stats AS (
-            SELECT
-                remote_port,
-                protocol,
-                COUNT(*)::float / {period_sec} AS packets_per_sec
-            FROM port_flows
-            WHERE remote_port IS NOT NULL
-            GROUP BY remote_port, protocol
-        )
-        SELECT
-            remote_port,
-            protocol,
-            packets_per_sec,
-            COUNT(*) OVER() AS total_count
-        FROM port_stats
-        {order_by_sql}
-        {limit_sql} {offset_sql}
-        """
-
         # --- Execution ---
         try:
-            async with db_pool.acquire() as conn:
-                rows = await conn.fetch(query, *pq.get_params())
+            from core.db import db_fetch_host_top_ports_data
+
+            rows = await db_fetch_host_top_ports_data(
+                host_ip_ph,
+                channel_ph,
+                interval_ph,
+                period_sec,
+                order_by_sql,
+                limit_sql,
+                offset_sql,
+                pq.get_params(),
+                pool=db_pool,
+            )
 
             # - Result Formatting -
             # Extract ports and total_count from the paginated result set.

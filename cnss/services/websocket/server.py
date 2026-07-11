@@ -24,7 +24,7 @@ from websockets.legacy.server import (
 from core.config import settings
 from core.contracts.auth import TokenPayload
 from core.contracts.subscriptions import SubscribeRequest
-from core.database import get_db_pool
+from core.db import db_channel_exists
 from core.exceptions import (
     ClientResponseError,
     ResourceNotFoundError,
@@ -197,10 +197,7 @@ class WebSocketServer:
         Verifies if the channel_id exists in the persistent registry.
         Uses the database pool for a reliable check.
         """
-        pool = get_db_pool()
-        async with pool.acquire() as conn:
-            row = await conn.fetchrow("SELECT 1 FROM channels WHERE channel_id = $1", channel_id)
-            return row is not None
+        return await db_channel_exists(channel_id)
 
     async def _heartbeat_loop(self, session: Session, interval: float = 5.0) -> None:
         """

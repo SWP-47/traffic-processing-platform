@@ -100,20 +100,18 @@ class HostDetailsHandler(BaseSubscriptionHandler):
         # IMPORTANT: period_sec is used directly in division for rate calculation.
         # Since Pydantic validates it as a numeric value (float), this is 100% safe
         # from SQL injection and supports arbitrary custom time windows.
-        query = f"""
-        SELECT
-            COUNT(*) FILTER (WHERE src_ip = {host_ip_ph}::inet)::float / {period_sec} AS tx_per_sec,
-            COUNT(*) FILTER (WHERE dst_ip = {host_ip_ph}::inet)::float / {period_sec} AS rx_per_sec
-        FROM packet_flows
-        WHERE channel_id = {channel_ph}
-        AND time > NOW() - ({interval_ph}::text)::interval
-        AND (src_ip = {host_ip_ph}::inet OR dst_ip = {host_ip_ph}::inet)
-        """
-
         # --- Execution ---
         try:
-            async with db_pool.acquire() as conn:
-                row = await conn.fetchrow(query, *pq.get_params())
+            from core.db import db_fetch_host_details_data
+
+            row = await db_fetch_host_details_data(
+                host_ip_ph,
+                channel_ph,
+                interval_ph,
+                period_sec,
+                pq.get_params(),
+                pool=db_pool,
+            )
 
             # Handle case where no packets found for this host
             if row is None or (row["tx_per_sec"] == 0 and row["rx_per_sec"] == 0):

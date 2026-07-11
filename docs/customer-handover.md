@@ -27,14 +27,37 @@ The platform is designed to be deployed using Docker and Docker Compose.
 
 ### 3.1. Prerequisites
 * Docker and Docker Compose installed on the host machine(s).
+* Python 3.11+ and [uv](https://github.com/astral-sh/uv) (for local CnSS development/migrations).
 * AMD Vivado Design Suite installed on the machine that will program the FPGA.
 
 ### 3.2. Backend Deployment (CnSS)
-1. Navigate to the backend directory: `cd cnss/`
-2. Create the environment file: `cp .env.example .env`
-3. **Crucial:** Edit `.env` and change the `JWT_SECRET_KEY` to a secure, random string. Adjust database credentials if necessary.
-4. Start the production environment: `make prod`
-   * *This spins up TimescaleDB, Redis, and the 4 CnSS microservices (API, WebSocket, Ingestion, Reporting).*
+
+**Getting Started (Setup & Infrastructure):**
+
+1. **Installation**: Install all dependencies (including dev extras for linting and testing) using `uv`:
+   ```bash
+   make install
+   ```
+2. **Environment Setup**: Copy the example environment file and adjust the variables if necessary. 
+   *Note: For production, ensure you change the `JWT_SECRET_KEY` to a secure, random string.*
+   ```bash
+   cp .env.example .env
+   ```
+3. **Running Infrastructure**: Start the required infrastructure services (TimescaleDB, Redis, pgAdmin) in detached mode using Docker Compose:
+   ```bash
+   make dev
+   ```
+4. **Database Migrations**: Apply the initial database schema, TimescaleDB hypertables, and continuous aggregates:
+   ```bash
+   make migrate
+   ```
+
+**Production Deployment:**
+
+For production deployment, all services run in Docker containers. Run the following command to build and start the complete stack (including all 4 microservices, TimescaleDB, Redis, and Nginx):
+```bash
+make prod
+```
 
 ### 3.3. Frontend Deployment (MUI)
 1. Navigate to the frontend directory: `cd mui/`
@@ -49,19 +72,21 @@ The platform is designed to be deployed using Docker and Docker Compose.
    * *This connects to the `cnss-network` and `mui-network` Docker networks created in the previous steps.*
 
 ### 3.5. Traffic Processor (TP) & Communication Node (CN) Deployment
+
 **Software Part:**
+*Note: The whole TP and CN code is containerized using Docker. The `docker-compose.yml` file builds both TP and CN systems simultaneously.*
 1. Navigate to the joint deployment directory: `cd cn-tp-deployment/`
-2. Create environment files for both components: `cp .env.example .env`
-3. Configure network interfaces (`SNIFF_INTERFACE_IN`, `SNIFF_INTERFACE_OUT`, etc.) and IP addresses in the `.env` files to match your physical hardware.
-4. Build and run the containers: `docker-compose up --build`
+2. Create the environment files for both components using the command `cp .env.example .env` (for bash) or `copy .env.example .env` (for PowerShell). Edit the `.env` files if necessary to configure network interfaces and IP addresses.
+3. Build and run the containers using the command: `docker-compose up --build`
 
 **Hardware Part (FPGA Programming):**
-1. Open AMD Vivado IDE and create a new project for the **ARTIX-7 FPGA Development Board AX7201**.
-2. Add all `*.sv` files from `traffic-processor/hardware-part/` as source code files.
-3. Add `top.xdc` from `traffic-processor/hardware-part/` as the constraint file.
-4. Run the Synthesis and Implementation processes, then Generate Bitstream.
+*Note: Ensure you have AMD Vivado Design Suite installed on your system. The folder contains `*.sv` and `*.xdc` files which are expected to be used to program the ARTIX-7 FPGA Development Board AX7201.*
+1. Run Vivado IDE and create a new project for the board **ARTIX-7 FPGA Development Board AX7201**.
+2. Add all `*.sv` files from the `./hardware-part/` folder to the project as source code files.
+3. Add the `top.xdc` file from the `./hardware-part/` folder to the project as the constraint file.
+4. Run the Synthesis and Implementation processes, then generate the bitstream.
 5. Connect the FPGA board to your computer using a JTAG programmer.
-6. Open "Hardware Manager" in Vivado and program the connected device using the generated bitstream.
+6. Open "Hardware Manager" and program the connected device using the corresponding button.
 
 ## 4. Required Configuration and Secrets Handling
 * **Environment Variables:** All components use `.env` files (which are strictly ignored by Git). Templates are provided as `.env.example`.
@@ -99,7 +124,7 @@ The platform is designed to be deployed using Docker and Docker Compose.
 
 ## 10. Links to Related Documentation
 * [System Architecture & Data Flow Specification](../docs/system-documentation.md)
-* [API Documentation](../api/README.md)
+* [API Documentation](../cnss/docs/api.md)
 * [Project Roadmap](../docs/roadmap.md)
 * [User Acceptance Tests & Known Issues](../docs/user-acceptance-tests.md)
 * [Local Setup & Deployment Guide](../README.md)

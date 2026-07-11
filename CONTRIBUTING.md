@@ -31,6 +31,6 @@ Before opening a Pull Request, you must verify your changes locally:
 4. **CI Gates:** All GitHub Actions checks (including Lychee link checking, pytest, and type checks) must pass before merging.
 
 ## 5. Further Reading
-- [Team Documentation & Standard Operating Procedure](./docs/team_documentation.md)
+- [Team Documentation & Standard Operating Procedure](./docs/development-process.md)
 - [Definition of Done](./docs/definition-of-done.md)
 - [System Architecture](./docs/system-documentation.md)

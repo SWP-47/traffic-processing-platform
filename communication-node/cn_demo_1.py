@@ -82,7 +82,6 @@ def sending_data_to_cnss():
     while True:
         time.sleep(int(TIME_WINDOW) / 1000.0)
 
-
         packets_to_send = []
 
         while not packet_queue.empty():

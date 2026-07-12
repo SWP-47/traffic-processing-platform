@@ -49,6 +49,7 @@ During Sprint 4, the team focused on transition readiness and system stability. 
 **Documentation & Setup Links:**
 
 * 📖 [Local Setup & Run Instructions](../../README.md#local-setup-instructions)
+* [`README.md`](../../README.md)
 * 🤝 [Contributor Guide (`CONTRIBUTING.md`)](../../CONTRIBUTING.md)
 * 🤖 [Agent Guide (`AGENTS.md`)](../../AGENTS.md)
 * 📦 [Customer Handover Documentation](../../docs/customer-handover.md)
@@ -121,12 +122,9 @@ The Sprint Review was recorded with the customer's permission. Publication of th
 The following maintained artifacts were updated during Sprint 4 to reflect the new backend test coverage, protocol aggregation, and physical stand stability fixes:
 
 * 🗺️ [Roadmap](../../docs/roadmap.md)
-* ✅ [Definition of Done](../../docs/definition-of-done.md)
 * 🧪 [Testing Strategy & Status](../../docs/testing.md)
 * 📏 [Quality Requirements](../../docs/quality-requirements.md)
 * 📐 [Quality Requirement Tests](../../docs/quality-requirement-tests.md)
-* 🏗️ [Architecture Documentation](../../docs/architecture/README.md)
-* ⚙️ [Development Process](../../docs/development-process.md)
 
 ---
 
@@ -168,5 +166,5 @@ The following maintained artifacts were updated during Sprint 4 to reflect the n
 
 ## Evidence Screenshots
 
-**Example reviewed PR ([Link](https://github.com/SWP-47/traffic-processing-platform/pull/266)):**
+**Example reviewed PR ([PR Link](https://github.com/SWP-47/traffic-processing-platform/pull/266)):**
 ![pr](images/pr.png)

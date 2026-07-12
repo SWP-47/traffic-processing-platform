@@ -16,6 +16,7 @@
 
 * **Week 6 Trial Release:** Physical test stand (Traffic Processor & Communication Node) and deployed CnSS/MUI.
 * **MUI Dashboard:** New detailed host statistics page and button-based filtering.
+![mui](images/mui-host-view.png)
 * **Handover Documentation:** Draft of `docs/customer-handover.md` and deployment instructions.
 
 ## Scope / Goal Reviewed
@@ -77,6 +78,6 @@ The goal of this Sprint Review was to demonstrate the Week 6 trial release (MVP 
 ## Evidence & Links
 
 * [Sprint 4 Milestone](https://github.com/SWP-47/traffic-processing-platform/milestone/4)
-* [Week 6 SemVer Release] PLACEHOLDER
+* [Week 6 SemVer Release](https://github.com/SWP-47/traffic-processing-platform/releases/tag/v3.0.0)
 * [`docs/customer-handover.md`](../../docs/customer-handover.md)
 * [UAT Public Result Summary](../../docs/user-acceptance-tests.md)

@@ -20,7 +20,7 @@ This is a monorepo containing minimally intrusive network traffic monitoring sys
 **Sprint 4 Goal:** Deliver a stable Week 6 trial release (MVP v3 candidate), resolve critical hardware stability issues, introduce detailed host statistics, and prepare the initial customer handover documentation.
 
 **Sprint Dates:** July 6, 2026 – July 12, 2026  
-**Total Sprint Size:** PLACEHOLDER
+**Total Sprint Size:** 48
 
 **Scope Summary:**
 During Sprint 4, the team focused on transition readiness and system stability. Key achievements include:
@@ -39,6 +39,17 @@ During Sprint 4, the team focused on transition readiness and system stability. 
 ![sprint backlog](images/sprint-backlog.png)
 * 🔗 [Sprint 4 Milestone](https://github.com/SWP-47/traffic-processing-platform/milestone/4)
 ![milestone](images/milestone.png)
+
+### Summary of the Week 6 Trial-Release Changes
+
+The Week 6 trial release (`v2.1.0-rc1`) focused on stability, observability depth, and transition readiness. Key changes include:
+
+* **Physical Stand Stability:** Resolved the critical CN/CnSS state corruption crash triggered by physical network cable disconnects. The test stand now recovers gracefully without manual restarts.
+* **Protocol-Aware Telemetry Aggregation:** The 1-second real-time telemetry buckets in TimescaleDB now aggregate with protocol binding, enabling more granular traffic classification.
+* **Backend Test Coverage:** Added extensive integration and unit tests, achieving 70% code coverage across the backend. Introduced a unified database interaction module shared across all CnSS services.
+* **Detailed Host Statistics Page (MUI):** Delivered the first iteration of the per-host deep-dive page, displaying packet transfer statistics, a historical activity graph, and destination address breakdowns.
+* **Fragmented Packet Fix (Code-Complete, Pending Deployment):** The fix for fragmented packets during FPGA hardware blocking was written and merged but not yet flashed to the physical test stand. Live hardware blocking was deferred to Sprint 5.
+* **Customer Handover Documentation:** Drafted `docs/customer-handover.md` with architecture overview, component responsibilities, and initial deployment instructions for customer review.
 
 ---
 
@@ -93,6 +104,10 @@ The detailed host map visualization was deferred to the post-course backlog to m
 
 ---
 
+## Roadmap
+
+* 🗺️ [Roadmap](../../docs/roadmap.md)
+
 ## User Acceptance Testing (UAT) Summary
 
 The team conducted UAT scenarios with the customer using the physical test stand and prepared high-traffic tabs (Wikipedia, online radio).
@@ -121,18 +136,18 @@ The Sprint Review was recorded with the customer's permission. Publication of th
 
 The following maintained artifacts were updated during Sprint 4 to reflect the new backend test coverage, protocol aggregation, and physical stand stability fixes:
 
-* 🗺️ [Roadmap](../../docs/roadmap.md)
 * 🧪 [Testing Strategy & Status](../../docs/testing.md)
 * 📏 [Quality Requirements](../../docs/quality-requirements.md)
 * 📐 [Quality Requirement Tests](../../docs/quality-requirement-tests.md)
+* [System Documentation](../../docs/system-documentation.md)
 
 ---
 
 ## Release & Changelog
 
-**Week 6 Trial Release (SemVer):** [v2.1.0-rc1] PLACEHOLDER  
+**Week 6 Trial Release (SemVer):** [v3.0.0](https://github.com/SWP-47/traffic-processing-platform/releases/tag/v3.0.0)
 *This release maps to the Sprint 4 Milestone and serves as the handover-candidate for the customer trial.*
-
+![release](images/release.png)
 🔗 [CHANGELOG.md](../../CHANGELOG.md)
 
 ---

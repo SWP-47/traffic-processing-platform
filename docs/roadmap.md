@@ -2,7 +2,7 @@
 
 This document outlines the Sprint-by-Sprint delivery plan for the Traffic Processing Platform.
 
-*Last updated: July 5, 2026*
+*Last updated: July 12, 2026*
 
 ---
 
@@ -94,28 +94,55 @@ Completely redesigned the CnSS architecture into a decoupled, microservice-orien
 
 ---
 
-## Sprint 4: Stability, UI/UX Refinement, and Real-Time Reactivity
+## Sprint 4: Trial Release, Stability Fixes, and Handover Preparation
 
 **Milestone:** [Sprint 4 Milestone](https://github.com/SWP-47/traffic-processing-platform/milestone/4)
 
 **Dates:** July 6 to July 12, 2026
 
-**Sprint Goal:** Resolve critical stability issues discovered during UAT, refine the MUI filtering experience based on customer feedback, and enhance the real-time reactivity of historical data visualizations.
+**Sprint Goal:** Deliver a stable Week 6 trial release (MVP v3 candidate), resolve critical hardware stability issues, introduce detailed host statistics, and prepare the initial customer handover documentation.
 
 **Focus / Expected Outcome:**
-Address the critical CN/CnSS state corruption crash triggered by physical network disconnects. Replace the quick text-based filtering syntax in the host statistics table with structured, user-friendly sidebar controls. Implement fine-grained time-scale zooming (1-minute/5-minute windows) for the historical line chart to allow near real-time observation of traffic state changes. Polish the hardware blocking implementation by fixing the physical button debounce and expanding blocking rules beyond a single hardcoded IP.
+Resolve the critical CN/CnSS crash triggered by physical network cable disconnects, ensuring the test stand recovers gracefully. Achieve 70% automated backend test coverage and implement protocol-aware telemetry aggregation in TimescaleDB. Deliver the first iteration of the detailed host statistics page in the MUI. Draft the customer handover documentation.
 
 **Linked Planned Items:**
 
 *User Stories:*
 
-- [US-006: Specific IP Traffic Analysis](https://github.com/SWP-47/traffic-processing-platform/issues/96) (Expand hardware blocking to support configurable per-host or per-channel rules)
-- [US-010: Protocol Type Traffic Display Filtering](https://github.com/SWP-47/traffic-processing-platform/issues/101) (Implement protocol-based display filtering in the MUI)
+- [US-006: Specific IP Traffic Analysis](https://github.com/SWP-47/traffic-processing-platform/issues/96) (Initial detailed host statistics page implementation)
+- [US-013: Historical Traffic Statistics Storage](https://github.com/SWP-47/traffic-processing-platform/issues/97) (Protocol-aware aggregation and backend test coverage)
 
 *Supporting PBIs:*
 
-- **[Critical] Physical Fault Tolerance:** Investigate and resolve the CN/CnSS state corruption crash when a network interface is physically disconnected. Implement graceful error handling and state recovery so telemetry automatically resumes without manual restarts (UAT-003).
-- **UI/UX Filtering Refinement:** Redesign the host table filtering UI to replace raw text-field syntax with structured sidebar/dropdown controls (e.g., tags, min/max bounds, subnet selectors) (UAT-004).
-- **Historical Chart Reactivity:** Implement a 1-minute/5-minute minimum time window toggle for the historical line chart to improve real-time reactivity and visibility of immediate traffic state changes (UAT-002).
-- **Hardware Polish:** Fix the Key1 button contact bounce (debounce) on the FPGA to prevent multiple unintended state toggles. Expand the blocking logic to support configurable rules rather than a single hardcoded IP (UAT-005).
-- **UAT Environment Preparation:** Prepare dedicated high-traffic test environments (e.g., local Speedtest servers, continuous streaming tabs) to properly validate telemetry counters and visually demonstrate hardware blocking effects during future demos (UAT-001).
+- **Physical Stand Stability:** Fix the CN/CnSS state corruption/crash when a network interface is physically disconnected and reconnected (UAT-003).
+- **Backend Test Coverage & Protocol Aggregation:** Write integration and unit tests to reach 70% backend coverage. Implement protocol binding in the 1-second real-time telemetry aggregation buckets.
+- **MUI Detailed Host Statistics:** Implement the first version of the detailed host statistics page, displaying packet transfer stats, historical graphs, and destination addresses.
+- **Handover Documentation:** Draft `docs/customer-handover.md` with initial deployment and usage instructions.
+
+---
+
+## Sprint 5: Final Maintenance, Byte-Volume Metrics, and MVP v3 Transition
+
+**Milestone:** [Sprint 5 Milestone](https://github.com/SWP-47/traffic-processing-platform/milestone/5)
+
+**Dates:** July 13 to July 19, 2026
+
+**Sprint Goal:** Incorporate customer feedback from the Week 6 trial, implement byte-volume counting, automate deployment, finalize handover documentation, and deliver the final `MVP v3` release.
+
+**Focus / Expected Outcome:**
+Respond to the customer's request for more globally useful network metrics by implementing byte-volume counting (sum of packet sizes) in the backend and adding a UI toggle in the MUI. Automate the database migration process to simplify server deployment. Deploy the previously written fragmented packet fix to the physical FPGA stand to enable live hardware blocking demonstrations. Investigate the 250 Mbps queue overflow, document the maximum stable throughput, and finalize the customer handover documentation to complete the product transition.
+
+**Linked Planned Items:**
+
+*User Stories:*
+
+- [US-016: Byte Volume Counting](https://github.com/SWP-47/traffic-processing-platform/issues/104) (Implement byte-volume counting and MUI toggle)
+- [US-017: Traffic Blocking / Dropping](https://github.com/SWP-47/traffic-processing-platform/issues/105) (Deploy fragmented packet fix to physical FPGA stand)
+
+*Supporting PBIs:*
+
+- **Byte-Volume Counting Backend & API:** Implement packet size aggregation in the TimescaleDB telemetry buckets and update the API endpoints to expose bytes/second.
+- **MUI Byte/Packet Toggle:** Add a UI toggle in the MUI dashboard to switch between "Packets per second" and "Bytes per second" views.
+- **Deployment Automation:** Update the deployment/startup script to automatically wait for database readiness and execute migration commands, removing the need for manual DB migrations.
+- **FPGA Fragmented Packet Fix Deployment:** Deploy the fix for fragmented packets during hardware blocking to the physical test stand and verify live blocking.
+- **Throughput Limits & Handover Finalization:** Investigate the CN/CnSS queue overflow at >200 Mbps. Update `docs/customer-handover.md` to explicitly state the maximum supported stable throughput and finalize all transition documentation for `MVP v3`.

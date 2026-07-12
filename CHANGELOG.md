@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- N/A
+- Fixed the way of working with queues to gain correct working of whole demo stend. TP now extracts packets from queue more often so all demo stand works without delays ([#251](https://github.com/SWP-47/traffic-processing-platform/issues/251))
 
 ### Security
 

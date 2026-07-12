@@ -1,6 +1,6 @@
 import styles from './Dashboard.module.css';
-import TopHostsTable from '@/features/TopHostsTable';
-import { LineChart } from './components/LineChart/LineChart';
+import TopHostsTable from '@/pages/Dashboard/components/TopHostsTable';
+import { RxTxLineChart } from './components/LineChart/RxTxLineChart';
 import { RxTxColumnChart } from './components/RxTxColumnChar';
 
 function Dashboard() {
@@ -9,7 +9,7 @@ function Dashboard() {
       <div className={styles.page}>
         <div className={styles.row}>
           <RxTxColumnChart />
-          <LineChart />
+          <RxTxLineChart />
         </div>
         <div className={styles.row}>
           <TopHostsTable mode='lan' />

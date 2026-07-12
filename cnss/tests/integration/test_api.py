@@ -6,9 +6,11 @@
 # Requires Redis and TimescaleDB to be running (e.g., via `make dev`).
 # ==============================================================================
 
+import asyncio
 import uuid
 from datetime import datetime, timedelta, timezone
 
+import asyncpg
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -16,9 +18,6 @@ from core.database import close_db_pool, get_db_pool, init_db_pool
 from core.redis.client import close_redis_client, get_redis_client, init_redis_client
 from core.security.passwords import hash_password
 from services.api.main import app
-
-import asyncio
-import asyncpg
 
 
 async def refresh_telemetry_1s(conn):
@@ -29,7 +28,8 @@ async def refresh_telemetry_1s(conn):
     for attempt in range(5):
         try:
             await conn.execute(
-                "CALL refresh_continuous_aggregate('telemetry_1s', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 second')"
+                "CALL refresh_continuous_aggregate"
+                "('telemetry_1s', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 second')"
             )
             return
         except asyncpg.exceptions.LockNotAvailableError:

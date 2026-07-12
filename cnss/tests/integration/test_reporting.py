@@ -10,6 +10,7 @@ import json
 import time
 from datetime import datetime, timedelta, timezone
 
+import asyncpg
 import pytest
 
 from core.database import close_db_pool, get_db_pool, init_db_pool
@@ -31,7 +32,6 @@ from services.reporting.handlers import (
 )
 from services.reporting.poller import PUSH_CHANNEL_PREFIX, Poller
 
-import asyncpg
 
 async def refresh_telemetry_1s(conn):
     """
@@ -41,13 +41,15 @@ async def refresh_telemetry_1s(conn):
     for attempt in range(5):
         try:
             await conn.execute(
-                "CALL refresh_continuous_aggregate('telemetry_1s', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 second')"
+                "CALL refresh_continuous_aggregate"
+                "('telemetry_1s', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 second')"
             )
             return
         except asyncpg.exceptions.LockNotAvailableError:
             if attempt == 4:
                 raise
             await asyncio.sleep(0.1)
+
 
 # --- Test Constants ---
 TEST_CHANNEL_ID_SYNC = "integration-test-ch-sync"

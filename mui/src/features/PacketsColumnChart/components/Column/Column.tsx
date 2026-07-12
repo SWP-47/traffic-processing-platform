@@ -1,4 +1,4 @@
-import type { ColumnRenderData } from "../../ColumnChart";
+import type { ColumnRenderData } from "../ColumnChart/ColumnChart";
 import styles from './Column.module.css';
 
 function Column({ value, label, formatter, heightFactor }: ColumnRenderData) {

@@ -121,66 +121,21 @@ class HostTopDestinationsHandler(BaseSubscriptionHandler):
         # IMPORTANT: period_sec is used directly in division for rate calculation.
         # Since Pydantic validates it as a numeric value (float), this is 100% safe
         # from SQL injection and supports arbitrary custom time windows.
-        query = f"""
-        WITH host_flows AS (
-            -- Find all packets where host_ip participates
-            -- Extract remote_ip and classify as LAN/WAN based on direction and role
-            SELECT
-                CASE
-                    WHEN direction = 0 AND dst_ip = {host_ip_ph}::inet THEN src_ip
-                    WHEN direction = 1 AND src_ip = {host_ip_ph}::inet THEN dst_ip
-                END AS remote_ip,
-                CASE
-                    -- WAN: IP appears as src_ip when direction=0 OR as dst_ip when direction=1
-                    WHEN (direction = 0 AND src_ip = CASE
-                        WHEN direction = 0 AND dst_ip = {host_ip_ph}::inet THEN src_ip
-                        WHEN direction = 1 AND src_ip = {host_ip_ph}::inet THEN dst_ip
-                    END) OR (direction = 1 AND dst_ip = CASE
-                        WHEN direction = 0 AND dst_ip = {host_ip_ph}::inet THEN src_ip
-                        WHEN direction = 1 AND src_ip = {host_ip_ph}::inet THEN dst_ip
-                    END) THEN 'WAN'
-                    -- LAN: IP appears as dst_ip when direction=0 OR as src_ip when direction=1
-                    ELSE 'LAN'
-                END AS location,
-                time
-            FROM packet_flows
-            WHERE channel_id = {channel_ph}
-            AND time > NOW() - ({interval_ph}::text)::interval
-            AND (
-                (direction = 0 AND dst_ip = {host_ip_ph}::inet)
-                OR (direction = 1 AND src_ip = {host_ip_ph}::inet)
-            )
-        ),
-        destination_stats AS (
-            SELECT
-                remote_ip,
-                CASE
-                    WHEN SUM(CASE WHEN location = 'LAN' THEN 1 ELSE 0 END) >=
-                        SUM(CASE WHEN location = 'WAN' THEN 1 ELSE 0 END)
-                    THEN 'LAN'
-                    ELSE 'WAN'
-                END AS location,
-                COUNT(*)::float / {period_sec} AS received_per_sec,
-                MAX(time) AS last_seen
-            FROM host_flows
-            WHERE remote_ip IS NOT NULL
-            GROUP BY remote_ip
-        )
-        SELECT
-            remote_ip,
-            location,
-            received_per_sec,
-            last_seen,
-            COUNT(*) OVER() AS total_count
-        FROM destination_stats
-        {order_by_sql}
-        {limit_sql} {offset_sql}
-        """
-
         # --- Execution ---
         try:
-            async with db_pool.acquire() as conn:
-                rows = await conn.fetch(query, *pq.get_params())
+            from core.db import db_fetch_host_top_destinations_data
+
+            rows = await db_fetch_host_top_destinations_data(
+                host_ip_ph,
+                channel_ph,
+                interval_ph,
+                period_sec,
+                order_by_sql,
+                limit_sql,
+                offset_sql,
+                pq.get_params(),
+                pool=db_pool,
+            )
 
             # --- Result Formatting ---
             # Extract destinations and total_count from the paginated result set.

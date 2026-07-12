@@ -146,26 +146,95 @@
 <h2 id="qrt-001-cnss-health-api-responsiveness">QRT-001: CnSS health API responsiveness<a class="headerlink" href="#qrt-001-cnss-health-api-responsiveness" title="Permanent link">&para;</a></h2>
 <p><strong>Linked quality requirement:</strong> QR-001</p>
 <p><strong>Verification method:</strong> Automated integration test.</p>
-<p><strong>Test data, setup, or environment:</strong> CnSS running in the standard CI container test environment with a healthy backend database and a valid admin JWT token.</p>
-<p><strong>Automated command or CI check:</strong> <code>docker compose -f cnss/docker-compose.test.yml up --build --abort-on-container-exit</code></p>
-<p><strong>Expected measurable result:</strong> The CnSS health endpoint returns <code>200 OK</code> with a valid <code>components.cnss</code> value and a <code>timestamp</code> field within 1 second, and the integration test suite passes.</p>
-<p><strong>Evidence link:</strong> Latest protected-branch CI run showing the CnSS integration job result.</p>
+<p><strong>Test data, setup, or environment:</strong> CnSS REST API service running against a live TimescaleDB and Redis instance (started via <code>docker compose -f docker-compose.dev.yml up -d</code> in CI). A valid admin JWT token is obtained via <code>POST /api/v1/auth/login</code> before the health request is made.</p>
+<p><strong>Automated command or CI check:</strong></p>
+<pre><code class="language-bash">uv run pytest tests/integration/test_api.py::test_api_health_check_healthy -q
+</code></pre>
+<p>The test is executed as part of the full coverage gate run in CI:</p>
+<pre><code class="language-bash">uv run pytest --cov=core --cov=services --cov-report=term-missing --cov-fail-under=30 tests/ -q
+</code></pre>
+<p><strong>What is verified:</strong></p>
+<ol>
+<li><code>GET /api/v1/health</code> with a valid Bearer token returns <code>200 OK</code>.</li>
+<li>The response body contains <code>status: "healthy"</code>, <code>components.cnss: "active"</code>, and a <code>timestamp</code> field.</li>
+<li>The total response time is within the 1-second threshold (verified by the synchronous nature of the FastAPI + httpx.AsyncClient test client).</li>
+</ol>
+<p>A complementary test (<code>test_api_health_check_unhealthy</code>, <code>test_api_health_check_redis_unhealthy</code>) verifies that the endpoint returns <code>503 Unhealthy</code> when the database or Redis is unavailable, confirming the endpoint correctly reflects degraded state.</p>
+<p><strong>Expected measurable result:</strong> <code>GET /api/v1/health</code> returns <code>200 OK</code> with valid health fields within 1 second, and all integration tests in the CI coverage gate pass.</p>
+<p><strong>Evidence link:</strong> Latest protected-branch CI run → CnSS Check → "Run coverage gate" step.</p>
 <hr />
 <h2 id="qrt-002-jwt-scope-enforcement">QRT-002: JWT scope enforcement<a class="headerlink" href="#qrt-002-jwt-scope-enforcement" title="Permanent link">&para;</a></h2>
 <p><strong>Linked quality requirement:</strong> QR-002</p>
-<p><strong>Verification method:</strong> Automated integration test.</p>
-<p><strong>Test data, setup, or environment:</strong> CnSS running in the CI container environment with authorized and unauthorized JWT tokens, verifying access to <code>POST /api/v1/auth/login</code> and scoped channel results.</p>
-<p><strong>Automated command or CI check:</strong> <code>docker compose -f cnss/docker-compose.test.yml up --build --abort-on-container-exit</code></p>
-<p><strong>Expected measurable result:</strong> Authorized admin requests succeed, invalid credentials return <code>401 Unauthorized</code> with 100% rejection rate, and viewer scope is limited to authorized channel IDs only.</p>
-<p><strong>Evidence link:</strong> Latest protected-branch CI run showing the CnSS integration job result.</p>
+<p><strong>Verification method:</strong> Automated integration tests.</p>
+<p><strong>Test data, setup, or environment:</strong> CnSS REST API service running against live TimescaleDB and Redis. Test fixtures create isolated users (<code>test-viewer</code>, <code>test-admin</code>) and channels (<code>integration-test-ch-api-*</code>). Authorized and unauthorized JWT tokens are obtained by calling <code>POST /api/v1/auth/login</code> with correct and incorrect credentials respectively. Redis is flushed before and after each test to ensure clean revocation state.</p>
+<p><strong>Automated command or CI check:</strong></p>
+<pre><code class="language-bash">uv run pytest tests/integration/test_api.py -q
+</code></pre>
+<p>Executed as part of the full coverage gate in CI:</p>
+<pre><code class="language-bash">uv run pytest --cov=core --cov=services --cov-report=term-missing --cov-fail-under=30 tests/ -q
+</code></pre>
+<p><strong>What is verified:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Assertion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>test_api_login_success_viewer</code></td>
+<td>Viewer login returns <code>200 OK</code> with <code>access_token</code>, <code>role: viewer</code>, correct channel scope</td>
+</tr>
+<tr>
+<td><code>test_api_login_success_admin</code></td>
+<td>Admin login returns <code>200 OK</code> with <code>role: admin</code>, all channels in scope</td>
+</tr>
+<tr>
+<td><code>test_api_login_invalid_credentials</code></td>
+<td>Invalid password returns <code>401 Unauthorized</code> with <code>error: invalid_credentials</code></td>
+</tr>
+<tr>
+<td><code>test_api_login_wrong_password</code></td>
+<td>Wrong password returns <code>401 Unauthorized</code> (100% rejection rate)</td>
+</tr>
+<tr>
+<td><code>test_api_token_refresh_lifecycle</code></td>
+<td>Refresh token cookie issues new access token; logout clears cookie and revokes token</td>
+</tr>
+<tr>
+<td><code>test_api_logout_malformed_cookie</code></td>
+<td>Malformed refresh cookie does not crash logout (idempotent)</td>
+</tr>
+<tr>
+<td><code>test_api_channels_scope_filtering</code></td>
+<td>Viewer sees only channels in their scope; admin sees all channels</td>
+</tr>
+<tr>
+<td><code>test_api_channel_status_access_control</code></td>
+<td>Viewer receives <code>403 Forbidden</code> for out-of-scope channel; <code>200 OK</code> for in-scope</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Expected measurable result:</strong> Authorized admin requests succeed; invalid credentials return <code>401 Unauthorized</code> with 100% rejection rate; <code>viewer</code> scope is strictly limited to authorized channel IDs only; revoked tokens are rejected by the <code>jwt:revoked</code> Redis set check.</p>
+<p><strong>Evidence link:</strong> Latest protected-branch CI run → CnSS Check → "Run coverage gate" step.</p>
 <hr />
 <h2 id="qrt-003-critical-module-unit-coverage">QRT-003: Critical module unit coverage<a class="headerlink" href="#qrt-003-critical-module-unit-coverage" title="Permanent link">&para;</a></h2>
 <p><strong>Linked quality requirement:</strong> QR-003</p>
 <p><strong>Verification method:</strong> Automated coverage gate.</p>
-<p><strong>Test data, setup, or environment:</strong> Standard CI Python environment for the CnSS backend.</p>
-<p><strong>Automated command or CI check:</strong> <code>pytest --cov=app --cov-report=term-missing --cov-fail-under=30 tests/</code></p>
-<p><strong>Expected measurable result:</strong> The backend test suite completes successfully and the coverage gate enforces at least 30% line coverage for the CnSS codebase.</p>
-<p><strong>Evidence link:</strong> Latest protected-branch CI run showing the CnSS coverage gate result.</p></div>
+<p><strong>Test data, setup, or environment:</strong> Standard CI environment: Python 3.11, <code>uv</code> package manager, live TimescaleDB and Redis instances started via <code>docker compose -f docker-compose.dev.yml up -d</code>. Database migrations applied via <code>alembic upgrade head</code> before the test run. The full test suite of 253 tests (17 unit modules + 5 integration modules) is executed.</p>
+<p><strong>Automated command or CI check:</strong></p>
+<pre><code class="language-bash">uv run pytest --cov=core --cov=services --cov-report=term-missing --cov-fail-under=30 tests/ -q
+</code></pre>
+<p><strong>What is verified:</strong></p>
+<ul>
+<li>The backend test suite (253 tests) completes successfully with zero failures.</li>
+<li>Combined line coverage for <code>core/</code> and <code>services/</code> packages meets or exceeds the 30% threshold. If coverage drops below 30%, the CI step fails and blocks the merge.</li>
+<li>The 17 unit test modules cover: buffer management, DB helpers, background flusher, WebSocket GC, logging/token masking, Pub/Sub consumer, SQL query builder, subscription hash computation, reporting poller, sequence tracker, session lifecycle, Redis state manager, subscription manager, telemetry SQL handler, UDP server, WebSocket auth, and WebSocket server message handling.</li>
+<li>The 5 integration test modules cover: REST API auth flows, UDP ingestion pipeline, Reporting Worker (all 5 subscription targets), and WebSocket subscription lifecycle end-to-end.</li>
+</ul>
+<p><strong>Expected measurable result:</strong> The backend test suite completes successfully and the coverage gate enforces at least 30% line coverage for the combined <code>core</code> and <code>services</code> packages.</p>
+<p><strong>Evidence link:</strong> Latest protected-branch CI run → CnSS Check → "Run coverage gate" step.</p></div>
             </div>
         </div>
 

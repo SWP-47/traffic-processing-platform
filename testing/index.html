@@ -168,29 +168,29 @@
 </thead>
 <tbody>
 <tr>
-<td><code>cnss/app/</code></td>
-<td>Core telemetry ingestion (UDP server), JWT authentication, WebSocket state management, TimescaleDB persistence, and Reporting Worker. Enforces all QRs.</td>
+<td><code>cnss/core/</code> + <code>cnss/services/</code></td>
+<td>Core backend: JWT authentication &amp; revocation, Argon2id password validation, WebSocket session lifecycle, UDP telemetry ingestion, sequence tracking, Redis buffering, background flushing, Reporting Worker (1Hz poller, state syncer, ghost cleaner), REST API (auth, channels, health, history). Enforces all QRs.</td>
 <td style="text-align: right;">30%</td>
-<td style="text-align: right;">≥ 30% (enforced by <code>--cov-fail-under=30</code> gate)</td>
+<td style="text-align: right;">≥ 30% (enforced by <code>--cov-fail-under=30</code> gate against <code>core</code> and <code>services</code> packages)</td>
 <td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → CnSS Check → "Run coverage gate" step</a></td>
 </tr>
 <tr>
 <td><code>cnss/tests/integration/</code></td>
-<td>Validates end-to-end API contracts, WebSocket lifecycle, auth middleware, and UDP ingestion against a real TimescaleDB instance.</td>
+<td>Validates end-to-end API contracts (login, refresh, logout, channels, status, history, host history, health), WebSocket subscription lifecycle, UDP ingestion pipeline, Reporting Worker aggregation, and ghost cleanup against live TimescaleDB and Redis instances.</td>
 <td style="text-align: right;">30%</td>
 <td style="text-align: right;">≥ 30% (enforced by <code>--cov-fail-under=30</code> gate)</td>
 <td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → CnSS Check → "Run coverage gate" step</a></td>
 </tr>
 <tr>
 <td><code>mui/src/services/</code></td>
-<td>Frontend API client, WebSocket telemetry service, and authentication state management. Bridges the MUI to the CnSS.</td>
+<td>Frontend: WebSocket client (<code>websocket.ts</code>), REST API client (authentication, channels, health, history), and subscription manager (<code>subscriptionManager.ts</code>). Bridges MUI to CnSS.</td>
 <td style="text-align: right;">30%</td>
 <td style="text-align: right;">N/A — frontend coverage gate not yet configured; type-safety enforced via <code>tsc --noEmit</code></td>
 <td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → MUI Check → "Lint and type check" step</a></td>
 </tr>
 <tr>
 <td><code>traffic-processor/software-part/</code></td>
-<td>Core packet extraction logic (<code>tp_packet_counter.py</code>) that produces the telemetry consumed by every downstream component.</td>
+<td>Core packet extraction logic (<code>tp_packet_counter.py</code>) that sniffs network interfaces and produces the per-packet JSON telemetry consumed by the Communication Node.</td>
 <td style="text-align: right;">30%</td>
 <td style="text-align: right;">N/A — unit tests exist but no coverage gate is configured yet</td>
 <td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → TP Check → "Run unit tests" step</a></td>
@@ -199,6 +199,132 @@
 </table>
 <p><em>If global repository coverage is lower than critical-module coverage, explain why here: N/A — The CnSS backend (the most critical module) is the only component with a hard coverage gate (<code>--cov-fail-under=30</code>). Frontend and TP coverage gates are deferred to a future sprint to avoid blocking MVP delivery.</em></p>
 <h2 id="automated-test-status">Automated Test Status<a class="headerlink" href="#automated-test-status" title="Permanent link">&para;</a></h2>
+<p>The CnSS test suite currently collects <strong>253 tests</strong> across three tiers: unit (17 modules), integration (5 modules), and end-to-end (1 stub module).</p>
+<h3 id="unit-tests-17-modules-cnsstestsunit">Unit Tests (17 modules, <code>cnss/tests/unit/</code>)<a class="headerlink" href="#unit-tests-17-modules-cnsstestsunit" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Test module</th>
+<th>What it tests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>test_buffer_manager.py</code></td>
+<td>Redis capped-list buffering: empty-batch skip, serialization, cap enforcement, OOM protection, error wrapping</td>
+</tr>
+<tr>
+<td><code>test_db.py</code></td>
+<td>All <code>core/db.py</code> query helpers: user fetch, channel upsert, history queries, host data, telemetry aggregation</td>
+</tr>
+<tr>
+<td><code>test_flusher.py</code></td>
+<td>Background flusher: channel registration, Redis-to-TimescaleDB flush, protocol field extraction, error recovery</td>
+</tr>
+<tr>
+<td><code>test_gc.py</code></td>
+<td>WebSocket garbage collector: stale-listener cleanup, empty-set pruning, multi-subscription teardown</td>
+</tr>
+<tr>
+<td><code>test_logging.py</code></td>
+<td>Token masking filter: <code>?token=</code> URL redaction, format coercion, logging patch</td>
+</tr>
+<tr>
+<td><code>test_pubsub_consumer.py</code></td>
+<td>Pub/Sub consumer: pattern subscription, <code>sub_id</code> injection, client routing, malformed-JSON handling</td>
+</tr>
+<tr>
+<td><code>test_query_builder.py</code></td>
+<td>SQL query builder: parameterized tracker, ORDER BY whitelist, LIMIT/OFFSET, WHERE clauses, time window</td>
+</tr>
+<tr>
+<td><code>test_query_hash.py</code></td>
+<td>SHA-256 subscription deduplication: determinism, <code>id</code> exclusion, key-order independence, hex encoding</td>
+</tr>
+<tr>
+<td><code>test_reporting_poller.py</code></td>
+<td>1Hz poller: active-hash discovery, listener check, handler dispatch, Pub/Sub publish</td>
+</tr>
+<tr>
+<td><code>test_sequence_tracker.py</code></td>
+<td>Sequence tracking: initial baseline, sequential, drop calculation, out-of-order ignore, reset detection</td>
+</tr>
+<tr>
+<td><code>test_session.py</code></td>
+<td>WebSocket session: Redis TTL creation, heartbeat refresh, destruction, expiration</td>
+</tr>
+<tr>
+<td><code>test_state_manager.py</code></td>
+<td>Redis state manager: HSET activity, dropped-delta HINCRBY, TTL, empty-batch skip</td>
+</tr>
+<tr>
+<td><code>test_subscription.py</code></td>
+<td>Subscription manager: registry creation, listener sets, unsubscribe, last-listener cleanup</td>
+</tr>
+<tr>
+<td><code>test_telemetry_handler.py</code></td>
+<td>Telemetry SQL handler: protocol-aware aggregation, multi-protocol rate calculation</td>
+</tr>
+<tr>
+<td><code>test_udp_server.py</code></td>
+<td>UDP server: transport start/stop, MTU warn-only, JSON/Pydantic validation, pipeline handoff</td>
+</tr>
+<tr>
+<td><code>test_ws_auth.py</code></td>
+<td>WebSocket auth: viewer/admin success, <code>4001</code>/<code>4002</code>/<code>4003</code> close codes, revoked token rejection</td>
+</tr>
+<tr>
+<td><code>test_ws_server.py</code></td>
+<td>WebSocket server: subscribe/unsubscribe message dispatch, channel mismatch rejection, heartbeat loop</td>
+</tr>
+</tbody>
+</table>
+<h3 id="integration-tests-5-modules-cnsstestsintegration">Integration Tests (5 modules, <code>cnss/tests/integration/</code>)<a class="headerlink" href="#integration-tests-5-modules-cnsstestsintegration" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Test module</th>
+<th>What it tests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>test_api.py</code></td>
+<td>REST API against live DB/Redis: login (viewer &amp; admin), token refresh, logout, channel scope filtering, channel status access control, channel history pagination, host history, health endpoint (healthy/unhealthy/Redis-down)</td>
+</tr>
+<tr>
+<td><code>test_ingestion_pipeline.py</code></td>
+<td>Full ingestion pipeline: sequence baseline, sequential no-drops, gap-drops, out-of-order ignore, reset detection, activity tracking, TTL, capped-list enforcement, flusher atomic pop-and-insert, multi-channel independence</td>
+</tr>
+<tr>
+<td><code>test_reporting.py</code></td>
+<td>Reporting Worker: channel state syncer (active upsert, mass timeout deactivation), ghost cleaner (stale-listener removal), Poller for all 5 subscription targets (<code>telemetry</code>, <code>hosts_table</code>, <code>host_details</code>, <code>host_top_destinations</code>, <code>host_top_ports</code>), multi-protocol telemetry aggregation</td>
+</tr>
+<tr>
+<td><code>test_ws_subscription.py</code></td>
+<td>WebSocket subscription engine: session TTL, heartbeat, destruction, registry/listener creation, <code>id</code> exclusion from hash, unsubscribe, GC on disconnect, Pub/Sub routing with <code>sub_id</code> injection, parallel subscriptions, <code>sub:active_hashes</code> lifecycle</td>
+</tr>
+<tr>
+<td><code>test_ghost_cleanup.py</code>, <code>test_auth_flow.py</code></td>
+<td>Stub/empty — reserved for future ghost-cleanup and full auth-flow E2E tests</td>
+</tr>
+</tbody>
+</table>
+<h3 id="e2e-tests-1-stub-cnsstestse2e">E2E Tests (1 stub, <code>cnss/tests/e2e/</code>)<a class="headerlink" href="#e2e-tests-1-stub-cnsstestse2e" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Test module</th>
+<th>What it tests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>test_full_pipeline.py</code></td>
+<td>Stub — reserved for full TP → CN → CnSS → MUI pipeline E2E tests</td>
+</tr>
+</tbody>
+</table>
 <table>
 <thead>
 <tr>
@@ -212,36 +338,36 @@
 <tbody>
 <tr>
 <td>Unit tests</td>
-<td>Critical backend logic (auth, state store, UDP parsing, recovery)</td>
-<td><code>pytest cnss/tests/unit/ -q</code> (executed as part of the containerized integration run)</td>
+<td>CnSS backend logic (buffer, DB, flusher, GC, logging, pub/sub, query builder, query hash, poller, sequence tracker, session, state manager, subscription, telemetry handler, UDP server, WS auth, WS server)</td>
+<td><code>uv run pytest tests/unit/ -q</code></td>
 <td>Passing</td>
 <td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → CnSS Check</a></td>
 </tr>
 <tr>
 <td>Unit tests</td>
 <td>Traffic Processor packet extraction logic</td>
-<td><code>pytest traffic-processor/software-part/tests/ -q</code></td>
+<td><code>pytest tests/ -q</code> (from <code>traffic-processor/software-part/</code>)</td>
 <td>Passing</td>
 <td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → TP Check</a></td>
 </tr>
 <tr>
 <td>Integration tests</td>
-<td>CnSS REST API endpoints, WebSocket lifecycle, auth middleware, UDP ingestion, and TimescaleDB interaction</td>
-<td><code>docker compose -f cnss/docker-compose.test.yml up --build --abort-on-container-exit</code></td>
+<td>CnSS REST API (auth login/refresh/logout, channels, status, history, health), WebSocket subscription lifecycle, UDP ingestion pipeline, Reporting Worker, ghost cleanup against live TimescaleDB and Redis</td>
+<td><code>uv run pytest tests/integration/ -q</code></td>
 <td>Passing</td>
-<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → CnSS Check → "Run containerized CnSS integration tests" step</a></td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → CnSS Check</a></td>
 </tr>
 <tr>
 <td>Automated QRTs</td>
 <td>QR-001 (health API responsiveness), QR-002 (JWT scope enforcement), QR-003 (critical module coverage)</td>
-<td><code>pytest --cov=app --cov-report=term-missing --cov-fail-under=30 tests/ -q</code> (coverage gate doubles as QRT-003; QRT-001 and QRT-002 are covered by the integration suite)</td>
+<td><code>uv run pytest --cov=core --cov=services --cov-report=term-missing --cov-fail-under=30 tests/ -q</code></td>
 <td>Passing</td>
 <td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → CnSS Check → "Run coverage gate" step</a></td>
 </tr>
 <tr>
 <td>Type checking</td>
-<td>MUI frontend type safety (<code>tsc --noEmit</code>) and OpenAPI schema validation</td>
-<td><code>npm run test:ts</code></td>
+<td>MUI frontend type safety (<code>tsc --noEmit</code>) and ESLint</td>
+<td><code>npm run lint &amp;&amp; npm run test:ts</code></td>
 <td>Passing</td>
 <td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → MUI Check → "Lint and type check" step</a></td>
 </tr>
@@ -265,13 +391,19 @@
 <td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → TP/CN/CnSS Check → "Lint code" steps</a></td>
 </tr>
 <tr>
+<td>Linting &amp; type checking (CnSS: <code>ruff</code>, <code>flake8</code>, <code>mypy</code>, <code>black --check</code>)</td>
+<td>Yes</td>
+<td>Passing</td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → CnSS Check → "Lint code" step</a></td>
+</tr>
+<tr>
 <td>Linting (JS/TS: <code>npm run lint</code>)</td>
 <td>Yes</td>
 <td>Passing</td>
 <td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → MUI Check → "Lint and type check" step</a></td>
 </tr>
 <tr>
-<td>Type checking (<code>tsc --noEmit</code>)</td>
+<td>Type checking (<code>npm run test:ts</code> / <code>tsc --noEmit</code>)</td>
 <td>Yes</td>
 <td>Passing</td>
 <td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → MUI Check → "Lint and type check" step</a></td>
@@ -283,7 +415,13 @@
 <td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → MUI Check → "Build production bundle" step</a></td>
 </tr>
 <tr>
-<td>Coverage gate (<code>--cov-fail-under=30</code>)</td>
+<td>Database migrations (<code>alembic upgrade head</code>)</td>
+<td>Yes</td>
+<td>Passing</td>
+<td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → CnSS Check → "Run database migrations" step</a></td>
+</tr>
+<tr>
+<td>Coverage gate (<code>--cov=core --cov=services --cov-fail-under=30</code>)</td>
 <td>Yes</td>
 <td>Passing</td>
 <td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → CnSS Check → "Run coverage gate" step</a></td>
@@ -321,10 +459,10 @@
 <tr>
 <td>Dependencies with known vulnerabilities may expose deployments to avoidable security risk, especially since the CnSS is exposed to the network and ingests untrusted UDP payloads.</td>
 <td>Automated Python dependency vulnerability scan via <code>pip-audit</code></td>
-<td>CnSS <code>requirements.txt</code> (and transitively all installed packages)</td>
+<td>CnSS <code>pyproject.toml</code> (compiled via <code>uv pip compile --all-extras</code>, covering all transitive packages)</td>
 <td>Passing</td>
 <td><a href="https://github.com/SWP-47/traffic-processing-platform/actions/workflows/ci.yml">Latest CI run → CnSS Check → "Run dependency audit" step</a></td>
-<td><code>pip-audit</code> only covers Python dependencies. Frontend (<code>npm audit</code>) and OS-level (<code>apt</code>) vulnerabilities are not yet scanned in CI and should be added in a future sprint. Some transitive vulnerabilities may require manual triage or delayed upstream fixes.</td>
+<td><code>pip-audit</code> only covers Python dependencies. Frontend (<code>npm audit</code>) and OS-level vulnerabilities are not yet scanned in CI and should be added in a future sprint.</td>
 </tr>
 </tbody>
 </table>
@@ -365,8 +503,8 @@
 <ul>
 <li>[ ] All automated unit and integration tests must pass.</li>
 <li>[ ] Automated Quality Requirement Tests (QRT-001, QRT-002, QRT-003) must pass.</li>
-<li>[ ] Critical modules must maintain ≥ 30% line coverage.</li>
-<li>[ ] Linting, formatting, and type-checking gates must pass.</li>
+<li>[ ] Critical modules must maintain ≥ 30% line coverage (measured against <code>core</code> and <code>services</code> packages).</li>
+<li>[ ] Linting, formatting, and type-checking gates must pass (Ruff, Flake8, Mypy, Black for CnSS; ESLint + tsc for MUI).</li>
 <li>[ ] Additional QA check (<code>pip-audit</code> dependency vulnerability scan) must pass.</li>
 <li>[ ] Lychee link checking must pass.</li>
 </ul></div>

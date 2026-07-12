@@ -133,7 +133,11 @@
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#sprint-4-stability-uiux-refinement-and-real-time-reactivity" class="nav-link">Sprint 4: Stability, UI/UX Refinement, and Real-Time Reactivity</a>
+            <li class="nav-item" data-bs-level="2"><a href="#sprint-4-trial-release-stability-fixes-and-handover-preparation" class="nav-link">Sprint 4: Trial Release, Stability Fixes, and Handover Preparation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#sprint-5-final-maintenance-byte-volume-metrics-and-mvp-v3-transition" class="nav-link">Sprint 5: Final Maintenance, Byte-Volume Metrics, and MVP v3 Transition</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -146,7 +150,7 @@
 
 <h1 id="project-roadmap">Project Roadmap<a class="headerlink" href="#project-roadmap" title="Permanent link">&para;</a></h1>
 <p>This document outlines the Sprint-by-Sprint delivery plan for the Traffic Processing Platform.</p>
-<p><em>Last updated: July 5, 2026</em></p>
+<p><em>Last updated: July 12, 2026</em></p>
 <hr />
 <h2 id="sprint-1-mvp-v1">Sprint 1: MVP v1<a class="headerlink" href="#sprint-1-mvp-v1" title="Permanent link">&para;</a></h2>
 <p><strong>Milestone:</strong> <a href="https://github.com/SWP-47/traffic-processing-platform/milestone/1">Sprint 1 Milestone</a></p>
@@ -215,25 +219,45 @@ Completely redesigned the CnSS architecture into a decoupled, microservice-orien
 <li><a href="https://github.com/SWP-47/traffic-processing-platform/issues/208">MUI Dashboard Redesign</a> Implement the detailed "Host Statistics" table featuring advanced real-time filtering (Direction IN/OUT, IP subnet/regex, RX/TX min/max bounds, LastSeen ranges) and bi-directional sorting. Add summary "Top Hosts" widgets to the main dashboard.</li>
 </ul>
 <hr />
-<h2 id="sprint-4-stability-uiux-refinement-and-real-time-reactivity">Sprint 4: Stability, UI/UX Refinement, and Real-Time Reactivity<a class="headerlink" href="#sprint-4-stability-uiux-refinement-and-real-time-reactivity" title="Permanent link">&para;</a></h2>
+<h2 id="sprint-4-trial-release-stability-fixes-and-handover-preparation">Sprint 4: Trial Release, Stability Fixes, and Handover Preparation<a class="headerlink" href="#sprint-4-trial-release-stability-fixes-and-handover-preparation" title="Permanent link">&para;</a></h2>
 <p><strong>Milestone:</strong> <a href="https://github.com/SWP-47/traffic-processing-platform/milestone/4">Sprint 4 Milestone</a></p>
 <p><strong>Dates:</strong> July 6 to July 12, 2026</p>
-<p><strong>Sprint Goal:</strong> Resolve critical stability issues discovered during UAT, refine the MUI filtering experience based on customer feedback, and enhance the real-time reactivity of historical data visualizations.</p>
+<p><strong>Sprint Goal:</strong> Deliver a stable Week 6 trial release (MVP v3 candidate), resolve critical hardware stability issues, introduce detailed host statistics, and prepare the initial customer handover documentation.</p>
 <p><strong>Focus / Expected Outcome:</strong>
-Address the critical CN/CnSS state corruption crash triggered by physical network disconnects. Replace the quick text-based filtering syntax in the host statistics table with structured, user-friendly sidebar controls. Implement fine-grained time-scale zooming (1-minute/5-minute windows) for the historical line chart to allow near real-time observation of traffic state changes. Polish the hardware blocking implementation by fixing the physical button debounce and expanding blocking rules beyond a single hardcoded IP.</p>
+Resolve the critical CN/CnSS crash triggered by physical network cable disconnects, ensuring the test stand recovers gracefully. Achieve 70% automated backend test coverage and implement protocol-aware telemetry aggregation in TimescaleDB. Deliver the first iteration of the detailed host statistics page in the MUI. Draft the customer handover documentation.</p>
 <p><strong>Linked Planned Items:</strong></p>
 <p><em>User Stories:</em></p>
 <ul>
-<li><a href="https://github.com/SWP-47/traffic-processing-platform/issues/96">US-006: Specific IP Traffic Analysis</a> (Expand hardware blocking to support configurable per-host or per-channel rules)</li>
-<li><a href="https://github.com/SWP-47/traffic-processing-platform/issues/101">US-010: Protocol Type Traffic Display Filtering</a> (Implement protocol-based display filtering in the MUI)</li>
+<li><a href="https://github.com/SWP-47/traffic-processing-platform/issues/96">US-006: Specific IP Traffic Analysis</a> (Initial detailed host statistics page implementation)</li>
+<li><a href="https://github.com/SWP-47/traffic-processing-platform/issues/97">US-013: Historical Traffic Statistics Storage</a> (Protocol-aware aggregation and backend test coverage)</li>
 </ul>
 <p><em>Supporting PBIs:</em></p>
 <ul>
-<li><strong>[Critical] Physical Fault Tolerance:</strong> Investigate and resolve the CN/CnSS state corruption crash when a network interface is physically disconnected. Implement graceful error handling and state recovery so telemetry automatically resumes without manual restarts (UAT-003).</li>
-<li><strong>UI/UX Filtering Refinement:</strong> Redesign the host table filtering UI to replace raw text-field syntax with structured sidebar/dropdown controls (e.g., tags, min/max bounds, subnet selectors) (UAT-004).</li>
-<li><strong>Historical Chart Reactivity:</strong> Implement a 1-minute/5-minute minimum time window toggle for the historical line chart to improve real-time reactivity and visibility of immediate traffic state changes (UAT-002).</li>
-<li><strong>Hardware Polish:</strong> Fix the Key1 button contact bounce (debounce) on the FPGA to prevent multiple unintended state toggles. Expand the blocking logic to support configurable rules rather than a single hardcoded IP (UAT-005).</li>
-<li><strong>UAT Environment Preparation:</strong> Prepare dedicated high-traffic test environments (e.g., local Speedtest servers, continuous streaming tabs) to properly validate telemetry counters and visually demonstrate hardware blocking effects during future demos (UAT-001).</li>
+<li><strong>Physical Stand Stability:</strong> Fix the CN/CnSS state corruption/crash when a network interface is physically disconnected and reconnected (UAT-003).</li>
+<li><strong>Backend Test Coverage &amp; Protocol Aggregation:</strong> Write integration and unit tests to reach 70% backend coverage. Implement protocol binding in the 1-second real-time telemetry aggregation buckets.</li>
+<li><strong>MUI Detailed Host Statistics:</strong> Implement the first version of the detailed host statistics page, displaying packet transfer stats, historical graphs, and destination addresses.</li>
+<li><strong>Handover Documentation:</strong> Draft <code>docs/customer-handover.md</code> with initial deployment and usage instructions.</li>
+</ul>
+<hr />
+<h2 id="sprint-5-final-maintenance-byte-volume-metrics-and-mvp-v3-transition">Sprint 5: Final Maintenance, Byte-Volume Metrics, and MVP v3 Transition<a class="headerlink" href="#sprint-5-final-maintenance-byte-volume-metrics-and-mvp-v3-transition" title="Permanent link">&para;</a></h2>
+<p><strong>Milestone:</strong> <a href="https://github.com/SWP-47/traffic-processing-platform/milestone/5">Sprint 5 Milestone</a></p>
+<p><strong>Dates:</strong> July 13 to July 19, 2026</p>
+<p><strong>Sprint Goal:</strong> Incorporate customer feedback from the Week 6 trial, implement byte-volume counting, automate deployment, finalize handover documentation, and deliver the final <code>MVP v3</code> release.</p>
+<p><strong>Focus / Expected Outcome:</strong>
+Respond to the customer's request for more globally useful network metrics by implementing byte-volume counting (sum of packet sizes) in the backend and adding a UI toggle in the MUI. Automate the database migration process to simplify server deployment. Deploy the previously written fragmented packet fix to the physical FPGA stand to enable live hardware blocking demonstrations. Investigate the 250 Mbps queue overflow, document the maximum stable throughput, and finalize the customer handover documentation to complete the product transition.</p>
+<p><strong>Linked Planned Items:</strong></p>
+<p><em>User Stories:</em></p>
+<ul>
+<li><a href="https://github.com/SWP-47/traffic-processing-platform/issues/104">US-016: Byte Volume Counting</a> (Implement byte-volume counting and MUI toggle)</li>
+<li><a href="https://github.com/SWP-47/traffic-processing-platform/issues/105">US-017: Traffic Blocking / Dropping</a> (Deploy fragmented packet fix to physical FPGA stand)</li>
+</ul>
+<p><em>Supporting PBIs:</em></p>
+<ul>
+<li><strong>Byte-Volume Counting Backend &amp; API:</strong> Implement packet size aggregation in the TimescaleDB telemetry buckets and update the API endpoints to expose bytes/second.</li>
+<li><strong>MUI Byte/Packet Toggle:</strong> Add a UI toggle in the MUI dashboard to switch between "Packets per second" and "Bytes per second" views.</li>
+<li><strong>Deployment Automation:</strong> Update the deployment/startup script to automatically wait for database readiness and execute migration commands, removing the need for manual DB migrations.</li>
+<li><strong>FPGA Fragmented Packet Fix Deployment:</strong> Deploy the fix for fragmented packets during hardware blocking to the physical test stand and verify live blocking.</li>
+<li><strong>Throughput Limits &amp; Handover Finalization:</strong> Investigate the CN/CnSS queue overflow at &gt;200 Mbps. Update <code>docs/customer-handover.md</code> to explicitly state the maximum supported stable throughput and finalize all transition documentation for <code>MVP v3</code>.</li>
 </ul></div>
             </div>
         </div>

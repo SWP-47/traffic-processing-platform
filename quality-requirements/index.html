@@ -160,40 +160,46 @@
 
 <h1 id="quality-requirements">Quality Requirements<a class="headerlink" href="#quality-requirements" title="Permanent link">&para;</a></h1>
 <p>This document defines the architectural quality requirements for the Traffic Processing Platform and preserves the maintained Assignment 4 quality gates for later work.</p>
-<p><em>Last updated: June 27, 2026</em></p>
+<p><em>Last updated: July 12, 2026</em></p>
 <hr />
 <h2 id="qr-001-cnss-health-api-responsiveness">QR-001: CnSS health API responsiveness<a class="headerlink" href="#qr-001-cnss-health-api-responsiveness" title="Permanent link">&para;</a></h2>
 <p><strong>ISO/IEC 25010 sub-characteristic:</strong> Time behaviour</p>
-<p><strong>Scenario:</strong> When a monitoring client requests <code>/api/v1/health</code> under a normal production-like load, the CnSS shall respond with <code>200 OK</code>, valid health metrics, and a <code>components.cnss</code> value of <code>active</code> within 1 second.</p>
+<p><strong>Scenario:</strong> When a monitoring client requests <code>GET /api/v1/health</code> with a valid Bearer token under a normal production-like load, the CnSS shall respond with <code>200 OK</code>, a <code>status</code> of <code>"healthy"</code>, a <code>components.cnss</code> value of <code>"active"</code>, and a <code>timestamp</code> field within 1 second.</p>
 <p><strong>Why this matters:</strong> Operators and automated monitors rely on fast, reliable health checks to detect service degradation quickly. A slow or inconsistent health endpoint delays incident response and obscures whether the traffic monitoring system is available.</p>
 <p><strong>Linked quality requirement tests:</strong> <a href="../quality-requirement-tests/#qrt-001-cnss-health-api-responsiveness">QRT-001</a></p>
 <hr />
 <h2 id="qr-002-cnss-access-control-confidentiality">QR-002: CnSS access control confidentiality<a class="headerlink" href="#qr-002-cnss-access-control-confidentiality" title="Permanent link">&para;</a></h2>
 <p><strong>ISO/IEC 25010 sub-characteristic:</strong> Confidentiality</p>
-<p><strong>Scenario:</strong> When a user presents a JWT access token for <code>GET /api/v1/channels</code> or an authenticated WebSocket connection, the CnSS shall validate the token, enforce channel scope from the token, and return only authorized channel listings or fail with <code>401 Unauthorized</code> / <code>403 Forbidden</code>.</p>
-<p><strong>Why this matters:</strong> The platform carries channel-specific telemetry and network monitoring data. Unauthorized access would expose sensitive infrastructure details and violate operator trust.</p>
+<p><strong>Scenario:</strong> When a user presents a JWT access token for authenticated REST endpoints (<code>GET /api/v1/channels</code>, <code>GET /api/v1/channel/{channel_id}/status</code>, <code>GET /api/v1/channel/{channel_id}/history</code>) or establishes a WebSocket connection, the CnSS shall:
+- Validate the JWT signature and expiration (HS256).
+- Check the token's <code>jti</code> against the <code>jwt:revoked</code> Redis set on every request.
+- Enforce channel scope from the token's <code>scope</code> claim (<code>viewer</code> role is restricted to listed channels; <code>admin</code> has unrestricted access).
+- Return <code>401 Unauthorized</code> for invalid, expired, or revoked tokens, or <code>403 Forbidden</code> for valid tokens lacking scope.
+- Close WebSocket connections with code <code>4001</code> (invalid token) or <code>4003</code> (channel forbidden) on scope violations.</p>
+<p><strong>Why this matters:</strong> The platform carries channel-specific telemetry and network monitoring data. Unauthorized access would expose sensitive infrastructure details and violate operator trust. Immediate token revocation (via <code>jwt:revoked</code> Redis set) is critical for responding to compromised sessions.</p>
 <p><strong>Linked quality requirement tests:</strong> <a href="../quality-requirement-tests/#qrt-002-jwt-scope-enforcement">QRT-002</a></p>
 <hr />
 <h2 id="qr-003-critical-module-testability-and-coverage">QR-003: Critical module testability and coverage<a class="headerlink" href="#qr-003-critical-module-testability-and-coverage" title="Permanent link">&para;</a></h2>
 <p><strong>ISO/IEC 25010 sub-characteristic:</strong> Testability</p>
-<p><strong>Scenario:</strong> When a developer changes a critical backend module under the standard CI environment, the CnSS codebase shall be covered by automated tests and the backend test suite shall enforce at least 30% line coverage for the critical module surface.</p>
-<p><strong>Why this matters:</strong> Critical backend components such as authentication, telemetry ingestion, and channel state management must be directly verifiable so defects are detected before merge and deployment.</p>
+<p><strong>Scenario:</strong> When a developer changes a critical backend module under the standard CI environment, the CnSS codebase (<code>core/</code> and <code>services/</code> packages) shall be covered by automated tests and the backend test suite shall enforce at least 30% line coverage.</p>
+<p><strong>Why this matters:</strong> Critical backend components such as authentication, telemetry ingestion, sequence tracking, WebSocket subscription lifecycle, and Reporting Worker aggregation must be directly verifiable so defects are detected before merge and deployment. The 253-test suite spanning unit and integration tiers provides layered verification of the system.</p>
 <p><strong>Linked quality requirement tests:</strong> <a href="../quality-requirement-tests/#qrt-003-critical-module-unit-coverage">QRT-003</a></p>
+<hr />
 <h2 id="architectural-decision-records-adrs">Architectural Decision Records (ADRs)<a class="headerlink" href="#architectural-decision-records-adrs" title="Permanent link">&para;</a></h2>
 <p>Each quality requirement is supported by specific architectural decisions documented in the ADRs below:</p>
 <h3 id="qr-001-cnss-health-api-responsiveness-time-behaviour">QR-001: CnSS Health API Responsiveness (Time Behaviour)<a class="headerlink" href="#qr-001-cnss-health-api-responsiveness-time-behaviour" title="Permanent link">&para;</a></h3>
 <p><strong>Related ADRs:</strong>
 - <a href="../architecture/adr/adr-001-hardware-software-separation/">ADR-001: Hardware-Software Separation</a> — FPGA provides wire-speed packet forwarding, ensuring monitoring doesn't introduce latency
-- <a href="../architecture/adr/adr-002-ephemeral-redis-buffering/">ADR-002: Ephemeral Redis Buffering</a> — Redis in-memory buffering minimizes ingestion latency and maximizes throughput
-- <a href="../architecture/adr/adr-003-microservice-decomposition/">ADR-003: Microservice Decomposition</a> — Independent scaling allows optimization of bottleneck components</p>
-<h3 id="qr-002-fault-tolerance">QR-002: Fault Tolerance<a class="headerlink" href="#qr-002-fault-tolerance" title="Permanent link">&para;</a></h3>
+- <a href="../architecture/adr/adr-002-ephemeral-redis-buffering/">ADR-002: Ephemeral Redis Buffering</a> — Redis in-memory buffering minimizes ingestion latency; health endpoint reads directly from <code>channels</code> table (no heavy aggregation queries)
+- <a href="../architecture/adr/adr-003-microservice-decomposition/">ADR-003: Microservice Decomposition</a> — Independent REST API service container allows optimization without affecting other workers</p>
+<h3 id="qr-002-cnss-access-control-confidentiality_1">QR-002: CnSS Access Control Confidentiality<a class="headerlink" href="#qr-002-cnss-access-control-confidentiality_1" title="Permanent link">&para;</a></h3>
 <p><strong>Related ADRs:</strong>
-- <a href="../architecture/adr/adr-001-hardware-software-separation/">ADR-001: Hardware-Software Separation</a> — Complete fault isolation between data plane (FPGA) and control plane (software)
-- <a href="../architecture/adr/adr-002-ephemeral-redis-buffering/">ADR-002: Ephemeral Redis Buffering</a> — Capped buffers prevent OOM crashes; graceful degradation on Redis failure
-- <a href="../architecture/adr/adr-003-microservice-decomposition/">ADR-003: Microservice Decomposition</a> — Fault isolation between microservices; Docker restart policy ensures automatic recovery</p>
+- <a href="../architecture/adr/adr-001-hardware-software-separation/">ADR-001: Hardware-Software Separation</a> — Complete fault isolation between data plane (FPGA) and control plane (software); monitoring does not affect core forwarding
+- <a href="../architecture/adr/adr-002-ephemeral-redis-buffering/">ADR-002: Ephemeral Redis Buffering</a> — <code>jwt:revoked</code> set stored in Redis enables sub-millisecond token revocation checks on every request
+- <a href="../architecture/adr/adr-003-microservice-decomposition/">ADR-003: Microservice Decomposition</a> — Auth middleware applied consistently across the REST API service; WebSocket service enforces independent JWT validation at connection time</p>
 <h3 id="qr-003-critical-module-testability">QR-003: Critical Module Testability<a class="headerlink" href="#qr-003-critical-module-testability" title="Permanent link">&para;</a></h3>
 <p><strong>Related ADRs:</strong>
-- <a href="../architecture/adr/adr-003-microservice-decomposition/">ADR-003: Microservice Decomposition</a> — Each microservice tested independently with mocked dependencies; ≥30% coverage enforced per critical module</p>
+- <a href="../architecture/adr/adr-003-microservice-decomposition/">ADR-003: Microservice Decomposition</a> — Each microservice tested independently with mocked or real dependencies; ≥30% coverage enforced against <code>core</code> and <code>services</code> packages via <code>--cov-fail-under=30</code> gate</p>
 <hr />
 <h2 id="adr-index">ADR Index<a class="headerlink" href="#adr-index" title="Permanent link">&para;</a></h2>
 <table>

@@ -196,6 +196,16 @@ As a network administrator, I want to quickly and accurately count the numeric v
 <li><strong>Resulting PBIs/Issues:</strong></li>
 <li>Prepare dedicated high-traffic test tabs (Speedtest, Wikipedia, online radio/TV) for future UAT sessions to generate meaningful packet rates.</li>
 </ul>
+<h3 id="uat-001-execution-results-week-6">UAT-001 Execution Results (Week 6)<a class="headerlink" href="#uat-001-execution-results-week-6" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Execution Date:</strong> July 11, 2026</li>
+<li><strong>Result:</strong> Passed with major feedback</li>
+<li><strong>Observations:</strong> The customer tested the dashboard using an asymmetric TCP workload (online radio streaming). The MUI displayed nearly identical RX and TX <em>packet</em> counts, which was confusing because TCP streaming involves large incoming data packets and small outgoing ACK packets. The customer pointed out that packet counts are less globally useful for network analysis than data volume (bits/bytes per second).</li>
+<li><strong>Comments:</strong> "Displaying statistics in bits or bytes per second would be much more useful... If you store the packet header in the database, it's not that hard." The customer suggested aggregating the sum of packet sizes per bucket.</li>
+<li><strong>Resulting PBIs/Issues:</strong></li>
+<li>Implement byte-volume counting (sum of packet sizes) in the backend TimescaleDB telemetry buckets and update the API endpoints.</li>
+<li>Add a UI toggle in the MUI to switch between "Packets per second" and "Bytes per second" views. (Prioritized over remaining UI map features).</li>
+</ul>
 <hr />
 <h2 id="uat-002-a-retrospective-analysis-of-channel-activity">UAT-002: A retrospective analysis of channel activity<a class="headerlink" href="#uat-002-a-retrospective-analysis-of-channel-activity" title="Permanent link">&para;</a></h2>
 <p><strong>Scenario Status:</strong> Active</p>
@@ -293,6 +303,15 @@ As a network administrator, I want to quickly understand who is generating the m
 <li><strong>Comments:</strong> "I think one of the system components just got tired, it worked for a long time. Alright, let's just restart it, and it will most likely work." The customer was understanding but flagged this as a stability concern that must be addressed.</li>
 <li><strong>Resulting PBIs/Issues:</strong></li>
 <li><strong>[Critical]</strong> Investigate and fix CN/CnSS state corruption or crash when a network interface is physically disconnected and reconnected. The system must recover gracefully without requiring a manual restart.</li>
+</ul>
+<h3 id="uat-003-execution-results-week-6">UAT-003 Execution Results (Week 6)<a class="headerlink" href="#uat-003-execution-results-week-6" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Execution Date:</strong> July 11, 2026</li>
+<li><strong>Result:</strong> Passed with minor feedback</li>
+<li><strong>Observations:</strong> The team demonstrated the first version of the detailed host statistics page. It successfully displayed packet transfer statistics, a historical graph, and destination addresses for a specific host.</li>
+<li><strong>Comments:</strong> "Great. So the local address and the address it sends data to." The customer approved the basic layout but noted it currently only shows packet counts, tying back to the need for byte-volume counting discussed in UAT-001.</li>
+<li><strong>Resulting PBIs/Issues:</strong></li>
+<li>Update the detailed host statistics page to support and display the new byte-volume counting metric once the backend feature is implemented.</li>
 </ul>
 <hr />
 <h2 id="uat-004-overview-of-the-list-of-active-network-hosts">UAT-004: Overview of the list of active network hosts<a class="headerlink" href="#uat-004-overview-of-the-list-of-active-network-hosts" title="Permanent link">&para;</a></h2>
@@ -406,6 +425,15 @@ As a network administrator, I want to physically stop unwanted traffic and make 
 <li><strong>Resulting PBIs/Issues:</strong></li>
 <li>Fix hardware button debounce (contact bounce) on Key1 to prevent multiple unintended state toggles.</li>
 <li>Expand blocking beyond the single hardcoded IP to support configurable per-host or per-channel blocking rules.</li>
+</ul>
+<h3 id="uat-005-execution-results-week-6">UAT-005 Execution Results (Week 6)<a class="headerlink" href="#uat-005-execution-results-week-6" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Execution Date:</strong> July 11, 2026</li>
+<li><strong>Result:</strong> Not Executed / Deferred</li>
+<li><strong>Observations:</strong> The team reported that the critical stability issue from Week 5 (system crash/hang when physically disconnecting and reconnecting cables) was successfully resolved. The physical stand now handles cable reconnects correctly. However, a known bug causing fragmented packets during hardware blocking was fixed in the codebase but had not yet been deployed to the physical FPGA stand. Therefore, live hardware blocking was intentionally not demonstrated to avoid showing broken behavior.</li>
+<li><strong>Comments:</strong> "The fix is already written, but it hasn't been deployed to the stand yet, so the hardware blocking function won't be demonstrated today."</li>
+<li><strong>Resulting PBIs/Issues:</strong></li>
+<li>Deploy the fragmented packet fix to the physical FPGA stand and verify hardware blocking live in Week 7.</li>
 </ul></div>
             </div>
         </div>

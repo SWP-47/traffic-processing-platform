@@ -1,4 +1,5 @@
 module sender (
+    input                           rst_n,
     input                           e_txc,
     output                          e_gtxc,
     output reg                      e_txen,
@@ -12,6 +13,18 @@ module sender (
     input[7:0]                      txd_to_send
 );
 
+logic isBlocked_r;
+always_ff @( posedge gtxc_to_send ) begin
+    if (rst_n) begin
+        if (isBlocked && txen_to_send)
+            isBlocked_r <= 1'b1;
+        else if (!txen_to_send)
+            isBlocked_r <= '0;
+    end else begin
+        isBlocked_r <= '0;
+    end
+end
+
 BUFG e1_tx_clk_buf
 (
     .I (gtxc_to_send),
@@ -21,7 +34,7 @@ BUFG e1_tx_clk_buf
 assign e_txer = '0;
 
 always_ff @( posedge e_gtxc ) begin
-    if (!isBlocked) begin
+    if (!isBlocked_r) begin
         e_txen <= txen_to_send;
         e_txd <= txd_to_send;
     end

@@ -38,6 +38,16 @@ As a network administrator, I want to quickly and accurately count the numeric v
 - **Resulting PBIs/Issues:**
   - Prepare dedicated high-traffic test tabs (Speedtest, Wikipedia, online radio/TV) for future UAT sessions to generate meaningful packet rates.
 
+### UAT-001 Execution Results (Week 6)
+
+- **Execution Date:** July 11, 2026
+- **Result:** Passed with major feedback
+- **Observations:** The customer tested the dashboard using an asymmetric TCP workload (online radio streaming). The MUI displayed nearly identical RX and TX *packet* counts, which was confusing because TCP streaming involves large incoming data packets and small outgoing ACK packets. The customer pointed out that packet counts are less globally useful for network analysis than data volume (bits/bytes per second).
+- **Comments:** "Displaying statistics in bits or bytes per second would be much more useful... If you store the packet header in the database, it's not that hard." The customer suggested aggregating the sum of packet sizes per bucket.
+- **Resulting PBIs/Issues:**
+  - Implement byte-volume counting (sum of packet sizes) in the backend TimescaleDB telemetry buckets and update the API endpoints.
+  - Add a UI toggle in the MUI to switch between "Packets per second" and "Bytes per second" views. (Prioritized over remaining UI map features).
+
 ---
 
 ## UAT-002: A retrospective analysis of channel activity
@@ -109,6 +119,15 @@ As a network administrator, I want to quickly understand who is generating the m
 - **Comments:** "I think one of the system components just got tired, it worked for a long time. Alright, let's just restart it, and it will most likely work." The customer was understanding but flagged this as a stability concern that must be addressed.
 - **Resulting PBIs/Issues:**
   - **[Critical]** Investigate and fix CN/CnSS state corruption or crash when a network interface is physically disconnected and reconnected. The system must recover gracefully without requiring a manual restart.
+
+### UAT-003 Execution Results (Week 6)
+
+- **Execution Date:** July 11, 2026
+- **Result:** Passed with minor feedback
+- **Observations:** The team demonstrated the first version of the detailed host statistics page. It successfully displayed packet transfer statistics, a historical graph, and destination addresses for a specific host.
+- **Comments:** "Great. So the local address and the address it sends data to." The customer approved the basic layout but noted it currently only shows packet counts, tying back to the need for byte-volume counting discussed in UAT-001.
+- **Resulting PBIs/Issues:**
+  - Update the detailed host statistics page to support and display the new byte-volume counting metric once the backend feature is implemented.
 
 ---
 
@@ -184,3 +203,12 @@ As a network administrator, I want to physically stop unwanted traffic and make 
 - **Resulting PBIs/Issues:**
   - Fix hardware button debounce (contact bounce) on Key1 to prevent multiple unintended state toggles.
   - Expand blocking beyond the single hardcoded IP to support configurable per-host or per-channel blocking rules.
+
+### UAT-005 Execution Results (Week 6)
+
+- **Execution Date:** July 11, 2026
+- **Result:** Not Executed / Deferred
+- **Observations:** The team reported that the critical stability issue from Week 5 (system crash/hang when physically disconnecting and reconnecting cables) was successfully resolved. The physical stand now handles cable reconnects correctly. However, a known bug causing fragmented packets during hardware blocking was fixed in the codebase but had not yet been deployed to the physical FPGA stand. Therefore, live hardware blocking was intentionally not demonstrated to avoid showing broken behavior.
+- **Comments:** "The fix is already written, but it hasn't been deployed to the stand yet, so the hardware blocking function won't be demonstrated today."
+- **Resulting PBIs/Issues:**
+  - Deploy the fragmented packet fix to the physical FPGA stand and verify hardware blocking live in Week 7.

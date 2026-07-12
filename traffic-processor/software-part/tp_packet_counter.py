@@ -6,7 +6,7 @@ import threading
 import time
 
 from dotenv import load_dotenv
-from scapy.all import IP, sniff, sendp, Ether, UDP
+from scapy.all import IP, sniff
 
 load_dotenv()
 

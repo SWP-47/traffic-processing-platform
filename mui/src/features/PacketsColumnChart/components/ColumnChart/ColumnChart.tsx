@@ -1,4 +1,4 @@
-import Column from "./components/Column/Column";
+import Column from "../Column/Column";
 import styles from "./ColumnChart.module.css";
 
 export interface ColumnData {

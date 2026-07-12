@@ -14,19 +14,29 @@ export interface TableData {
   columns: ColumnData[],
   data: (React.ReactNode)[][],
   loading?: boolean,
-  onSortChange?: (column: string) => void,
+  onSortChange?: (column: string, direction: 'asc' | 'desc') => void,
   onExpanding?: () => void,
   defaultSortColumn: string;
 }
 
 function TopTable({ columns, data, loading, onSortChange, onExpanding, defaultSortColumn }: TableData) {
-  const [soringColumn, setSortingColumn] = useState<string>(defaultSortColumn);
+  const [sortingColumn, setSortingColumn] = useState<string>(defaultSortColumn);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  const handleSortClick = (columnId: string) => {
+    if (columnId === sortingColumn) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortingColumn(columnId);
+      setSortDirection('desc'); 
+    }
+  };
 
   useEffect(() => {
-    if (!onSortChange || !soringColumn) return;
+    if (!onSortChange || !sortingColumn) return;
 
-    onSortChange(soringColumn);
-  }, [onSortChange, soringColumn])
+    onSortChange(sortingColumn, sortDirection);
+  }, [onSortChange, sortingColumn, sortDirection]);
 
   return (
     <div className={styles.table} style={{ '--column-count': columns.length } as React.CSSProperties}>
@@ -34,12 +44,20 @@ function TopTable({ columns, data, loading, onSortChange, onExpanding, defaultSo
         {columns.map((column, i) => (
           <div 
             key={i} 
-            className={`${styles.header_column} ${soringColumn == column.id ? styles.sorting : ''}`}
-            onClick={() => column.allowSorting && setSortingColumn(column.id)}
+            className={`${styles.header_column} ${sortingColumn === column.id ? styles.sorting : ''}`}
+            onClick={() => column.allowSorting && handleSortClick(column.id)}
           >
             <span className={styles.column_name}>{column.name}</span>
             {column.allowSorting && (
-              <img src={sortIcon} alt="Sort" className={styles.sort_icon} />
+              <img 
+                src={sortIcon} 
+                alt="Sort" 
+                className={styles.sort_icon} 
+                style={{
+                  transform: sortingColumn === column.id && sortDirection === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s ease'
+                }}
+              />
             )}
           </div>
         ))}
@@ -62,7 +80,7 @@ function TopTable({ columns, data, loading, onSortChange, onExpanding, defaultSo
         <div className={`${styles.row} ${styles.expand_row}`} onClick={onExpanding}>
             <div className={styles.cell}>
               <span>View all entries</span>
-              <img src={expandIcon} />
+              <img src={expandIcon} alt="Expand" />
             </div>
         </div>
       </div>

@@ -1,5 +1,4 @@
-import ColumnChart from "@/components/ColumnChart";
-import { useTelemetry } from "@/hooks/useTelemetry";
+import ColumnChart from "./components/ColumnChart/ColumnChart";
 import styles from './PacketsColumnChart.module.css';
 import numerical_mode from '@/assets/numerical_mode.svg';
 import bars_mode from '@/assets/bars_mode.svg';
@@ -7,12 +6,16 @@ import arrow_down from '@/assets/arrow_down.svg';
 import arrow_up from '@/assets/arrow_up.svg';
 import { useState } from "react";
 
-function PacketsColumnChart() {
+export interface PacketsColumnChartData {
+  packetsIn: number
+  packetsOut: number
+}
+
+function PacketsColumnChart({
+  packetsIn,
+  packetsOut
+}: PacketsColumnChartData) {
   const [mode, setMode] = useState<'numerical' | 'bars'>('numerical');
-  const telemetry = useTelemetry();
-  
-  const packets_in = telemetry?.metrics?.direction_in?.packets_per_sec;
-  const packets_out = telemetry?.metrics?.direction_out?.packets_per_sec;
 
   return (
     <div className={`card ${styles.chart}`}>
@@ -37,12 +40,12 @@ function PacketsColumnChart() {
           <ColumnChart
             data={[
               {
-                value: packets_in ?? 0,
+                value: packetsIn ?? 0,
                 formatter: (value) => value.toFixed(0) + ' pkt/s',
                 label: 'received'
               },
               {
-                value: packets_out ?? 0,
+                value: packetsOut ?? 0,
                 formatter: (value) => value.toFixed(0) + ' pkt/s',
                 label: 'sent'
               }
@@ -52,7 +55,7 @@ function PacketsColumnChart() {
         <div className={`${styles.view} ${mode === 'numerical' ? styles.view_active : ''}`}>
           <div className={styles.numerical}>
             <div className={styles.data}>
-              <p className={styles.value}>{(packets_in ?? 0).toFixed(0)}</p>
+              <p className={styles.value}>{(packetsIn ?? 0).toFixed(0)}</p>
               <div className={styles.label}>
                 <img src={arrow_down} className={styles.arrow} />
                 <div className={styles.text}>
@@ -62,7 +65,7 @@ function PacketsColumnChart() {
               </div>
             </div>
             <div className={styles.data}>
-              <p className={styles.value}>{(packets_out ?? 0).toFixed(0)}</p>
+              <p className={styles.value}>{(packetsOut ?? 0).toFixed(0)}</p>
               <div className={styles.label}>
                 <img src={arrow_up} className={styles.arrow} />
                 <div className={styles.text}>

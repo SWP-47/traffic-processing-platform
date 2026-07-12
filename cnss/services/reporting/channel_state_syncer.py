@@ -27,6 +27,7 @@ import asyncpg
 
 from core.config import settings
 from core.database import get_db_pool
+from core.db import db_deactivate_timed_out_channels, db_upsert_channel
 from core.exceptions import DatabaseError, RedisError
 from core.redis.client import get_lua_script, get_redis_client
 
@@ -234,29 +235,7 @@ class ChannelStateSyncer:
             # --- Step 4: Database Update (UPSERT) ---
             # Auto-registers the channel if it doesn't exist yet (first time seen in Redis).
             # If it already exists, accumulates drops and updates activity state.
-            # - dropped = dropped + $1 (accumulate drops, even if 0)
-            # - is_active = $2 (channel is active in Redis)
-            # - last_activity_at = $4 (exact timestamp from Redis, avoiding NOW() drift)
-            #   Only update if timestamp is valid; otherwise preserve existing value.
-            async with self._db_pool.acquire() as conn:
-                await conn.execute(
-                    """
-                    INSERT INTO channels (channel_id, is_active, dropped, last_activity_at)
-                    VALUES ($3, $2, $1, $4)
-                    ON CONFLICT (channel_id) DO UPDATE SET
-                        dropped = channels.dropped + EXCLUDED.dropped,
-                        is_active = EXCLUDED.is_active,
-                        last_activity_at = CASE
-                            WHEN EXCLUDED.last_activity_at IS NOT NULL
-                            THEN EXCLUDED.last_activity_at
-                            ELSE channels.last_activity_at
-                        END
-                    """,
-                    dropped_delta,
-                    True,
-                    channel_id,
-                    last_activity_at,
-                )
+            await db_upsert_channel(channel_id, True, dropped_delta, last_activity_at, pool=self._db_pool)
 
             logger.info(
                 f"[{channel_id}] Synced: dropped_delta={dropped_delta}, " f"last_activity_at={last_activity_at}."
@@ -283,30 +262,8 @@ class ChannelStateSyncer:
         :return: The number of channels deactivated.
         """
         logger.debug("Executing mass timeout deactivation query...")
-
-        # SQL Query:
-        # - Only update rows where is_active = TRUE (minimize unnecessary writes)
-        # - Deactivate if last_activity_at is older than activity_timeout_ms
-        # - Preserve last_activity_at (do not set to NULL or NOW())
-        query = """
-            UPDATE channels
-            SET is_active = FALSE
-            WHERE is_active = TRUE
-              AND last_activity_at < NOW() - ($1 * INTERVAL '1 millisecond')
-        """
-
         try:
-            async with self._db_pool.acquire() as conn:
-                # asyncpg's execute() returns a status string (e.g., 'UPDATE 5')
-                status = await conn.execute(query, settings.activity_timeout_ms)
-
-            # Parse the number of affected rows from the status string
-            if status:
-                updated_count = int(status.split()[-1])
-                return updated_count
-            else:
-                logger.debug("Timeout deactivation query executed with no status returned.")
-                return 0
+            return await db_deactivate_timed_out_channels(settings.activity_timeout_ms, pool=self._db_pool)
 
         except asyncpg.PostgresError as e:
             logger.error(f"Database error during timeout deactivation: {e}", exc_info=True)

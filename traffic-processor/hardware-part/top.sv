@@ -126,6 +126,7 @@ logic [7:0] in_rxd_read;
 
 
 receiver receiver_inst_in_e4 (
+    .rst_n     (  rst_n         ),
     .e_rxc     (  e4_rxc        ),
     .e_rxdv    (  e4_rxdv       ),
     .e_rxer    (  e4_rxer       ),
@@ -143,6 +144,7 @@ logic [7:0] out_rxd_read;
 
 
 receiver receiver_inst_out_e1 (
+    .rst_n     (  rst_n          ),
     .e_rxc     (  e1_rxc         ),
     .e_rxdv    (  e1_rxdv        ),
     .e_rxer    (  e1_rxer        ),
@@ -160,8 +162,8 @@ logic isBlocked_out;
 
 traffic_monitor traffic_monitor_out_e1 (
     .rxc_read  (  out_rxc_read   ),
-    .rxdv_read (  out_rxdv_read  ),
-    .rxd_read  (  out_rxd_read   ), 
+    .rxdv_read (  e1_rxdv        ),
+    .rxd_read  (  e1_rxd         ), 
     
     .block_but (  block_but      ),
     
@@ -173,8 +175,8 @@ logic isBlocked_in;
 
 traffic_monitor traffic_monitor_in_e1 (
     .rxc_read  (  in_rxc_read   ),
-    .rxdv_read (  in_rxdv_read  ),
-    .rxd_read  (  in_rxd_read   ), 
+    .rxdv_read (  e4_rxdv       ),
+    .rxd_read  (  e4_rxd        ), 
     
     .block_but (  block_but     ),
     
@@ -185,6 +187,7 @@ traffic_monitor traffic_monitor_in_e1 (
 
 
 sender sender_e1 (
+    .rst_n        (  rst_n          ),
     .e_txc        (  e1_txc         ),
     .e_gtxc       (  e1_gtxc        ),
     .e_txen       (  e1_txen        ),
@@ -200,6 +203,7 @@ sender sender_e1 (
 
 
 sender sender_e2 (
+    .rst_n        (  rst_n          ),
     .e_txc        (  e2_txc         ),
     .e_gtxc       (  e2_gtxc        ),
     .e_txen       (  e2_txen        ),
@@ -215,6 +219,7 @@ sender sender_e2 (
 
 
 sender sender_e3 (
+    .rst_n        (  rst_n          ),
     .e_txc        (  e3_txc         ),
     .e_gtxc       (  e3_gtxc        ),
     .e_txen       (  e3_txen        ),
@@ -230,6 +235,7 @@ sender sender_e3 (
 
 
 sender sender_e4 (
+    .rst_n        (  rst_n          ),
     .e_txc        (  e4_txc         ),
     .e_gtxc       (  e4_gtxc        ),
     .e_txen       (  e4_txen        ),
@@ -243,6 +249,13 @@ sender sender_e4 (
     .txd_to_send  (  out_rxd_read   )
 );
 
+
+ila_0 ila_0_inst (
+    .clk (out_rxc_read),
+    .probe0(e1_rxd),
+    .probe1(out_rxd_read),
+    .probe2(isBlocked_out)
+);
 // -------------------------------------------------------------------------
 //  wire [7:0]    probe_out0;
 //  wire [7:0]    probe_out1;

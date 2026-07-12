@@ -11,7 +11,11 @@ from fastapi import APIRouter, Cookie, Response
 
 from core.config import settings
 from core.contracts.auth import RefreshTokenPayload
-from core.database import get_db_pool
+from core.db import (
+    db_fetch_all_channels,
+    db_fetch_user_by_username,
+    db_fetch_user_scopes,
+)
 from core.exceptions import AuthError, InvalidCredentialsError
 from core.redis.client import get_redis_client
 from core.security.jwt import (
@@ -63,15 +67,9 @@ async def login(
     Raises InvalidCredentialsError (401) if username or password is incorrect.
     The error message is intentionally generic to prevent user enumeration.
     """
-    db_pool = get_db_pool()
-
     # --- Step 1: Fetch user by username ---
     # Query only the fields needed for authentication to minimize data transfer.
-    async with db_pool.acquire() as conn:
-        user_row = await conn.fetchrow(
-            "SELECT id, username, password_hash, role FROM users WHERE username = $1",
-            request.username,
-        )
+    user_row = await db_fetch_user_by_username(request.username)
 
     # User not found — raise invalid credentials (do not reveal account existence).
     if user_row is None:
@@ -89,17 +87,11 @@ async def login(
     # Admins bypass scope restrictions entirely (Architecture §5.1).
     # Their scope list remains empty, and verify_channel_access() grants unrestricted access.
     scope: list[str] = []
-    async with db_pool.acquire() as conn:
-        if role == "viewer":
-            scope_rows = await conn.fetch(
-                "SELECT channel_id FROM user_channel_scopes WHERE user_id = $1",
-                user_row["id"],
-            )
-            scope = [str(row["channel_id"]) for row in scope_rows]
-        elif role == "admin":
-            # Fetch all registered channels for admin
-            scope_rows = await conn.fetch("SELECT channel_id FROM channels")
-            scope = [str(row["channel_id"]) for row in scope_rows]
+    if role == "viewer":
+        scope = await db_fetch_user_scopes(user_row["id"])
+    elif role == "admin":
+        # Fetch all registered channels for admin
+        scope = await db_fetch_all_channels()
 
     # --- Step 4: Generate JWT tokens ---
     # Access token: short-lived (24h), stored in MUI memory (Architecture §5.3).

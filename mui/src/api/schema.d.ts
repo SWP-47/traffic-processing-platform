@@ -313,18 +313,20 @@ export interface paths {
         /**
          * Historical Telemetry Data (Line Chart)
          * @description Lazy-loads historical telemetry data for the Channel Line Chart.
-         *     CnSS dynamically calculates the optimal `time_bucket` interval (approx 1400 points).
+         *     CnSS dynamically calculates the optimal `time_bucket` interval (approx 1400 points)
+         *     based on the requested `period_sec` to ensure smooth chart rendering.
          */
         get: {
             parameters: {
                 query: {
-                    /** @description Duration of the time window. */
-                    period: "1h" | "24h" | "7d" | "30d";
-                    /** @description Start of the time range (ISO 8601). If omitted, defaults to `now - period`. */
+                    /** @description Duration of the time window in seconds (e.g., 3600 for 1 hour, 86400 for 24h). */
+                    period_sec: number;
+                    /** @description Start of the time range (ISO 8601). If omitted, defaults to `now - period_sec`. */
                     start_time?: string;
                 };
                 header?: never;
                 path: {
+                    /** @description Identifier of the channel to query. */
                     channel_id: string;
                 };
                 cookie?: never;
@@ -387,15 +389,20 @@ export interface paths {
         /**
          * Historical Host Rx/Tx Data
          * @description Lazy-loads historical Rx/Tx rate data for a specific Host Line Chart.
+         *     CnSS dynamically calculates the optimal `time_bucket` interval
+         *     based on the requested `period_sec` to ensure smooth chart rendering.
          */
         get: {
             parameters: {
                 query: {
-                    period: "1h" | "24h" | "7d" | "30d";
+                    /** @description Duration of the time window in seconds. */
+                    period_sec: number;
+                    /** @description Start of the time range (ISO 8601). If omitted, defaults to `now - period_sec`. */
                     start_time?: string;
                 };
                 header?: never;
                 path: {
+                    /** @description Identifier of the channel to query. */
                     channel_id: string;
                     /** @description IP address of the host (IPv4/IPv6). */
                     host_ip: string;
@@ -563,41 +570,81 @@ export interface components {
             total: number;
         };
         ChannelHistoryResponse: {
+            /** @description Identifier of the queried channel. */
             channel_id: string;
-            period: string;
-            /** Format: date-time */
+            /** @description Requested period duration in seconds. */
+            period_sec: number;
+            /**
+             * Format: date-time
+             * @description Actual start of the returned time range.
+             */
             start_time: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Actual end of the returned time range.
+             */
             end_time: string;
+            /** @description The calculated time bucket size in seconds. */
             interval_sec: number;
+            /** @description Array of aggregated data points. */
             points: components["schemas"]["HistoryPoint"][];
         };
         HistoryPoint: {
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description ISO 8601 timestamp of the data point.
+             */
             timestamp: string;
-            /** Format: float */
+            /**
+             * Format: float
+             * @description Aggregated incoming packet rate.
+             */
             packets_in_per_sec: number;
-            /** Format: float */
+            /**
+             * Format: float
+             * @description Aggregated outgoing packet rate.
+             */
             packets_out_per_sec: number;
+            /** @description Channel activity status at this specific timestamp (Channel History only). */
             is_active: boolean;
         };
         HostHistoryResponse: {
+            /** @description Identifier of the queried channel. */
             channel_id: string;
+            /** @description IP address of the queried host. */
             host_ip: string;
-            period: string;
-            /** Format: date-time */
+            /** @description Requested period duration in seconds. */
+            period_sec: number;
+            /**
+             * Format: date-time
+             * @description Actual start of the returned time range.
+             */
             start_time: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Actual end of the returned time range.
+             */
             end_time: string;
+            /** @description The calculated time bucket size in seconds. */
             interval_sec: number;
+            /** @description Array of aggregated data points. */
             points: components["schemas"]["HostHistoryPoint"][];
         };
         HostHistoryPoint: {
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description ISO 8601 timestamp of the data point.
+             */
             timestamp: string;
-            /** Format: float */
+            /**
+             * Format: float
+             * @description Aggregated incoming packet rate for the host.
+             */
             packets_in_per_sec: number;
-            /** Format: float */
+            /**
+             * Format: float
+             * @description Aggregated outgoing packet rate for the host.
+             */
             packets_out_per_sec: number;
         };
         ErrorResponse: {
@@ -669,49 +716,62 @@ export interface components {
         TelemetryParams: {
             /**
              * Format: float
-             * @description Aggregation time window in seconds.
+             * @description Aggregation time window in seconds. Defines the rolling window for `packets_per_sec` calculation.
              */
             window_sec: number;
         };
         HostsTableParams: {
-            /** @enum {string} */
-            period: "5m" | "15m" | "1h" | "24h" | "7d" | "30d";
-            /** @enum {string|null} */
+            /** @description Aggregation time window in seconds (e.g., 300 for 5m, 900 for 15m). */
+            period_sec: number;
+            /**
+             * @description Filter by network location (LAN or WAN), or null for all.
+             * @enum {string|null}
+             */
             location: "LAN" | "WAN" | null;
+            /** @description Exact IP address match filter, or null. */
             ip: string | null;
             /** @enum {string} */
             sort_by: "location" | "ip" | "unique_destinations" | "tx" | "rx" | "last_activity";
             /** @enum {string} */
             sort_order: "asc" | "desc";
+            /** @description Page size. */
             limit: number;
+            /** @description Pagination offset. */
             offset: number;
         };
         HostDetailsParams: {
+            /** @description IP address of the specific host. */
             host_ip: string;
-            /** @enum {string} */
-            period: "5m" | "15m" | "1h" | "24h" | "7d" | "30d";
+            /** @description Aggregation window in seconds for real-time rate calculation. */
+            period_sec?: number;
         };
         HostTopDestinationsParams: {
+            /** @description IP address of the specific host. */
             host_ip: string;
+            /** @description Aggregation time window in seconds. */
+            period_sec?: number;
             /** @enum {string} */
-            period: "5m" | "15m" | "1h" | "24h" | "7d" | "30d";
+            sort_by?: "ip" | "location" | "received" | "last_seen";
             /** @enum {string} */
-            sort_by: "ip" | "location" | "received" | "last_seen";
-            /** @enum {string} */
-            sort_order: "asc" | "desc";
-            limit: number;
-            offset: number;
+            sort_order?: "asc" | "desc";
+            /** @description Page size. */
+            limit?: number;
+            /** @description Pagination offset. */
+            offset?: number;
         };
         HostTopPortsParams: {
+            /** @description IP address of the specific host. */
             host_ip: string;
+            /** @description Aggregation time window in seconds. */
+            period_sec?: number;
             /** @enum {string} */
-            period: "5m" | "15m" | "1h" | "24h" | "7d" | "30d";
+            sort_by?: "port" | "protocol" | "pps";
             /** @enum {string} */
-            sort_by: "port" | "protocol" | "pps";
-            /** @enum {string} */
-            sort_order: "asc" | "desc";
-            limit: number;
-            offset: number;
+            sort_order?: "asc" | "desc";
+            /** @description Page size. */
+            limit?: number;
+            /** @description Pagination offset. */
+            offset?: number;
         };
         TelemetryUpdate: {
             /** @enum {string} */

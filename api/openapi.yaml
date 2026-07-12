@@ -25,7 +25,10 @@ info:
       - `4004` (channel_not_found): Channel or Target does not exist.
       - `1011` (internal_error): Unexpected server error.
     - **Unified Subscription Engine**: CnSS DOES NOT push data automatically. MUI MUST send a `subscribe` control message to start receiving updates. Initial snapshots are pushed immediately upon subscription.
-  version: 2.0.1
+
+    ## Time Parameters Note
+    To ensure scalability and avoid the limitations of hardcoded Enums, all time-based parameters (e.g., `window_sec`, `period_sec`) are strictly defined in **seconds** as numeric values. This allows the frontend to request custom aggregation windows (e.g., 45 minutes, 3 hours) without requiring backend code changes or schema updates.
+  version: 3.0.0
 
 servers:
   - url: https://{{cnss_host}}
@@ -189,7 +192,8 @@ paths:
       summary: Historical Telemetry Data (Line Chart)
       description: |
         Lazy-loads historical telemetry data for the Channel Line Chart. 
-        CnSS dynamically calculates the optimal `time_bucket` interval (approx 1400 points).
+        CnSS dynamically calculates the optimal `time_bucket` interval (approx 1400 points) 
+        based on the requested `period_sec` to ensure smooth chart rendering.
       tags: [History]
       security:
         - bearerAuth: []
@@ -199,20 +203,21 @@ paths:
           required: true
           schema:
             type: string
+          description: Identifier of the channel to query.
         - in: query
-          name: period
+          name: period_sec
           required: true
           schema:
-            type: string
-            enum: ["1h", "24h", "7d", "30d"]
-          description: Duration of the time window.
+            type: integer
+            minimum: 1
+          description: Duration of the time window in seconds (e.g., 3600 for 1 hour, 86400 for 24h).
         - in: query
           name: start_time
           required: false
           schema:
             type: string
             format: date-time
-          description: Start of the time range (ISO 8601). If omitted, defaults to `now - period`.
+          description: Start of the time range (ISO 8601). If omitted, defaults to `now - period_sec`.
       responses:
         '200':
           description: Aggregated historical points
@@ -242,7 +247,10 @@ paths:
   /api/v1/channel/{channel_id}/hosts/{host_ip}/history:
     get:
       summary: Historical Host Rx/Tx Data
-      description: Lazy-loads historical Rx/Tx rate data for a specific Host Line Chart.
+      description: |
+        Lazy-loads historical Rx/Tx rate data for a specific Host Line Chart.
+        CnSS dynamically calculates the optimal `time_bucket` interval 
+        based on the requested `period_sec` to ensure smooth chart rendering.
       tags: [History]
       security:
         - bearerAuth: []
@@ -252,6 +260,7 @@ paths:
           required: true
           schema:
             type: string
+          description: Identifier of the channel to query.
         - in: path
           name: host_ip
           required: true
@@ -259,17 +268,19 @@ paths:
             type: string
           description: IP address of the host (IPv4/IPv6).
         - in: query
-          name: period
+          name: period_sec
           required: true
           schema:
-            type: string
-            enum: ["1h", "24h", "7d", "30d"]
+            type: integer
+            minimum: 1
+          description: Duration of the time window in seconds.
         - in: query
           name: start_time
           required: false
           schema:
             type: string
             format: date-time
+          description: Start of the time range (ISO 8601). If omitted, defaults to `now - period_sec`.
       responses:
         '200':
           description: Aggregated host historical points
@@ -448,20 +459,26 @@ components:
       properties:
         channel_id:
           type: string
-        period:
-          type: string
+          description: Identifier of the queried channel.
+        period_sec:
+          type: integer
+          description: Requested period duration in seconds.
         start_time:
           type: string
           format: date-time
+          description: Actual start of the returned time range.
         end_time:
           type: string
           format: date-time
+          description: Actual end of the returned time range.
         interval_sec:
           type: integer
+          description: The calculated time bucket size in seconds.
         points:
           type: array
           items:
             $ref: '#/components/schemas/HistoryPoint'
+          description: Array of aggregated data points.
 
     HistoryPoint:
       type: object
@@ -469,36 +486,47 @@ components:
         timestamp:
           type: string
           format: date-time
+          description: ISO 8601 timestamp of the data point.
         packets_in_per_sec:
           type: number
           format: float
+          description: Aggregated incoming packet rate.
         packets_out_per_sec:
           type: number
           format: float
+          description: Aggregated outgoing packet rate.
         is_active:
           type: boolean
+          description: Channel activity status at this specific timestamp (Channel History only).
 
     HostHistoryResponse:
       type: object
       properties:
         channel_id:
           type: string
+          description: Identifier of the queried channel.
         host_ip:
           type: string
-        period:
-          type: string
+          description: IP address of the queried host.
+        period_sec:
+          type: integer
+          description: Requested period duration in seconds.
         start_time:
           type: string
           format: date-time
+          description: Actual start of the returned time range.
         end_time:
           type: string
           format: date-time
+          description: Actual end of the returned time range.
         interval_sec:
           type: integer
+          description: The calculated time bucket size in seconds.
         points:
           type: array
           items:
             $ref: '#/components/schemas/HostHistoryPoint'
+          description: Array of aggregated data points.
 
     HostHistoryPoint:
       type: object
@@ -506,12 +534,15 @@ components:
         timestamp:
           type: string
           format: date-time
+          description: ISO 8601 timestamp of the data point.
         packets_in_per_sec:
           type: number
           format: float
+          description: Aggregated incoming packet rate for the host.
         packets_out_per_sec:
           type: number
           format: float
+          description: Aggregated outgoing packet rate for the host.
 
     # --- Error Schema ---
     ErrorResponse:
@@ -608,21 +639,23 @@ components:
         window_sec:
           type: number
           format: float
-          description: Aggregation time window in seconds.
+          description: Aggregation time window in seconds. Defines the rolling window for `packets_per_sec` calculation.
 
     HostsTableParams:
       type: object
       properties:
-        period:
-          type: string
-          enum: ["5m", "15m", "1h", "24h", "7d", "30d"]
+        period_sec:
+          type: integer
+          description: Aggregation time window in seconds (e.g., 300 for 5m, 900 for 15m).
         location:
           type: string
           enum: [LAN, WAN]
           nullable: true
+          description: Filter by network location (LAN or WAN), or null for all.
         ip:
           type: string
           nullable: true
+          description: Exact IP address match filter, or null.
         sort_by:
           type: string
           enum: [location, ip, unique_destinations, tx, rx, last_activity]
@@ -631,26 +664,32 @@ components:
           enum: [asc, desc]
         limit:
           type: integer
+          description: Page size.
         offset:
           type: integer
+          description: Pagination offset.
 
     HostDetailsParams:
       type: object
+      required: [host_ip]
       properties:
         host_ip:
           type: string
-        period:
-          type: string
-          enum: ["5m", "15m", "1h", "24h", "7d", "30d"]
+          description: IP address of the specific host.
+        period_sec:
+          type: integer
+          description: Aggregation window in seconds for real-time rate calculation.
 
     HostTopDestinationsParams:
       type: object
+      required: [host_ip]
       properties:
         host_ip:
           type: string
-        period:
-          type: string
-          enum: ["5m", "15m", "1h", "24h", "7d", "30d"]
+          description: IP address of the specific host.
+        period_sec:
+          type: integer
+          description: Aggregation time window in seconds.
         sort_by:
           type: string
           enum: [ip, location, received, last_seen]
@@ -659,17 +698,21 @@ components:
           enum: [asc, desc]
         limit:
           type: integer
+          description: Page size.
         offset:
           type: integer
+          description: Pagination offset.
 
     HostTopPortsParams:
       type: object
+      required: [host_ip]
       properties:
         host_ip:
           type: string
-        period:
-          type: string
-          enum: ["5m", "15m", "1h", "24h", "7d", "30d"]
+          description: IP address of the specific host.
+        period_sec:
+          type: integer
+          description: Aggregation time window in seconds.
         sort_by:
           type: string
           enum: [port, protocol, pps]
@@ -678,8 +721,10 @@ components:
           enum: [asc, desc]
         limit:
           type: integer
+          description: Page size.
         offset:
           type: integer
+          description: Pagination offset.
 
     # --- WebSocket Push Payloads ---
     TelemetryUpdate:

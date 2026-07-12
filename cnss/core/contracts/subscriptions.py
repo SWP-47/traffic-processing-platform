@@ -44,11 +44,12 @@ class SubscriptionParams(BaseModel):
     offset: Optional[int] = Field(default=None, ge=0, description="Pagination offset.")
 
     # --- Telemetry Specific ---
-    window_sec: Optional[float] = Field(default=None, ge=0.1, description="Aggregation time window in seconds.")
+    window_sec: Optional[float] = Field(default=None, ge=1.0, description="Aggregation time window in seconds.")
 
     # --- Hosts Table & Details Specific ---
-    period: Optional[Literal["5m", "15m", "1h", "24h", "7d", "30d"]] = Field(
-        default=None, description="Duration of the time window for aggregation."
+    # Numeric period in seconds to support arbitrary custom aggregation windows
+    period_sec: Optional[float] = Field(
+        default=None, gt=0, description="Duration of the time window for aggregation in seconds."
     )
     location: Optional[Literal["LAN", "WAN"]] = Field(
         default=None, description="Filter by network location (LAN or WAN)."

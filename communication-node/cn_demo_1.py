@@ -82,17 +82,17 @@ def sending_data_to_cnss():
     while True:
         time.sleep(int(TIME_WINDOW) / 1000.0)
 
-        sequence += 1
-
         packets_to_send = []
 
         while not packet_queue.empty():
             packets_to_send.append(packet_queue.get_nowait())
 
-        packet_to_cnss = make_json_for_cnss(packets_to_send, sequence)
-        packet_to_cnss = json.dumps(packet_to_cnss).encode("utf-8")
-        udp_socket.sendto(packet_to_cnss, (CNSS_IP, 5140))
-        print("PACKET WAS SENT")
+        if len(packets_to_send) > 0:
+            sequence += 1
+            packet_to_cnss = make_json_for_cnss(packets_to_send, sequence)
+            packet_to_cnss = json.dumps(packet_to_cnss).encode("utf-8")
+            udp_socket.sendto(packet_to_cnss, (CNSS_IP, 5140))
+            print(f"PACKET WAS SENT, sequence: {sequence}")
 
 
 def process_packet(pkt):

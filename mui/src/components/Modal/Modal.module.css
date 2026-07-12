@@ -1,0 +1,63 @@
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+
+    z-index: 100;
+
+    width: 100vw;
+    height: 100vh;
+
+    opacity: 0;
+    visibility: hidden;
+
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    transition: visibility .3s, opacity .3s, backdrop-filter .3s;
+}
+
+.modal.opened {
+    opacity: 1;
+    visibility: visible;
+}
+
+.content {
+    background-color: var(--color-background);
+    padding: 40px;
+
+    border-radius: 35px;
+
+    /* --- Новые свойства для скролла внутри --- */
+    max-height: 90vh;
+    max-width: 90vw;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* ----------------------------------------- */
+
+    transform: translateY(15px);
+    transition: transform .4s;
+}
+
+.modal.opened .content {
+    transform: translateY(0);
+}
+
+/* Опционально: стилизация скроллбара */
+.content::-webkit-scrollbar {
+    width: 8px;
+}
+.content::-webkit-scrollbar-track {
+    background: transparent;
+}
+.content::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+.content::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}

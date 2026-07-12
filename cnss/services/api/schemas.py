@@ -4,16 +4,14 @@
 # Ensures strict validation and consistent JSON serialization across
 # authentication, channel discovery, health checks, and historical data retrieval.
 # ==============================================================================
-
 from datetime import datetime
 from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
+
 # --- Authentication Schemas ---
 # Models for login, token refresh, and logout operations.
-
-
 class LoginRequest(BaseModel):
     """
     Request payload for user authentication.
@@ -57,8 +55,6 @@ class LogoutResponse(BaseModel):
 
 # --- System Health & Discovery Schemas ---
 # Models for health checks and channel registry discovery.
-
-
 class HealthResponse(BaseModel):
     """
     Response payload for the system health check endpoint.
@@ -94,8 +90,6 @@ class ChannelsListResponse(BaseModel):
 
 # --- Historical Data Schemas ---
 # Models for lazy-loading time-series data for line charts.
-
-
 class HistoryPoint(BaseModel):
     """
     A single aggregated data point in a time-series history response.
@@ -115,7 +109,8 @@ class ChannelHistoryResponse(BaseModel):
     """
 
     channel_id: str = Field(..., description="Identifier of the queried channel.")
-    period: str = Field(..., description="Requested period duration (e.g., '1h', '24h').")
+    # Replaced string Enum 'period' with numeric 'period_sec' for arbitrary time windows
+    period_sec: int = Field(..., description="Requested period duration in seconds.")
     start_time: datetime = Field(..., description="Actual start of the returned time range.")
     end_time: datetime = Field(..., description="Actual end of the returned time range.")
     interval_sec: int = Field(..., description="Calculated time bucket size in seconds.")
@@ -139,7 +134,8 @@ class HostHistoryResponse(BaseModel):
 
     channel_id: str = Field(..., description="Identifier of the queried channel.")
     host_ip: str = Field(..., description="IP address of the queried host.")
-    period: str = Field(..., description="Requested period duration.")
+    # Replaced string Enum 'period' with numeric 'period_sec' for arbitrary time windows
+    period_sec: int = Field(..., description="Requested period duration in seconds.")
     start_time: datetime = Field(..., description="Actual start of the returned time range.")
     end_time: datetime = Field(..., description="Actual end of the returned time range.")
     interval_sec: int = Field(..., description="Calculated time bucket size in seconds.")
@@ -148,8 +144,6 @@ class HostHistoryResponse(BaseModel):
 
 # --- Error Response Schema ---
 # Standardized error format for all REST API failures.
-
-
 class ErrorResponse(BaseModel):
     """
     Standardized JSON error response structure.

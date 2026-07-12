@@ -72,6 +72,7 @@ class BufferManager:
                 "dst_ip": str(packet.dst_ip),
                 "src_port": packet.src_port,
                 "dst_port": packet.dst_port,
+                "protocol": packet.protocol,
             }
             serialized_records.append(json.dumps(record))
 
@@ -80,10 +81,11 @@ class BufferManager:
             # Explicitly check the current length before pushing to prevent OOM.
             current_len = await self._redis.llen(buffer_key)
 
-            if current_len >= settings.redis_udp_buffer_max_len:
-                # Threshold exceeded. Calculate how many of the oldest entries
-                # we need to keep to make exact room for the new batch.
+            if current_len + len(serialized_records) > settings.redis_udp_buffer_max_len:
                 keep_count = settings.redis_udp_buffer_max_len - len(serialized_records)
+                if keep_count < 0:
+                    # Batch larger than max capacity — drop it
+                    return
 
                 # If the incoming batch itself is larger than the max buffer capacity,
                 # drop the entire batch to protect the system.

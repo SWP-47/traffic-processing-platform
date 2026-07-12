@@ -260,15 +260,7 @@ class TestChannelExistence:
         """
         Verify that _check_channel_exists returns True when channel exists.
         """
-        # Mock the database pool
-        mock_pool = AsyncMock()
-        mock_conn = AsyncMock()
-        mock_conn.fetchrow = AsyncMock(return_value={"channel_id": "bridge-01"})
-        mock_pool.acquire = MagicMock(
-            return_value=AsyncMock(__aenter__=AsyncMock(return_value=mock_conn), __aexit__=AsyncMock())
-        )
-
-        with patch("services.websocket.server.get_db_pool", return_value=mock_pool):
+        with patch("services.websocket.server.db_channel_exists", return_value=True):
             result = await server._check_channel_exists("bridge-01")
             assert result is True
 
@@ -276,14 +268,6 @@ class TestChannelExistence:
         """
         Verify that _check_channel_exists returns False when channel does not exist.
         """
-        # Mock the database pool
-        mock_pool = AsyncMock()
-        mock_conn = AsyncMock()
-        mock_conn.fetchrow = AsyncMock(return_value=None)
-        mock_pool.acquire = MagicMock(
-            return_value=AsyncMock(__aenter__=AsyncMock(return_value=mock_conn), __aexit__=AsyncMock())
-        )
-
-        with patch("services.websocket.server.get_db_pool", return_value=mock_pool):
+        with patch("services.websocket.server.db_channel_exists", return_value=False):
             result = await server._check_channel_exists("nonexistent-channel")
             assert result is False

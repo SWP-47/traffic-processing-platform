@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useSubscription } from "./useSubscription"
 import type { components } from "@/api/schema";
 
@@ -5,10 +6,17 @@ export type HostsUpdate = components["schemas"]["HostsTableUpdate"];
 export type HostsTableParams = components["schemas"]["HostsTableParams"];
 
 export function useHostsUpdate(params: HostsTableParams): HostsUpdate | null {
-    const data = useSubscription<HostsUpdate>({
-        target: "hosts_table",
-        params: params
-    }, validateUpdate);
+    const [data, setData] = useState<HostsUpdate | null>(null);
+
+    const updateCallback = (update: unknown) => validateUpdate(update) && setData(update);
+    const inactivityCallback = () => setData(null);
+
+    useSubscription(
+        "hosts_table",
+        params,
+        updateCallback,
+        inactivityCallback
+    );
     
     return data;
 }

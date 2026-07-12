@@ -8,11 +8,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- N/A
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [3.0.0] - 2026-07-12
+
+### Added
+
+- Centralized database query module `core/db.py` consolidating SQL query definitions for all microservices. ([#263](https://github.com/SWP-47/traffic-processing-platform/issues/263))
+- Dedicated unit test suite in `tests/unit/test_db.py` achieving 98% coverage for the centralized database helper functions. ([#227](https://github.com/SWP-47/traffic-processing-platform/issues/227))
+- Comprehensive end-to-end integration tests in `tests/integration/test_reporting.py` simulating active traffic and multi-target subscriptions validation. ([#227](https://github.com/SWP-47/traffic-processing-platform/issues/227))
+- Interactive end-to-end system verification scripts `scripts/verify_system.py` and `scripts/verify_all_subscriptions.py` to test websocket push updates under concurrent stress load. ([#227](https://github.com/SWP-47/traffic-processing-platform/issues/227))
+- Added to hardware pert of TP shift register to detect packet to block before the transmission starts([#250](https://github.com/SWP-47/traffic-processing-platform/issues/250))
 
 ### Changed
 
-- N/A
+- REST API (`/history`): Query parameter `period` (string Enum: `1h`, `24h`, etc.) has been **replaced** with `period_sec` (integer, e.g., `3600` for 1 hour). ([#247](https://github.com/SWP-47/traffic-processing-platform/issues/247))
+- WebSocket Subscriptions: `params.period` (string Enum) has been **replaced** with `params.period_sec` (number, e.g., `300` for 5 minutes). ([#247](https://github.com/SWP-47/traffic-processing-platform/issues/247))
+- Refactored REST API endpoints (`auth.py`, `channels.py`, `health.py`, `history.py`), WebSocket server (`server.py`, `snapshot.py`), Reporting Worker channel state syncer (`channel_state_syncer.py`), and all five Reporting handlers (`telemetry`, `hosts_table`, `host_details`, `host_top_destinations`, `host_top_ports`) to call the centralized functions in `core/db.py` instead of executing inline raw SQL queries. ([#263](https://github.com/SWP-47/traffic-processing-platform/issues/263))
+- Updated unit and integration test mocks in `tests/unit/test_ws_server.py` and `tests/integration/test_api.py` to target the new centralized `core/db.py` helper methods directly. ([#227](https://github.com/SWP-47/traffic-processing-platform/issues/227))
+- Updated root `docs/` documentation (`testing.md`, `quality-requirements.md`, `quality-requirement-tests.md`, `system-documentation.md`) to accurately reflect the current state of the codebase: 253-test suite inventory, correct `--cov=core --cov=services` coverage command, `protocol` field in `packet_flows` and `TelemetryBatch`, all 5 subscription targets and handlers, token refresh/logout endpoints, `HttpOnly` refresh token cookie flow, `id` field in subscription control messages and push payloads, Nginx infrastructure layer, MUI services and hooks inventory, and corrected Redis key table.
+- Updated root `README.md`, `traffic-processor/README.md`, and `communication-node/README.md` to correct local setup and execution instructions, fix folder names (`hardware-part`, `software-part`), resolve `docker-compose` typos (`docket-compose`), update Vivado project initialization steps, and fix Makefile targets (`dev-all` and `down`).
 
 ### Deprecated
 
@@ -24,7 +47,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- N/A
+- Fixed the way of working with queues to gain correct working of whole demo stend. TP now extracts packets from queue more often so all demo stand works without delays ([#251](https://github.com/SWP-47/traffic-processing-platform/issues/251))
+- Fixed missing `channel_id` field in WebSocket subscription examples in `docs/system-documentation.md`.
+- Fixed outdated Vivado project setup instructions in `docs/customer-handover.md`, aligning them with the SystemVerilog/constraints source compilation workflow.
 
 ### Security
 
@@ -34,12 +59,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Upload unreleased necessary changes for v2.0.0 ([#256](https://github.com/SWP-47/traffic-processing-platform/issues/256))
+- Upload unreleased necessary changes for v2.0.0 ([#256](https://github.com/SWP-47/traffic-processing-platform/pull/256))
 
 ## [2.0.0] - 2026-07-05
 
 ### Added
 
+- Basic Detailed Host Statistics modal window ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
 - Ingestion Worker entry point and UDP receiver (`services/ingestion/main.py`, `services/ingestion/udp_server.py`) with `asyncio.DatagramProtocol`, component wiring, graceful shutdown via OS signals, and MTU payload validation. ([#218](https://github.com/SWP-47/traffic-processing-platform/issues/218))
 - Sequence tracking and Fast Path state management (`services/ingestion/sequence_tracker.py`, `services/ingestion/state_manager.py`) featuring Redis-backed `last_sequence` persistence, >1,000,000 threshold reset detection, conditional `last_activity_at` updates, `dropped_delta` accumulation, and 6-second TTL enforcement. ([#218](https://github.com/SWP-47/traffic-processing-platform/issues/218))
 - Redis Capped List buffering (`services/ingestion/buffer_manager.py`) with `LLEN` checks and `LTRIM` enforcement at 100,000 items to prevent OOM, alongside a background asyncio flusher (`services/ingestion/flusher.py`) utilizing Lua atomic pops and `asyncpg.executemany` for batch `INSERT` operations into the `packet_flows` hypertable. ([#219](https://github.com/SWP-47/traffic-processing-platform/issues/219))
@@ -245,8 +271,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added JWT-based authentication for all REST and WebSocket endpoints to protect telemetry data and prevent unauthorized access. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 - CnSS now sanitizes access logs to prevent `access_token` leakage via query parameters. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 
-[Unreleased]: https://github.com/SWP-47/traffic-processing-platform/compare/v2.0.1...HEAD
-[2.0.1]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v2.0.0
+[Unreleased]: https://github.com/SWP-47/traffic-processing-platform/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v3.0.0
+[2.0.1]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v2.0.1
 [2.0.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v2.0.0
 [1.1.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.1.0
 [1.0.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.0.0

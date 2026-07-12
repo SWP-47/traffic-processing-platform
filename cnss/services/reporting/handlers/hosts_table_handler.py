@@ -1,7 +1,7 @@
 # ==============================================================================
 # CnSS Hosts Table Subscription Handler
 # Handles SQL execution for the 'hosts_table' subscription target.
-# Aggregates packet_flows by host IP over a configurable time period,
+# Aggregates packet_flows by host IP over a configurable time period (in seconds),
 # computes per-second rates (tx/rx), unique destination counts, and
 # classifies hosts as LAN/WAN based on traffic direction and IP role.
 #
@@ -33,18 +33,10 @@ from services.reporting.query_builder import (
 # --- Module Logger ---
 logger = logging.getLogger(__name__)
 
-# --- Period to Seconds Mapping ---
-# Maps human-readable period strings to their duration in seconds.
-# Used to convert packet COUNT(*) into per-second rates (tx_per_sec, rx_per_sec).
-PERIOD_TO_SECONDS: Dict[str, int] = {
-    "5m": 300,
-    "15m": 900,
-    "1h": 3600,
-    "24h": 86400,
-    "7d": 604800,
-    "30d": 2592000,
-}
-DEFAULT_PERIOD = "5m"
+# --- Default Period ---
+# Default aggregation window in seconds if not specified in the subscription request.
+# Set to 300 seconds (5 minutes) for a balance between responsiveness and stability.
+DEFAULT_PERIOD_SEC = 300.0
 
 # --- Sort By Whitelist ---
 # Maps user-facing sort_by aliases to actual SQL column names from the aggregated CTE.
@@ -75,7 +67,6 @@ class HostsTableHandler(BaseSubscriptionHandler):
     async def execute(self, db_pool: asyncpg.Pool, request: SubscribeRequest) -> Optional[Dict[str, Any]]:
         """
         Executes the hosts table aggregation query and returns the formatted JSON result.
-
         Query Strategy (3-stage CTE pipeline):
         1. host_flows CTE: Unfolds each packet into 2 records (host + remote),
            classifying each IP as LAN or WAN based on direction and role.
@@ -96,21 +87,20 @@ class HostsTableHandler(BaseSubscriptionHandler):
         params = request.params
         channel_id = request.channel_id
 
-        # Resolve period: validate against whitelist, fallback to default
-        period = params.period if params.period in PERIOD_TO_SECONDS else DEFAULT_PERIOD
-        interval_str = resolve_period_interval(period)
-        period_seconds = PERIOD_TO_SECONDS[period]
+        # Resolve period_sec: use provided value or fallback to default (300 seconds = 5 minutes)
+        # Pydantic validates period_sec as float, so it's safe for SQL interpolation.
+        period_sec = params.period_sec if params.period_sec and params.period_sec > 0 else DEFAULT_PERIOD_SEC
+        interval_str = resolve_period_interval(period_sec)
 
         logger.debug(
             f"[hosts_table] Executing query for channel '{channel_id}' "
-            f"(period: {period}, interval: {interval_str}, seconds: {period_seconds})."
+            f"(period_sec: {period_sec}, interval: {interval_str})."
         )
 
         # --- Dynamic Parameter Tracking ---
         # ParameterizedQuery tracks $N placeholders as we add parameters dynamically.
         # Start at $1 since channel_id and interval occupy $1-$2.
         pq = ParameterizedQuery(start_index=1)
-
         channel_ph = pq.add_param(channel_id)
         interval_ph = pq.add_param(interval_str)
 
@@ -139,109 +129,55 @@ class HostsTableHandler(BaseSubscriptionHandler):
         limit_sql = build_limit_param(params.limit, pq)
         offset_sql = build_offset(params.offset, pq)
 
-        # --- Query Assembly ---
-        # 3-stage CTE pipeline ensures clean separation of concerns:
-        # - host_flows: unfolds packets into host/remote pairs with LAN/WAN classification
-        # - aggregated: per-host metrics computation
-        # - final SELECT: filtering, sorting, pagination, total_count
-        query = f"""
-        WITH host_flows AS (
-            -- Unfold each packet into 2 records: host (LAN/WAN) and remote
-            -- For IN (direction=0): dst_ip is LAN host (receives), src_ip is WAN host (sends)
-            -- For OUT (direction=1): src_ip is LAN host (sends), dst_ip is WAN host (receives)
-
-            -- LAN hosts: dst at IN (rx) OR src at OUT (tx)
-            SELECT
-                CASE WHEN direction = 0 THEN dst_ip ELSE src_ip END AS host_ip,
-                CASE WHEN direction = 0 THEN src_ip ELSE dst_ip END AS remote_ip,
-                'LAN' AS host_location,
-                CASE WHEN direction = 1 THEN 1 ELSE 0 END AS is_tx,
-                CASE WHEN direction = 0 THEN 1 ELSE 0 END AS is_rx,
-                time
-            FROM packet_flows
-            WHERE channel_id = {channel_ph} AND time > NOW() - ({interval_ph}::text)::interval
-
-            UNION ALL
-
-            -- WAN hosts: src at IN (tx) OR dst at OUT (rx)
-            SELECT
-                CASE WHEN direction = 0 THEN src_ip ELSE dst_ip END AS host_ip,
-                CASE WHEN direction = 0 THEN dst_ip ELSE src_ip END AS remote_ip,
-                'WAN' AS host_location,
-                CASE WHEN direction = 0 THEN 1 ELSE 0 END AS is_tx,
-                CASE WHEN direction = 1 THEN 1 ELSE 0 END AS is_rx,
-                time
-            FROM packet_flows
-            WHERE channel_id = {channel_ph} AND time > NOW() - ({interval_ph}::text)::interval
-        ),
-        aggregated AS (
-            SELECT
-                host_ip,
-                CASE
-                    WHEN SUM(CASE WHEN host_location = 'LAN' THEN 1 ELSE 0 END) >=
-                         SUM(CASE WHEN host_location = 'WAN' THEN 1 ELSE 0 END)
-                    THEN 'LAN'
-                    ELSE 'WAN'
-                END AS location,
-                COUNT(DISTINCT remote_ip) AS unique_destinations,
-                SUM(is_tx)::float / {period_seconds} AS tx_per_sec,
-                SUM(is_rx)::float / {period_seconds} AS rx_per_sec,
-                MAX(time) AS last_activity
-            FROM host_flows
-            GROUP BY host_ip
-        )
-        SELECT
-            host_ip,
-            location,
-            unique_destinations,
-            tx_per_sec,
-            rx_per_sec,
-            last_activity,
-            COUNT(*) OVER() AS total_count
-        FROM aggregated
-        {where_sql}
-        {order_by_sql}
-        {limit_sql} {offset_sql}
-        """
-
         # --- Execution ---
         try:
-            async with db_pool.acquire() as conn:
-                rows = await conn.fetch(query, *pq.get_params())
+            from core.db import db_fetch_hosts_table_data
 
-                # --- Result Formatting ---
-                # Extract hosts and total_count from the paginated result set.
-                # total_count is identical across all rows (window function),
-                # so we read it once from the first row.
-                hosts: list[Dict[str, Any]] = []
-                total_count = 0
+            rows = await db_fetch_hosts_table_data(
+                channel_ph,
+                interval_ph,
+                period_sec,
+                where_sql,
+                order_by_sql,
+                limit_sql,
+                offset_sql,
+                pq.get_params(),
+                pool=db_pool,
+            )
 
-                for row in rows:
-                    total_count = int(row["total_count"])
-                    hosts.append(
-                        {
-                            "location": row["location"],
-                            "ip": str(row["host_ip"]),
-                            "unique_destinations": int(row["unique_destinations"]),
-                            "tx_per_sec": float(row["tx_per_sec"]),
-                            "rx_per_sec": float(row["rx_per_sec"]),
-                            "last_activity": (row["last_activity"].isoformat() if row["last_activity"] else None),
-                        }
-                    )
+            # --- Result Formatting ---
+            # Extract hosts and total_count from the paginated result set.
+            # total_count is identical across all rows (window function),
+            # so we read it once from the first row.
+            hosts: list[Dict[str, Any]] = []
+            total_count = 0
 
-                result = {
-                    "type": "hosts_table_update",
-                    "channel_id": channel_id,
-                    "target": "hosts_table",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "total_count": total_count,
-                    "hosts": hosts,
-                }
-
-                logger.debug(
-                    f"[hosts_table] Success for '{channel_id}': " f"{len(hosts)} hosts returned (total: {total_count})."
+            for row in rows:
+                total_count = int(row["total_count"])
+                hosts.append(
+                    {
+                        "location": row["location"],
+                        "ip": str(row["host_ip"]),
+                        "unique_destinations": int(row["unique_destinations"]),
+                        "tx_per_sec": float(row["tx_per_sec"]),
+                        "rx_per_sec": float(row["rx_per_sec"]),
+                        "last_activity": (row["last_activity"].isoformat() if row["last_activity"] else None),
+                    }
                 )
-                return result
+
+            result = {
+                "type": "hosts_table_update",
+                "channel_id": channel_id,
+                "target": "hosts_table",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "total_count": total_count,
+                "hosts": hosts,
+            }
+
+            logger.debug(
+                f"[hosts_table] Success for '{channel_id}': " f"{len(hosts)} hosts returned (total: {total_count})."
+            )
+            return result
 
         except asyncpg.PostgresError as e:
             logger.error(

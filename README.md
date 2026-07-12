@@ -1,15 +1,21 @@
 # Traffic Processing Platform
 
-[![Release](https://img.shields.io/badge/release-v2.0.1-orange)](https://github.com/SWP-47/traffic-processing-platform/releases/tag/v2.0.1)
+[![Release](https://img.shields.io/badge/release-v3.0.0-orange)](https://github.com/SWP-47/traffic-processing-platform/releases/tag/v3.0.0)
 
 ## Project Overview
 
-This is a monorepo containing minimally intrusive network traffic monitoring system. It consists of four distinct components designed to capture, process, forward, and visualize network telemetry in real-time without degrading network performance:
+This is a monorepo containing a minimally intrusive network traffic monitoring system. It consists of four distinct components designed to capture, process, forward, and visualize network telemetry in real-time without degrading network performance:
 
 - **`traffic-processor/`**: Core packet counting and telemetry engine (transparent inline bridge).
 - **`communication-node/`**: Local data forwarding node.
 - **`cnss/`**: Control and Status Server (Backend) aggregating data via API/WebSocket.
 - **`mui/`**: Management User Interface (Frontend) for real-time visualization.
+
+## Product Access & Handover
+
+- **Live Deployment**: [http://10.93.26.186](http://10.93.26.186) *(Accessible via Innopolis University "UniversityStudent" Network)*
+- **Customer Handover Guide**: [docs/customer-handover.md](docs/customer-handover.md) *(Full installation, deployment, and operational instructions)*
+- **Hosted Documentation Site**: [https://swp-47.github.io/traffic-processing-platform/](https://swp-47.github.io/traffic-processing-platform/)
 
 ## Local Setup Instructions
 
@@ -36,40 +42,70 @@ cd traffic-processing-platform
 
 note: Ensure you have Python 3.8 or higher and pip (Python package installer) installed on your system. Create and activate a virtual environment.
 
-1. Install dependencies using command `pip install -r requirements.txt`
-2. Create an environment file using `cp .env.example .env` (POSIX) or `copy .env.example .env` (PowerShell). Edit `.env` if necessary.
-3. Run the main script:
+1. Navigate to the Traffic Processor software directory:
 
 ```bash
-sudo python3 software-part/tp_packet_counter.py
+cd traffic-processor/software-part
 ```
 
-or on Windows PowerShell:
-
-```powershell
-python3 .\software-part\tp_packet_counter.py
-```
-
-##### Hardware part
-
-note: Ensure you have AMD Vivado Design Suite installed on your system. The folder contains `top.sv` and `top.xdc` files which are expected to be used to program ARTIX-7 FPGA Development Board AX7201.
-
-1. Run Vivado IDE and add open `ax7201-ethernet-loopback.xpr` project.
-2. Run synthesis and Implementation process. Than generate bitstream.
-3. Connect FPGA board to your computer using JTAG programmer.
-4. Open "Hardware manager" and program connected device using the corresponding button
-
-#### **Communication node**
-
-note: Ensure you have Python 3.8 or higher and pip (Python package installer) installed on your system. Create and activate a virtual environment.
-
-1. Install dependencies using:
+2. Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Create an environment file:
+3. Create an environment file:
+
+```bash
+cp .env.example .env
+```
+
+or on Windows PowerShell:
+
+```powershell
+copy .env.example .env
+```
+
+4. Run the main script:
+
+```bash
+sudo python3 tp_packet_counter.py
+```
+
+or on Windows PowerShell:
+
+```powershell
+python3 .\tp_packet_counter.py
+```
+
+##### Hardware part
+
+note: Ensure you have AMD Vivado Design Suite installed on your system. The folder contains `*.sv` and `top.xdc` files which are expected to be used to program ARTIX-7 FPGA Development Board AX7201.
+
+1. Run Vivado IDE and create a new project for board ARTIX-7 FPGA Development Board AX7201.
+2. Add all `*.sv` files from the `traffic-processor/hardware-part/` folder to the project as source code files.
+3. Add `top.xdc` file from the `traffic-processor/hardware-part/` folder to the project as constraint file.
+4. Run synthesis and Implementation process. Then generate bitstream.
+5. Connect FPGA board to your computer using JTAG programmer.
+6. Open "Hardware manager" and program connected device using the corresponding button.
+
+#### **Communication node**
+
+note: Ensure you have Python 3.8 or higher and pip (Python package installer) installed on your system. Create and activate a virtual environment.
+
+1. Navigate to the Communication Node directory:
+
+```bash
+cd communication-node/
+```
+
+2. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+3. Create an environment file:
 
 ```bash
 cp .env.example .env
@@ -81,16 +117,16 @@ or on PowerShell:
 copy .env.example .env
 ```
 
-1. Run the Communication Node script (the actual demo script is `communication-node/cn_demo_1.py`):
+4. Run the Communication Node script (the actual demo script is `cn_demo_1.py`):
 
 ```bash
-sudo python3 communication-node/cn_demo_1.py
+sudo python3 cn_demo_1.py
 ```
 
 or on Windows PowerShell:
 
 ```powershell
-python3 .\communication-node\cn_demo_1.py
+python3 .\cn_demo_1.py
 ```
 
 #### **Control and Status Server (CnSS)**
@@ -114,7 +150,7 @@ Use this configuration for active local development. It includes hot-reload capa
 3. Start the development environment:
 
    ```bash
-   make all-dev
+   make dev-all
    ```
 
    *The server will be available at `http://localhost:8000`.*
@@ -151,22 +187,19 @@ make prod
 make logs
 
 # Stop MUI containers
-make stop
+make down
 ```
 
-## Documentation
+## Maintained Documentation
 
-- **Hosted Documentation Site**: [https://swp-47.github.io/traffic-processing-platform/](https://swp-47.github.io/traffic-processing-platform/)
-- **System Documentation**: [docs/system-documentation.md](docs/system-documentation.md)
-- **API Documentation**: [api/README.md](api/README.md)
+- **Architecture**: [docs/architecture/README.md](docs/architecture/README.md)
+- **System & API Docs**: [docs/system-documentation.md](docs/system-documentation.md) | [api/README.md](api/README.md)
 - **Development Process**: [docs/development-process.md](docs/development-process.md)
-- **Architecture Documentation**: [docs/architecture/README.md](docs/architecture/README.md)
+- **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Agent Guidance**: [AGENTS.md](AGENTS.md)
 
-## Links and Reports
+## Reports & Changelog
 
-- **Current Deployment**: [Runnable Artifact](http://10.93.26.186)
+- **Changelog**: [CHANGELOG.md](CHANGELOG.md)
 - **Weekly Reports**:
-  - [Week 2 Report](reports/week2/README.md)
-  - [Week 3 Report](reports/week3/README.md)
-  - [Week 4 Report](reports/week4/README.md)
-  - [Week 5 Report](reports/week5/README.md)
+  - [Week 6](reports/week6/README.md) | [Week 5](reports/week5/README.md) | [Week 4](reports/week4/README.md) | [Week 3](reports/week3/README.md) | [Week 2](reports/week2/README.md)

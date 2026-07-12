@@ -32,25 +32,17 @@ from services.reporting.query_builder import (
 # --- Module Logger ---
 logger = logging.getLogger(__name__)
 
-# --- Period to Seconds Mapping ---
-# Maps human-readable period strings to their duration in seconds.
-# Used to convert packet COUNT(*) into per-second rates.
-PERIOD_TO_SECONDS: Dict[str, int] = {
-    "5m": 300,
-    "15m": 900,
-    "1h": 3600,
-    "24h": 86400,
-    "7d": 604800,
-    "30d": 2592000,
-}
-DEFAULT_PERIOD = "5m"
+# --- Default Period ---
+# Default aggregation window in seconds if not specified in the subscription request.
+# Set to 300 seconds (5 minutes) for a balance between responsiveness and stability.
+DEFAULT_PERIOD_SEC = 300.0
 
 # --- Sort By Whitelist ---
 # Maps user-facing sort_by aliases to actual SQL column names.
 # Strict whitelisting prevents SQL injection via ORDER BY clause.
 HOST_TOP_PORTS_SORT_WHITELIST: Dict[str, str] = {
     "port": "remote_port",
-    "protocol": "remote_port",  # Protocol is derived from port, so sorting by port is equivalent
+    "protocol": "protocol",  # Protocol is now a native column in packet_flows
     "pps": "packets_per_sec",
 }
 
@@ -76,7 +68,7 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
     """
     Executes SQL queries for the 'host_top_ports' subscription target.
     Provides a paginated, sortable list of top remote ports that a specific host
-    communicates with, including inferred protocol and traffic rates.
+    communicates with, including the actual protocol from the database and traffic rates.
     """
 
     @property
@@ -87,7 +79,6 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
     async def execute(self, db_pool: asyncpg.Pool, request: SubscribeRequest) -> Optional[Dict[str, Any]]:
         """
         Executes the host top ports query and returns the formatted JSON result.
-
         Query Strategy (2-stage CTE pipeline):
         1. port_flows CTE: Filters packet_flows for packets where host_ip participates,
            extracts the remote_port (the port of the other side of the connection).
@@ -112,25 +103,24 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
             logger.warning("[host_top_ports] host_ip parameter is required but missing.")
             return None
 
-        # Resolve period: validate against whitelist, fallback to default
-        period = params.period if params.period in PERIOD_TO_SECONDS else DEFAULT_PERIOD
-        interval_str = resolve_period_interval(period)
-        period_seconds = PERIOD_TO_SECONDS[period]
+        # Resolve period_sec: use provided value or fallback to default (300 seconds = 5 minutes)
+        # Pydantic validates period_sec as float, so it's safe for SQL interpolation.
+        period_sec = params.period_sec if params.period_sec and params.period_sec > 0 else DEFAULT_PERIOD_SEC
+        interval_str = resolve_period_interval(period_sec)
 
         logger.debug(
             f"[host_top_ports] Executing query for channel '{channel_id}', "
-            f"host '{params.host_ip}' (period: {period}, seconds: {period_seconds})."
+            f"host '{params.host_ip}' (period_sec: {period_sec}, interval: {interval_str})."
         )
 
         # --- Dynamic Parameter Tracking ---
         # ParameterizedQuery tracks $N placeholders as we add parameters dynamically.
         pq = ParameterizedQuery(start_index=1)
 
-        # Fixed parameters: channel_id ($1), interval ($2), host_ip ($3), period_seconds ($4)
+        # Fixed parameters: channel_id ($1), interval ($2), host_ip ($3)
         channel_ph = pq.add_param(channel_id)
         interval_ph = pq.add_param(interval_str)
         host_ip_ph = pq.add_param(params.host_ip)
-        seconds_ph = pq.add_param(period_seconds)
 
         # --- ORDER BY, LIMIT, OFFSET ---
         # All use strict whitelisting / parameterized placeholders for safety.
@@ -138,84 +128,55 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
         limit_sql = build_limit_param(params.limit, pq)
         offset_sql = build_offset(params.offset, pq)
 
-        # --- Query Assembly ---
-        # 2-stage CTE pipeline ensures clean separation of concerns:
-        # - port_flows: filters packets where host_ip participates, extracts remote_port
-        # - port_stats: aggregates by remote_port with rate calculation
-        # - final SELECT: sorting, pagination, total_count
-        query = f"""
-        WITH port_flows AS (
-            -- Find all packets where host_ip participates
-            -- Extract the remote_port (the port of the other side)
-            SELECT
-                CASE
-                    WHEN direction = 0 AND dst_ip = {host_ip_ph}::inet THEN src_port
-                    WHEN direction = 1 AND src_ip = {host_ip_ph}::inet THEN dst_port
-                END AS remote_port,
-                time
-            FROM packet_flows
-            WHERE channel_id = {channel_ph}
-                AND time > NOW() - ({interval_ph}::text)::interval
-                AND (
-                    (direction = 0 AND dst_ip = {host_ip_ph}::inet)
-                    OR (direction = 1 AND src_ip = {host_ip_ph}::inet)
-                )
-        ),
-        port_stats AS (
-            SELECT
-                remote_port,
-                COUNT(*)::float / {seconds_ph} AS packets_per_sec
-            FROM port_flows
-            WHERE remote_port IS NOT NULL
-            GROUP BY remote_port
-        )
-        SELECT
-            remote_port,
-            packets_per_sec,
-            COUNT(*) OVER() AS total_count
-        FROM port_stats
-        {order_by_sql}
-        {limit_sql} {offset_sql}
-        """
-
         # --- Execution ---
         try:
-            async with db_pool.acquire() as conn:
-                rows = await conn.fetch(query, *pq.get_params())
+            from core.db import db_fetch_host_top_ports_data
 
-                # --- Result Formatting ---
-                # Extract ports and total_count from the paginated result set.
-                # total_count is identical across all rows (window function),
-                # so we read it once from the first row.
-                ports: list[Dict[str, Any]] = []
-                total_count = 0
+            rows = await db_fetch_host_top_ports_data(
+                host_ip_ph,
+                channel_ph,
+                interval_ph,
+                period_sec,
+                order_by_sql,
+                limit_sql,
+                offset_sql,
+                pq.get_params(),
+                pool=db_pool,
+            )
 
-                for row in rows:
-                    total_count = int(row["total_count"])
-                    port_num = int(row["remote_port"])
-                    ports.append(
-                        {
-                            "port": port_num,
-                            "protocol": self._get_protocol_by_port(port_num),
-                            "packets_per_sec": float(row["packets_per_sec"]),
-                        }
-                    )
+            # - Result Formatting -
+            # Extract ports and total_count from the paginated result set.
+            # total_count is identical across all rows (window function),
+            # so we read it once from the first row.
+            ports: list[Dict[str, Any]] = []
+            total_count = 0
 
-                result = {
-                    "type": "host_top_ports_update",
-                    "channel_id": channel_id,
-                    "host_ip": params.host_ip,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "total_count": total_count,
-                    "ports": ports,
-                }
-
-                logger.debug(
-                    f"[host_top_ports] Success for host '{params.host_ip}' "
-                    f"in channel '{channel_id}': {len(ports)} ports returned "
-                    f"(total: {total_count})."
+            for row in rows:
+                total_count = int(row["total_count"])
+                port_num = int(row["remote_port"])
+                ports.append(
+                    {
+                        "port": port_num,
+                        "protocol": row["protocol"],  # Read directly from the database
+                        "packets_per_sec": float(row["packets_per_sec"]),
+                    }
                 )
-                return result
+
+            result = {
+                "type": "host_top_ports_update",
+                "channel_id": channel_id,
+                "host_ip": params.host_ip,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "total_count": total_count,
+                "ports": ports,
+            }
+
+            logger.debug(
+                f"[host_top_ports] Success for host '{params.host_ip}' "
+                f"in channel '{channel_id}': {len(ports)} ports returned "
+                f"(total: {total_count})."
+            )
+            return result
 
         except asyncpg.PostgresError as e:
             logger.error(
@@ -229,18 +190,3 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
                 exc_info=True,
             )
             raise DatabaseError(message=f"Unexpected host top ports query failure for host '{params.host_ip}'.") from e
-
-    def _get_protocol_by_port(self, port: int) -> str:
-        """
-        Determines the likely protocol based on well-known port numbers.
-        Defaults to TCP for unrecognized ports.
-
-        This is a pragmatic approximation since the packet_flows schema
-        does not include an explicit 'protocol' field.
-
-        :param port: The port number to classify.
-        :return: "UDP" for well-known UDP ports, "TCP" otherwise.
-        """
-        if port in WELL_KNOWN_UDP_PORTS:
-            return "UDP"
-        return "TCP"

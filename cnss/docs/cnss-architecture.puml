@@ -1,0 +1,75 @@
+@startuml cnss-architecture
+!theme plain
+title Control and Status Server (CnSS) - Component Architecture
+
+' === Skin Parameters ===
+skinparam componentStyle rectangle
+skinparam packageStyle frame
+skinparam linetype ortho
+skinparam nodesep 140
+skinparam ranksep 140
+skinparam defaultPadding 8
+skinparam arrowThickness 1.2
+skinparam arrowFontSize 13
+
+skinparam component {
+    BackgroundColor White
+    BorderColor Black
+    FontSize 13
+}
+skinparam database {
+    BackgroundColor White
+    BorderColor Black
+}
+
+' === Top Layer: Ephemeral Caching & Pub/Sub ===
+' Added additional spacing to make the Redis database element span the full width of the diagram
+database "                                                                                               Redis (Ephemeral State & Pub/Sub Bus)                                                                                                         " as Redis
+
+' === Second Layer: External Entities ===
+component "Communication Node (CN)" as CN
+component "         Management UI (MUI)         " as MUI
+
+' === Third Layer: CnSS Subsystem Microservices ===
+package "Control and Status Server (CnSS)" as CnSS {
+    component "Ingestion Worker\n(UDP Service & Flusher)" as Ingestion
+    component "Reporting Worker\n(Background Aggregator & Syncer)" as Reporting
+    component "WebSocket Service\n(Session & Subscriptions Gateway)" as WS_Service
+    component " REST API & Auth (FastAPI HTTP Gateway)\n " as REST_Service
+}
+
+' === Bottom Layer: Persistent Time-Series Store ===
+database "                     TimescaleDB (Persistent Time-Series Store)                     " as TSDB
+
+' === Layout / Alignment Helpers (Invisible Links for Vertical Stacking) ===
+Redis -[hidden]down-> CN
+CN -[hidden]right-> MUI
+CN -[hidden]down-> Ingestion
+MUI -[hidden]down-> Reporting
+Ingestion -[hidden]right-> Reporting
+Reporting -[hidden]right-> WS_Service
+WS_Service -[hidden]right-> REST_Service
+Ingestion -[hidden]down-> TSDB
+
+' === External Integration ===
+CN -down-> Ingestion : "Telemetry JSON (UDP)"
+MUI <--> WS_Service : "Real-time updates (WSS)"
+MUI --> REST_Service : "API requests (HTTPS)"
+
+' === Ingestion Worker Data Store Connections ===
+Ingestion -up-> Redis : "Buffer & sequence"
+Ingestion -down-> TSDB : "Flush flows"
+
+' === Reporting Worker Data Store Connections ===
+Reporting -up-> Redis : "Poll & publish"
+Reporting -down-> TSDB : "Query & sync"
+
+' === WebSocket Service Data Store Connections ===
+WS_Service <--> Redis : "Sessions & PubSub"
+WS_Service -down-> TSDB : "Query snapshots"
+
+' === REST API Data Store Connections ===
+REST_Service -down-> TSDB : "Query history"
+REST_Service -up-> Redis : "Revoke tokens"
+
+@enduml

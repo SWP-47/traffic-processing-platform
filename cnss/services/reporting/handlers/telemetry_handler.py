@@ -114,36 +114,11 @@ class TelemetryHandler(BaseSubscriptionHandler):
             f"(window: {window_sec}s, end_offset: {CONTINUOUS_AGG_END_OFFSET_SEC}s)."
         )
 
-        # --- Query Assembly ---
-        # The query uses $1 for window_sec and $2 for channel_id.
-        # Time window logic:
-        # Upper bound: NOW() - end_offset (1s) → reads only CLOSED buckets
-        # Lower bound: NOW() - window_sec - end_offset → ensures approximately window_sec duration
-        #
-        # IMPORTANT: We also COUNT(*) to get the actual number of buckets read.
-        # This is critical for accurate rate calculation when window_sec is not a whole number.
-        # Example: window_sec=1.5 reads 2 buckets (2s actual), so we divide by 2, not 1.5.
-        query = """
-            SELECT
-                c.is_active,
-                c.dropped,
-                COALESCE(SUM(t.packets_in), 0) AS total_in,
-                COALESCE(SUM(t.packets_out), 0) AS total_out,
-                COUNT(t.bucket) AS bucket_count,
-                MAX(t.bucket) AS latest_bucket
-            FROM channels c
-            LEFT JOIN telemetry_1s t
-                ON c.channel_id = t.channel_id
-                AND t.bucket > NOW() - ($1 * INTERVAL '1 second') - INTERVAL '1 second'
-                AND t.bucket <= NOW() - INTERVAL '1 second'
-            WHERE c.channel_id = $2
-            GROUP BY c.channel_id, c.is_active, c.dropped;
-        """
-
         # --- Execution ---
         try:
-            async with db_pool.acquire() as conn:
-                row = await conn.fetchrow(query, window_sec, channel_id)
+            from core.db import db_fetch_telemetry_data
+
+            row = await db_fetch_telemetry_data(channel_id, window_sec, pool=db_pool)
 
             if row is None:
                 logger.debug(f"[telemetry] Channel '{channel_id}' not found in registry.")

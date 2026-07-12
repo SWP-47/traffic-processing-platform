@@ -5,12 +5,11 @@
 # to provide instant, zero-latency status checks as per Architecture §2.4.
 # ==============================================================================
 
-from typing import Any, List
 
 from fastapi import APIRouter, Depends
 
 from core.contracts.auth import TokenPayload
-from core.database import get_db_pool
+from core.db import db_fetch_channel_status, db_list_channels
 from core.exceptions import ResourceNotFoundError
 from core.security.scopes import verify_channel_access
 from services.api.deps import get_current_user
@@ -32,30 +31,17 @@ async def list_channels(
     Lists all channels accessible to the authenticated user.
     Admins see all registered channels. Viewers are strictly filtered by their JWT scope.
     """
-    db_pool = get_db_pool()
-
-    # --- Query Construction ---
+    # --- Query Construction & Database Execution ---
     # Admins bypass scope restrictions and can view all channels.
     # Viewers are limited to the channel IDs explicitly granted in their scope.
     if current_user.role == "admin":
-        query = "SELECT channel_id, is_active, last_activity_at FROM channels"
-        params: List[Any] = []
+        rows = await db_list_channels()
     else:
         # Viewers must have at least one channel in their scope to see anything.
-        # If scope is empty, return an empty list immediately to avoid invalid SQL.
+        # If scope is empty, return an empty list immediately.
         if not current_user.scope:
             return ChannelsListResponse(channels=[], total=0)
-
-        query = """
-            SELECT channel_id, is_active, last_activity_at
-            FROM channels
-            WHERE channel_id = ANY($1)
-        """
-        params = [current_user.scope]
-
-    # --- Database Execution ---
-    async with db_pool.acquire() as conn:
-        rows = await conn.fetch(query, *params)
+        rows = await db_list_channels(current_user.scope)
 
     # --- Response Formatting ---
     # Map database rows to Pydantic models.
@@ -93,16 +79,7 @@ async def get_channel_status(
     verify_channel_access(current_user, channel_id)
 
     # --- Database Query ---
-    db_pool = get_db_pool()
-    async with db_pool.acquire() as conn:
-        row = await conn.fetchrow(
-            """
-            SELECT channel_id, is_active, last_activity_at
-            FROM channels
-            WHERE channel_id = $1
-            """,
-            channel_id,
-        )
+    row = await db_fetch_channel_status(channel_id)
 
     # --- Existence Validation ---
     # If the channel is not found in the persistent registry, return 404.

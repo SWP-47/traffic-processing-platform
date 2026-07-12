@@ -1,15 +1,15 @@
 import styles from './Dashboard.module.css';
-import PacketsColumnChart from "@/features/PacketsColumnChart/PacketsColumnChart";
-import PacketsLineChart from "@/features/PacketsLineChart";
-import TopHostsTable from '@/features/TopHostsTable';
+import TopHostsTable from '@/pages/Dashboard/components/TopHostsTable';
+import { RxTxLineChart } from './components/LineChart/RxTxLineChart';
+import { RxTxColumnChart } from './components/RxTxColumnChar';
 
 function Dashboard() {
   return (
     <>
       <div className={styles.page}>
         <div className={styles.row}>
-          <PacketsColumnChart />
-          <PacketsLineChart />
+          <RxTxColumnChart />
+          <RxTxLineChart />
         </div>
         <div className={styles.row}>
           <TopHostsTable mode='lan' />

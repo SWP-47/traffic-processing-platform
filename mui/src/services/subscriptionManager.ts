@@ -24,8 +24,12 @@ class SubscriptionManager {
             const state = websocket.getState();
 
             // If new WebSocket state is Connected, reconnect all active subscriptions
+            // and clear lastUpdates
             if (state.connectionStatus === ConnectionStatus.Connected) {
-                Object.values(this.subscriptions).forEach(sub => this.requestWebsocketAction('subscribe', sub));
+                Object.values(this.subscriptions).forEach(sub => {
+                    sub.lastUpdate = null;
+                    this.requestWebsocketAction('subscribe', sub);
+                });
             }
 
             // Otherwise there will be no new updates until connection is restored, notify listeners about inactivity

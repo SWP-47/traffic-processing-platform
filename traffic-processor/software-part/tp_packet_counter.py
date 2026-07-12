@@ -6,7 +6,7 @@ import threading
 import time
 
 from dotenv import load_dotenv
-from scapy.all import IP, sniff
+from scapy.all import IP, sniff, sendp, Ether, UDP
 
 load_dotenv()
 
@@ -34,6 +34,15 @@ packet_queue_in = queue.Queue()
 packet_queue_out = queue.Queue()
 
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+try:
+    udp_socket.setsockopt(
+        socket.SOL_SOCKET, socket.SO_BINDTODEVICE, OUT_INTERFACE.encode()
+    )
+    print(f"Socket bound to interface: {OUT_INTERFACE}")
+except (AttributeError, OSError) as e:
+    print(f"Warning: Could not bind socket to {OUT_INTERFACE}: {e}")
+    print("Socket will use OS routing table to choose interface")
 
 
 def get_json_payload(pkt, direction):
@@ -74,15 +83,18 @@ def sending_data_to_cnss():
                 packet_to_cn = packet_queue_in.get_nowait()
                 packet_to_cn = json.dumps(packet_to_cn).encode("utf-8")
                 udp_socket.sendto(packet_to_cn, (CN_IP, 5140))
+                # sendp(Ether(src=MY_MAC)/IP(src=MY_IP, dst=CN_IP)/UDP()/packet_to_cn)
                 print("PACKET WAS SENT")
+                print(list(packet_queue_in.queue))
 
             if not packet_queue_out.empty():
                 packet_to_cn = packet_queue_out.get_nowait()
                 packet_to_cn = json.dumps(packet_to_cn).encode("utf-8")
                 udp_socket.sendto(packet_to_cn, (CN_IP, 5140))
+                # sendp(Ether(src=MY_MAC)/IP(src=MY_IP, dst=CN_IP)/UDP()/packet_to_cn)
                 print("PACKET WAS SENT")
 
-            time.sleep(0.3)
+            time.sleep(0.000001)
         except queue.Empty:
             pass
         except Exception as e:

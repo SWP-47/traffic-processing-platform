@@ -17,6 +17,27 @@ from core.redis.client import close_redis_client, get_redis_client, init_redis_c
 from core.security.passwords import hash_password
 from services.api.main import app
 
+import asyncio
+import asyncpg
+
+
+async def refresh_telemetry_1s(conn):
+    """
+    Refreshes the telemetry_1s continuous aggregate with retries to handle
+    LockNotAvailableError due to concurrent background refresh policies.
+    """
+    for attempt in range(5):
+        try:
+            await conn.execute(
+                "CALL refresh_continuous_aggregate('telemetry_1s', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 second')"
+            )
+            return
+        except asyncpg.exceptions.LockNotAvailableError:
+            if attempt == 4:
+                raise
+            await asyncio.sleep(0.1)
+
+
 # --- Test Constants ---
 TEST_VIEWER_USERNAME = "test-viewer"
 TEST_ADMIN_USERNAME = "test-admin"
@@ -399,9 +420,7 @@ async def test_api_channel_history_and_validation(redis_setup, db_pool_setup, ap
         )
         # Refresh the continuous aggregate. Per architecture §3.1, end_offset=1s
         # means the upper bound must be at least NOW()-1s to include 10s/11s old data.
-        await conn.execute(
-            "CALL refresh_continuous_aggregate('telemetry_1s', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 second')"
-        )
+        await refresh_telemetry_1s(conn)
 
     # Login as Viewer
     login_viewer = await api_client.post(

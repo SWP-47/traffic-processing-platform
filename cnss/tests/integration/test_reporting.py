@@ -31,6 +31,24 @@ from services.reporting.handlers import (
 )
 from services.reporting.poller import PUSH_CHANNEL_PREFIX, Poller
 
+import asyncpg
+
+async def refresh_telemetry_1s(conn):
+    """
+    Refreshes the telemetry_1s continuous aggregate with retries to handle
+    LockNotAvailableError due to concurrent background refresh policies.
+    """
+    for attempt in range(5):
+        try:
+            await conn.execute(
+                "CALL refresh_continuous_aggregate('telemetry_1s', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 second')"
+            )
+            return
+        except asyncpg.exceptions.LockNotAvailableError:
+            if attempt == 4:
+                raise
+            await asyncio.sleep(0.1)
+
 # --- Test Constants ---
 TEST_CHANNEL_ID_SYNC = "integration-test-ch-sync"
 TEST_CHANNEL_ID_ACTIVE = "integration-test-ch-active"
@@ -341,9 +359,7 @@ async def test_poller_executes_telemetry_handler_and_publishes(redis_setup, db_p
         )
 
         # Manually refresh the continuous aggregate so telemetry_1s reflects the inserted rows
-        await conn.execute(
-            "CALL refresh_continuous_aggregate('telemetry_1s', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 second')"
-        )
+        await refresh_telemetry_1s(conn)
 
     # Set up Poller
     poller = Poller()
@@ -845,9 +861,7 @@ async def test_telemetry_aggregation_across_protocols(redis_setup, db_pool_setup
         )
 
         # Manually refresh the continuous aggregate
-        await conn.execute(
-            "CALL refresh_continuous_aggregate('telemetry_1s', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 second')"
-        )
+        await refresh_telemetry_1s(conn)
 
     # Set up Poller
     poller = Poller()
@@ -1057,9 +1071,7 @@ async def test_simulated_traffic_multi_subscription(redis_setup, db_pool_setup):
             )
 
         # Manually refresh continuous aggregate
-        await conn.execute(
-            "CALL refresh_continuous_aggregate('telemetry_1s', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 second')"
-        )
+        await refresh_telemetry_1s(conn)
 
     # 3. Setup Poller and register all 5 handlers
     poller = Poller()

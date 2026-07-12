@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [3.0.0] - 2026-07-12
+
+### Added
+
 - Centralized database query module `core/db.py` consolidating SQL query definitions for all microservices. ([#263](https://github.com/SWP-47/traffic-processing-platform/issues/263))
 - Dedicated unit test suite in `tests/unit/test_db.py` achieving 98% coverage for the centralized database helper functions. ([#227](https://github.com/SWP-47/traffic-processing-platform/issues/227))
 - Comprehensive end-to-end integration tests in `tests/integration/test_reporting.py` simulating active traffic and multi-target subscriptions validation. ([#227](https://github.com/SWP-47/traffic-processing-platform/issues/227))
@@ -34,6 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed the way of working with queues to gain correct working of whole demo stend. TP now extracts packets from queue more often so all demo stand works without delays ([#251](https://github.com/SWP-47/traffic-processing-platform/issues/251))
+- Fixed missing `channel_id` field in WebSocket subscription examples in `docs/system-documentation.md`.
+- Fixed outdated Vivado project setup instructions in `docs/customer-handover.md`, aligning them with the SystemVerilog/constraints source compilation workflow.
 
 ### Security
 
@@ -255,8 +271,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added JWT-based authentication for all REST and WebSocket endpoints to protect telemetry data and prevent unauthorized access. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 - CnSS now sanitizes access logs to prevent `access_token` leakage via query parameters. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 
-[Unreleased]: https://github.com/SWP-47/traffic-processing-platform/compare/v2.0.1...HEAD
-[2.0.1]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v2.0.0
+[Unreleased]: https://github.com/SWP-47/traffic-processing-platform/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v3.0.0
+[2.0.1]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v2.0.1
 [2.0.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v2.0.0
 [1.1.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.1.0
 [1.0.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.0.0

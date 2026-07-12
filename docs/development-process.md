@@ -32,7 +32,7 @@ gitGraph
     merge release/1.0.0 id: "Sync release to develop"
 ```
 
-> *This is exmaple*
+> *This is an example*
 
 ## 2. Workflow Description & Practical Usage
 

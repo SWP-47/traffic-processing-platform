@@ -46,7 +46,7 @@ To ensure horizontal scalability, fault isolation, and high-performance telemetr
 
 ### 2.3. Control and Status Server (CnSS)
 
-The CnSS is deployed as a set of Docker containers (version `2.0.1`, Python ≥ 3.11). If any container crashes, Docker's `restart: always` policy ensures immediate recovery without affecting the core network forwarding plane.
+The CnSS is deployed as a set of Docker containers (version `3.0.0`, Python ≥ 3.11). If any container crashes, Docker's `restart: always` policy ensures immediate recovery without affecting the core network forwarding plane.
 
 The CnSS is composed of four independently deployable microservices:
 
@@ -257,7 +257,7 @@ sequenceDiagram
     WS->>DB: CHECK channel exists
     WS-->>MUI: 101 Switching Protocols
     
-    MUI->>WS: WS Send: { "action": "subscribe", "id": "sub-abc-1", "target": "telemetry", "params": {} }
+    MUI->>WS: WS Send: { "action": "subscribe", "id": "sub-abc-1", "channel_id": "bridge-berlin-01", "target": "telemetry", "params": {} }
     WS->>WS: Compute query_hash (SHA256, id excluded)
     WS->>Redis: SET sub:registry:{hash} (no TTL)
     WS->>Redis: SADD sub:listeners:{hash} {client_id:sub_id}
@@ -371,7 +371,7 @@ sequenceDiagram
     participant DB as TimescaleDB
     participant Report as CnSS Reporting Worker
 
-    MUI->>WS: WS Send: { "action": "subscribe", "id": "sub-xyz", "target": "hosts_table", "params": {...} }
+    MUI->>WS: WS Send: { "action": "subscribe", "id": "sub-xyz", "channel_id": "bridge-berlin-01", "target": "hosts_table", "params": {...} }
     WS->>WS: Compute query_hash (SHA256, id excluded)
     WS->>Redis: SET sub:registry:{hash} (no TTL)
     WS->>Redis: SADD sub:listeners:{hash} {client_id:sub_id}

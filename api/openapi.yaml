@@ -28,7 +28,7 @@ info:
 
     ## Time Parameters Note
     To ensure scalability and avoid the limitations of hardcoded Enums, all time-based parameters (e.g., `window_sec`, `period_sec`) are strictly defined in **seconds** as numeric values. This allows the frontend to request custom aggregation windows (e.g., 45 minutes, 3 hours) without requiring backend code changes or schema updates.
-  version: 2.0.1
+  version: 3.0.0
 
 servers:
   - url: https://{{cnss_host}}

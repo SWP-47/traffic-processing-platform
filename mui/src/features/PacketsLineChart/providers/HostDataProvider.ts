@@ -1,28 +1,33 @@
 import { BaseChartDataProvider } from "./BaseChartDataProvider";
-import { getHistory } from "@/services/history";
+import { getHostHistory } from "@/services/history";
 import subscriptionManager from "@/services/subscriptionManager";
-import { validateTelemetryUpdate } from "@/hooks/useTelemetry";
 import type { ChartDataProvider, DataPoint } from "../types";
+import { validateHostDetailsUpdate } from "@/hooks/useHostDetails";
 
-export interface ChannelDataProviderOptions {
+export interface HostDataProviderOptions {
     channelId: string;
+    hostIp: string;
     windowSec?: number;
     maxPoints?: number;
 }
 
-export class ChannelDataProvider extends BaseChartDataProvider implements ChartDataProvider {
+export class HostDataProvider extends BaseChartDataProvider implements ChartDataProvider {
     private readonly channelId: string;
-    private readonly windowSec: number;
+    private readonly hostIp: string;
+    private isInitialized: boolean = false;
     private unsubscribeFromTelemetry?: () => void;
 
-    constructor(options: ChannelDataProviderOptions) {
+    constructor(options: HostDataProviderOptions) {
         super({ maxPoints: options.maxPoints });
         this.channelId = options.channelId;
-        this.windowSec = options.windowSec ?? 5.0;
+        this.hostIp = options.hostIp;
     }
 
     async initialize(timeScale: number): Promise<void> {
-        const response = await getHistory(this.channelId, timeScale);
+        if (this.isInitialized) return;
+
+        this.isInitialized = true;
+        const response = await getHostHistory(this.channelId, this.hostIp, timeScale);
         this.setBucketSize(response.interval_sec * 1000);
 
         if (response.points) {
@@ -30,7 +35,7 @@ export class ChannelDataProvider extends BaseChartDataProvider implements ChartD
                 timestamp: Date.parse(p.timestamp!),
                 packetsInPerSec: p.packets_in_per_sec ?? 0,
                 packetsOutPerSec: p.packets_out_per_sec ?? 0,
-                isActive: p.is_active ?? false,
+                isActive: true,
                 windowMs: this.getBucketSize(),
                 complete: true,
             })).filter(p => !Number.isNaN(p.timestamp));
@@ -39,25 +44,28 @@ export class ChannelDataProvider extends BaseChartDataProvider implements ChartD
         }
 
         this.unsubscribeFromTelemetry = subscriptionManager.subscribe(
-            "telemetry",
-            { window_sec: this.windowSec },
-            (update) => this.handleTelemetryUpdate(update),
+            "host_details",
+            {
+                host_ip: this.hostIp,
+                period_sec: 5
+            },
+            (update) => this.handleHostDetailsUpdate(update),
             () => {}
         );
     }
 
-    private handleTelemetryUpdate(update: Record<string, unknown>): void {
-        if (!validateTelemetryUpdate(update)) return;
+    private handleHostDetailsUpdate(update: Record<string, unknown>): void {
+        if (!validateHostDetailsUpdate(update)) return;
 
         const timestamp = Date.parse(update.timestamp as string);
         if (Number.isNaN(timestamp)) return;
 
         const point: DataPoint = {
             timestamp,
-            packetsInPerSec: update.metrics.direction_in.packets_per_sec,
-            packetsOutPerSec: update.metrics.direction_out.packets_per_sec,
-            isActive: update.is_active === true,
-            windowMs: update.window_ms,
+            packetsInPerSec: update.rx_per_sec,
+            packetsOutPerSec: update.tx_per_sec,
+            isActive: true,
+            windowMs: 5,
             complete: false,
         };
 
@@ -66,6 +74,8 @@ export class ChannelDataProvider extends BaseChartDataProvider implements ChartD
     }
 
     dispose(): void {
+        if (!this.isInitialized) return;
+
         this.unsubscribeFromTelemetry?.();
         this.unsubscribeFromTelemetry = undefined;
         super.dispose();

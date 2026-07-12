@@ -202,4 +202,4 @@ make down
 
 - **Changelog**: [CHANGELOG.md](CHANGELOG.md)
 - **Weekly Reports**:
-  - [Week 5](reports/week5/README.md) | [Week 4](reports/week4/README.md) | [Week 3](reports/week3/README.md) | [Week 2](reports/week2/README.md)
+  - [Week 6](reports/week6/README.md) | [Week 5](reports/week5/README.md) | [Week 4](reports/week4/README.md) | [Week 3](reports/week3/README.md) | [Week 2](reports/week2/README.md)

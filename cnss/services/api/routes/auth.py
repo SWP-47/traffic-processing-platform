@@ -170,11 +170,12 @@ async def refresh(
     # Query the database to get the latest user profile (id, username, role, scope).
     # This ensures that any changes to the user's role or assigned channels are
     # reflected in the MUI upon page reload (Architecture §2.4).
+    # Note: payload.sub is a string UUID from the JWT, asyncpg handles conversion to UUID type.
     user_row = await db_fetch_user_by_id(payload.sub)
     if not user_row:
         raise AuthError(message="User profile not found.")
 
-    user_id = payload.sub
+    user_id = str(user_row["id"])
     role = user_row["role"]
     username = user_row["username"]
 
@@ -183,7 +184,7 @@ async def refresh(
     # Viewers receive only their assigned channels.
     scope: list[str] = []
     if role == "viewer":
-        scope = await db_fetch_user_scopes(user_id)
+        scope = await db_fetch_user_scopes(user_row["id"])
     elif role == "admin":
         # Fetch all registered channels for admin
         scope = await db_fetch_all_channels()

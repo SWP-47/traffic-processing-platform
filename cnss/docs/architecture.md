@@ -80,7 +80,7 @@ The CnSS is deployed as a set of Docker containers. If any container crashes, Do
 
 **Responsibilities**:
 
-1. **Authentication**: Handles `POST /api/v1/auth/login`. Validates credentials using Argon2id password hashes. Issues JWTs containing `role` and `scope`.
+1. **Authentication**: Handles `POST /api/v1/auth/login` and `POST /api/v1/auth/refresh`. Validates credentials using Argon2id password hashes. Issues JWTs containing `role` and `scope`. Crucially, both endpoints must return a `user` object in the JSON response body containing `id`, `username`, `role`, and `scope`. For the `/refresh` endpoint, the service must extract the `sub` (user ID) from the valid `refresh_token`, query the `users` and `user_channel_scopes` tables to fetch the latest profile data, and include it in the response to allow the MUI to restore its UI state upon page reload.
 2. **Channel Discovery & Status**: Serves `/channels` and `/status`. Reads directly from the `channels` table for instant, zero-latency status checks (no heavy `MAX(time)` queries required).
 3. **History API**: Serves `/history`. Accepts `period_sec` (integer) to support arbitrary time windows. Dynamically calculates optimal `time_bucket` intervals based on the requested seconds to ensure smooth chart rendering.
 4. **Health Check**: Serves `/health`, verifying internal component and database connectivity.
@@ -279,7 +279,9 @@ The core `telemetry_update` stream is now unified under this mechanic.
 - **Password Storage**: Plaintext passwords are never stored. The Auth module uses `passlib` with the `argon2` backend to generate and verify `password_hash`.
 
 - **JWT Specification**: Tokens are signed using HS256.
-  - **Claims**: `sub` (user ID), `iat`, `exp` (default 24h), `role` (`admin` or `viewer`), `scope` (array of `channel_id`).
+  - Claims : `sub` (user ID), `iat`, `exp` (default 24h), `role` (`admin` or `viewer`), `scope` (array of `channel_id`).
+
+> *Note: While `role` and `scope` are embedded in the JWT for backend authorization checks, the REST API `/login` and `/refresh` endpoints explicitly return them (along with `id` and `username`) in the JSON response body. This provides the MUI with the necessary context for UI state restoration without requiring client-side JWT parsing or additional `/me` requests.*
 
 - **Authorization Matrix**:
   - `admin`: The `scope` claim is ignored; unrestricted access to all channels.

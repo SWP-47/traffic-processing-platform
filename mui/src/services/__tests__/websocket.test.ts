@@ -291,7 +291,7 @@ describe('WebSocketConnectionService', () => {
             
             wsInstance!.simulateClose(4001, 'Auth error', true);
             
-            expect(auth.requestTokenRenewal).toHaveBeenCalled();
+            expect(auth.handleAuthError).toHaveBeenCalled();
         });
     });
 

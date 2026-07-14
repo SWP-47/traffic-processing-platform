@@ -8,15 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Automatic token refresh and request retry mechanism for REST API 401 Unauthorized responses (excluding login and refresh endpoints). ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
+- Automatic WebSocket reconnection with a new access token upon authentication error (close code 4001). ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
+- Session initialization and validation on protected route access to restore authentication state on page load. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
+- Logout functionality triggered by clicking the user avatar in the Header, which now invokes the `/api/v1/auth/logout` endpoint. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
+
 ### Changed
 - REST API (`POST /api/v1/auth/login` and `POST /api/v1/auth/refresh`): Response structure now includes a nested `user` object containing `id`, `username`, `role`, and `scope` fields. Flat `role` and `scope` fields at the root level have been removed.
 - REST API (`POST /api/v1/auth/refresh`): Now fetches the latest user profile from the database to ensure real-time scope updates and role changes are immediately reflected upon page reload.
 - CnSS: Added `db_fetch_user_profile()` function to centralized database query module `core/db.py` for fetching complete user profiles with current scope information.
 - Integration tests (`tests/integration/test_api.py`): Updated `test_api_login_success_viewer`, `test_api_login_success_admin`, and `test_api_token_refresh_lifecycle` to validate nested user profile fields in authentication responses.
 
+- Updated authentication error handling in `AuthenticationService` to prevent concurrent token refresh requests using promise deduplication. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
+
 ### Deprecated
 
 ### Removed
+- Deprecated `requestTokenRenewal` method in favor of the new robust `handleAuthError` and `attemptTokenRefresh` flow. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
 
 ### Fixed
 

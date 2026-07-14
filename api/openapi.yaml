@@ -407,7 +407,7 @@ components:
         user:
           $ref: '#/components/schemas/UserProfile'
 
-RefreshTokenResponse:
+    RefreshTokenResponse:
       type: object
       description: Response for token refresh. Includes user profile to allow frontend state restoration on page reload without additional requests.
       properties:

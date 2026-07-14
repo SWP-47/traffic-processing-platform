@@ -57,6 +57,17 @@ async def db_fetch_user_by_username(username: str, pool: Optional[Any] = None) -
         return dict(row) if row else None
 
 
+async def db_fetch_user_by_id(user_id: Any, pool: Optional[Any] = None) -> Optional[dict[str, Any]]:
+    """Fetches user information (id, username, role) by user ID."""
+    db_p = pool or get_db_pool()
+    async with db_p.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT id, username, role FROM users WHERE id = $1",
+            user_id,
+        )
+        return dict(row) if row else None
+
+
 async def db_fetch_user_scopes(user_id: Any, pool: Optional[Any] = None) -> list[str]:
     """Fetches list of permitted channel scopes for a viewer user."""
     db_p = pool or get_db_pool()

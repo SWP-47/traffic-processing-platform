@@ -13,8 +13,8 @@ from core.config import settings
 from core.contracts.auth import RefreshTokenPayload
 from core.db import (
     db_fetch_all_channels,
+    db_fetch_user_by_id,
     db_fetch_user_by_username,
-    db_fetch_user_profile,
     db_fetch_user_scopes,
 )
 from core.exceptions import AuthError, InvalidCredentialsError
@@ -170,20 +170,34 @@ async def refresh(
     # Query the database to get the latest user profile (id, username, role, scope).
     # This ensures that any changes to the user's role or assigned channels are
     # reflected in the MUI upon page reload (Architecture §2.4).
-    user_profile = await db_fetch_user_profile(payload.sub)
-    if not user_profile:
+    user_row = await db_fetch_user_by_id(payload.sub)
+    if not user_row:
         raise AuthError(message="User profile not found.")
 
-    # --- Step 5: Issue new access token ---
+    user_id = payload.sub
+    role = user_row["role"]
+    username = user_row["username"]
+
+    # --- Step 5: Fetch channel scopes for viewer role ---
+    # Admins receive scopes for all registered channels.
+    # Viewers receive only their assigned channels.
+    scope: list[str] = []
+    if role == "viewer":
+        scope = await db_fetch_user_scopes(user_id)
+    elif role == "admin":
+        # Fetch all registered channels for admin
+        scope = await db_fetch_all_channels()
+
+    # --- Step 6: Issue new access token ---
     # Use the fresh scope from the database instead of relying on the token payload,
     # ensuring that any revoked channel access is immediately reflected.
     new_access_token = create_access_token(
-        subject=payload.sub,
-        role=user_profile["role"],
-        scope=user_profile["scope"],
+        subject=user_id,
+        role=role,
+        scope=scope,
     )
 
-    # --- Step 6: Build and return response ---
+    # --- Step 7: Build and return response ---
     now = datetime.now(timezone.utc)
     return RefreshTokenResponse(
         access_token=new_access_token,
@@ -191,10 +205,10 @@ async def refresh(
         expires_in=settings.jwt_expiration_hours * 3600,
         issued_at=now,
         user=UserProfile(
-            id=user_profile["id"],
-            username=user_profile["username"],
-            role=user_profile["role"],
-            scope=user_profile["scope"],
+            id=user_id,
+            username=username,
+            role=role,
+            scope=scope,
         ),
     )
 

@@ -519,6 +519,32 @@ export interface components {
              */
             password: string;
         };
+        /** @description User context required by the frontend to restore UI state. */
+        UserProfile: {
+            /**
+             * @description Internal user identifier (UUID).
+             * @example usr_8f7a9b2c
+             */
+            id: string;
+            /**
+             * @description Human-readable username for UI display.
+             * @example admin
+             */
+            username: string;
+            /**
+             * @description User role.
+             * @enum {string}
+             */
+            role: "admin" | "viewer";
+            /**
+             * @description List of accessible channel_ids. Empty or omitted for admin role.
+             * @example [
+             *       "bridge-berlin-01",
+             *       "bridge-prague-01"
+             *     ]
+             */
+            scope: string[];
+        };
         TokenResponse: {
             /** @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... */
             access_token: string;
@@ -531,18 +557,22 @@ export interface components {
             expires_in: number;
             /** Format: date-time */
             issued_at: string;
-            /** @enum {string} */
-            role: "admin" | "viewer";
-            /** @description List of accessible channel_ids. Empty for admin. */
-            scope: string[];
+            user: components["schemas"]["UserProfile"];
         };
+        /** @description Response for token refresh. Includes user profile to allow frontend state restoration on page reload without additional requests. */
         RefreshTokenResponse: {
+            /** @example new_access_token_eyJhbG... */
             access_token: string;
-            /** @enum {string} */
+            /**
+             * @example Bearer
+             * @enum {string}
+             */
             token_type: "Bearer";
+            /** @example 86400 */
             expires_in: number;
             /** Format: date-time */
             issued_at: string;
+            user: components["schemas"]["UserProfile"];
         };
         LogoutResponse: {
             /** @example Successfully logged out. */

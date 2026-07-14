@@ -2,7 +2,7 @@ import apiClient from '@/api/client';
 
 import type { components } from '@/api/schema';
 export type LoginRequest = components["schemas"]["LoginRequest"]; 
-export type Role = components["schemas"]["TokenResponse"]["role"];
+export type Role = components["schemas"]["TokenResponse"]["user"]["role"];
 
 export interface UserData {
     isAuthenticated: boolean,
@@ -64,8 +64,8 @@ class AuthenticationService {
         this.token = data.access_token;
 
         this.updateState({
-            username: "ehhh",
-            role: "admin",
+            username: data.user.username,
+            role: data.user.role,
             isAuthenticated: true
         });
     }
@@ -95,7 +95,7 @@ class AuthenticationService {
 
         this.state = {
            username: credentials.username,
-           role: data.role,
+           role: data.user.role,
            isAuthenticated: true
         };
 
@@ -113,7 +113,8 @@ class AuthenticationService {
             
             this.token = data.access_token;
             this.updateState({
-                ...this.state,
+                username: data.user.username,
+                role: data.user.role,
                 isAuthenticated: true,
             });
 

@@ -12,12 +12,14 @@ export interface UserData {
 
 class AuthenticationService {
     private token: string | undefined;
-
     private state: UserData = {
         isAuthenticated: false,
         username: undefined,
         role: undefined,
     };
+
+    private isRefreshing: boolean = false;
+    private refreshPromise: Promise<boolean> | null = null;
 
     private listeners = new Set<() => void>();
 
@@ -50,10 +52,39 @@ class AuthenticationService {
         return this.token;
     }
 
-    requestTokenRenewal(): void {
-        this.logout();
-        // To be implemented in the future
-        // this.notifyAll();
+    async initialize(): Promise<void> {
+        if (this.state.isAuthenticated) return;
+
+        const { data, error } = await apiClient.POST('/api/v1/auth/refresh');
+
+        if (error) {
+            return;
+        }
+
+        this.token = data.access_token;
+
+        this.updateState({
+            username: "ehhh",
+            role: "admin",
+            isAuthenticated: true
+        });
+    }
+
+    async handleAuthError(): Promise<boolean> {
+        if (this.isRefreshing && this.refreshPromise) {
+            return this.refreshPromise;
+        }
+
+        this.isRefreshing = true;
+        this.refreshPromise = this.attemptTokenRefresh();
+
+        try {
+            const success = await this.refreshPromise;
+            return success;
+        } finally {
+            this.isRefreshing = false;
+            this.refreshPromise = null;
+        }
     }
 
     async login(credentials: LoginRequest) {
@@ -68,19 +99,48 @@ class AuthenticationService {
            isAuthenticated: true
         };
 
-        // implement auto renewal
         this.notifyAll();
     }
 
-    logout() {
-        this.state = {
+    private async attemptTokenRefresh(): Promise<boolean> {
+        try {
+            const { data, error } = await apiClient.POST('/api/v1/auth/refresh');
+            
+            if (error) {
+                this.clearData();
+                return false;
+            }
+            
+            this.token = data.access_token;
+            this.updateState({
+                ...this.state,
+                isAuthenticated: true,
+            });
+
+            return true;
+        } catch (e: unknown) {
+            this.clearData();
+            console.error(e);
+            return false;
+        }
+    }
+
+    async logout() {
+        await apiClient.POST('/api/v1/auth/logout').catch(() => {});
+        this.clearData();
+    }
+
+    private clearData() {
+        this.updateState({
             isAuthenticated: false,
             username: undefined,
             role: undefined
-        }
-
+        });
         this.token = undefined;
+    }
 
+    private updateState(newState: UserData) {
+        this.state = newState;
         this.notifyAll();
     }
 }

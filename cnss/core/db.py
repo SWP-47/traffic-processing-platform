@@ -102,7 +102,7 @@ async def db_fetch_user_profile(user_id: Any, pool: Optional[Any] = None) -> Opt
         )
         if not user_row:
             return None
-        
+
         # Fetch scope based on role
         scope: list[str] = []
         if user_row["role"] == "admin":
@@ -111,7 +111,7 @@ async def db_fetch_user_profile(user_id: Any, pool: Optional[Any] = None) -> Opt
         else:
             # Viewer: scope includes only assigned channels
             scope = await db_fetch_user_scopes(user_id, pool=db_p)
-        
+
         return {
             "id": str(user_row["id"]),
             "username": user_row["username"],

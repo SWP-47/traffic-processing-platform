@@ -21,17 +21,28 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=1, description="Plaintext password for verification.")
 
 
+class UserProfile(BaseModel):
+    """
+    User profile information included in authentication responses.
+    Contains user identity and access scope information.
+    """
+
+    id: str = Field(..., description="Unique user identifier (UUID).")
+    username: str = Field(..., description="Unique username for the user.")
+    role: Literal["admin", "viewer"] = Field(..., description="User role for authorization.")
+    scope: List[str] = Field(default_factory=list, description="List of accessible channel IDs.")
+
+
 class TokenResponse(BaseModel):
     """
-    Response payload containing the issued JWT access token and metadata.
+    Response payload containing the issued JWT access token, user profile, and metadata.
     """
 
     access_token: str = Field(..., description="Signed JWT access token.")
     token_type: str = Field(default="Bearer", description="Token type identifier.")
     expires_in: int = Field(..., description="Token lifetime in seconds.")
     issued_at: datetime = Field(..., description="ISO 8601 timestamp of token issuance.")
-    role: Literal["admin", "viewer"] = Field(..., description="User role for authorization.")
-    scope: List[str] = Field(default_factory=list, description="List of accessible channel IDs.")
+    user: UserProfile = Field(..., description="User profile information containing role and scope.")
 
 
 class RefreshTokenResponse(BaseModel):
@@ -43,6 +54,7 @@ class RefreshTokenResponse(BaseModel):
     token_type: str = Field(default="Bearer", description="Token type identifier.")
     expires_in: int = Field(..., description="Token lifetime in seconds.")
     issued_at: datetime = Field(..., description="ISO 8601 timestamp of token issuance.")
+    user: UserProfile = Field(..., description="User profile information containing role and scope.")
 
 
 class LogoutResponse(BaseModel):

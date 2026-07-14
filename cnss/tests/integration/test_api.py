@@ -149,8 +149,9 @@ async def test_api_login_success_viewer(redis_setup, db_pool_setup, api_client):
     # Verify Response Body
     assert data["token_type"] == "Bearer"
     assert "access_token" in data
-    assert data["role"] == "viewer"
-    assert data["scope"] == [TEST_CHANNEL_API_1]
+    assert data["user"]["role"] == "viewer"
+    assert data["user"]["scope"] == [TEST_CHANNEL_API_1]
+    assert data["user"]["username"] == TEST_VIEWER_USERNAME
 
     # Verify HttpOnly Cookie
     assert "refresh_token" in response.cookies
@@ -189,9 +190,10 @@ async def test_api_login_success_admin(redis_setup, db_pool_setup, api_client):
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["role"] == "admin"
+    assert data["user"]["role"] == "admin"
     # Admin has all registered channels in their scope (subset assertion to accommodate existing DB seeding)
-    assert {TEST_CHANNEL_API_1, TEST_CHANNEL_API_2}.issubset(set(data["scope"]))
+    assert {TEST_CHANNEL_API_1, TEST_CHANNEL_API_2}.issubset(set(data["user"]["scope"]))
+    assert data["user"]["username"] == TEST_ADMIN_USERNAME
 
 
 async def test_api_login_invalid_credentials(redis_setup, db_pool_setup, api_client):
@@ -240,6 +242,10 @@ async def test_api_token_refresh_lifecycle(redis_setup, db_pool_setup, api_clien
     refresh_data = refresh_response.json()
     assert "access_token" in refresh_data
     assert refresh_data["access_token"] != initial_access_token
+    # Verify user profile is included in refresh response
+    assert "user" in refresh_data
+    assert refresh_data["user"]["username"] == TEST_VIEWER_USERNAME
+    assert refresh_data["user"]["role"] == "viewer"
 
     # 3. Logout (revokes refresh token JTI in Redis)
     logout_response = await api_client.post("/api/v1/auth/logout")

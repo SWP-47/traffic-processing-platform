@@ -81,8 +81,12 @@ The Control and Status Server (CnSS) provides a decoupled API for the Management
   "token_type": "Bearer",
   "expires_in": 86400,
   "issued_at": "2026-06-18T12:00:00Z",
-  "role": "admin",
-  "scope": ["bridge-berlin-01", "bridge-prague-01"]
+  "user": {
+    "id": "usr_8f7a9b2c",
+    "username": "admin",
+    "role": "admin",
+    "scope": ["bridge-berlin-01", "bridge-prague-01"]
+  }
 }
 ```
 
@@ -115,7 +119,13 @@ Cookie: refresh_token=eyJhbG...
   "access_token": "new_access_token_eyJhbG...",
   "token_type": "Bearer",
   "expires_in": 86400,
-  "issued_at": "2026-06-19T12:00:00Z"
+  "issued_at": "2026-06-19T12:00:00Z",
+  "user": {
+    "id": "usr_8f7a9b2c",
+    "username": "admin",
+    "role": "admin",
+    "scope": ["bridge-berlin-01", "bridge-prague-01"]
+  }
 }
 ```
 

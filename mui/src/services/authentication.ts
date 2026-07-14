@@ -64,8 +64,8 @@ class AuthenticationService {
         this.token = data.access_token;
 
         this.updateState({
-            username: data.user.username,
-            role: data.user.role,
+            username: data.user?.username ?? 'user',
+            role: data.user?.role ?? 'viewer',
             isAuthenticated: true
         });
     }
@@ -94,9 +94,9 @@ class AuthenticationService {
         this.token = data.access_token;
 
         this.state = {
-           username: credentials.username,
-           role: data.user.role,
-           isAuthenticated: true
+            username: credentials.username,
+            role: data.user?.role ?? 'viewer',
+            isAuthenticated: true
         };
 
         this.notifyAll();
@@ -113,8 +113,8 @@ class AuthenticationService {
             
             this.token = data.access_token;
             this.updateState({
-                username: data.user.username,
-                role: data.user.role,
+                username: data.user?.username ?? 'user',
+                role: data.user?.role ?? 'viewer',
                 isAuthenticated: true,
             });
 

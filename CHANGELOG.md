@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive end-to-end integration tests in `tests/integration/test_reporting.py` simulating active traffic and multi-target subscriptions validation. ([#227](https://github.com/SWP-47/traffic-processing-platform/issues/227))
 - Interactive end-to-end system verification scripts `scripts/verify_system.py` and `scripts/verify_all_subscriptions.py` to test websocket push updates under concurrent stress load. ([#227](https://github.com/SWP-47/traffic-processing-platform/issues/227))
 - Added to hardware pert of TP shift register to detect packet to block before the transmission starts([#250](https://github.com/SWP-47/traffic-processing-platform/issues/250))
-- New module added with receiving IP address form specific packets sent by TP-CN device to FPGA board
+- New module added with receiving IP address form specific packets sent by TP-CN device to FPGA board([#294](https://github.com/SWP-47/traffic-processing-platform/issues/294))
 
 ### Changed
 

@@ -151,6 +151,7 @@ class HostTopDestinationsHandler(BaseSubscriptionHandler):
                         "ip": str(row["remote_ip"]),
                         "location": row["location"],
                         "received_per_sec": float(row["received_per_sec"]),
+                        "received_bytes_per_sec": float(row.get("received_bytes_per_sec", 0.0)),
                         "last_seen": (row["last_seen"].isoformat() if row["last_seen"] else None),
                     }
                 )

@@ -73,6 +73,7 @@ class BufferManager:
                 "src_port": packet.src_port,
                 "dst_port": packet.dst_port,
                 "protocol": packet.protocol,
+                "size": packet.size,
             }
             serialized_records.append(json.dumps(record))
 

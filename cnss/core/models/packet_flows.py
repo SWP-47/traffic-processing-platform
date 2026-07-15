@@ -53,9 +53,7 @@ class PacketFlow(Base):
     )
 
     # Packet size in bytes
-    size: Mapped[int] = mapped_column(
-        BigInteger, nullable=False, server_default="0", comment="Packet size in bytes"
-    )
+    size: Mapped[int] = mapped_column(BigInteger, nullable=False, server_default="0", comment="Packet size in bytes")
 
     # --- Indexes ---
     # Composite index for fast channel-specific time-series queries

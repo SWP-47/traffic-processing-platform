@@ -146,9 +146,9 @@ class BackgroundFlusher:
             async with db_pool.acquire() as conn:
                 await conn.executemany(
                     """
-                    INSERT INTO packet_flows (time, channel_id, direction, src_ip, dst_ip, src_port, dst_port, protocol, size)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                    """,
+INSERT INTO packet_flows (time, channel_id, direction, src_ip, dst_ip, src_port, dst_port, protocol, size)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+""",
                     parsed_records,
                 )
 

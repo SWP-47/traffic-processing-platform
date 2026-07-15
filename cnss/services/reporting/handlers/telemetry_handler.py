@@ -127,6 +127,8 @@ class TelemetryHandler(BaseSubscriptionHandler):
             # --- Metric Calculation ---
             total_in = int(row["total_in"])
             total_out = int(row["total_out"])
+            total_bytes_in = int(row.get("total_bytes_in", 0))
+            total_bytes_out = int(row.get("total_bytes_out", 0))
             bucket_count = int(row["bucket_count"])
 
             # --- Accurate Rate Calculation ---
@@ -137,6 +139,8 @@ class TelemetryHandler(BaseSubscriptionHandler):
                 # No buckets available (e.g., window_sec too small or no data)
                 pps_in = 0
                 pps_out = 0
+                bps_in = 0
+                bps_out = 0
                 actual_window_sec = 0.0
                 logger.debug(
                     f"[telemetry] No buckets found for channel '{channel_id}'. " f"Requested window: {window_sec}s."
@@ -146,6 +150,8 @@ class TelemetryHandler(BaseSubscriptionHandler):
                 actual_window_sec = float(bucket_count)
                 pps_in = int(total_in / actual_window_sec)
                 pps_out = int(total_out / actual_window_sec)
+                bps_in = int(total_bytes_in / actual_window_sec)
+                bps_out = int(total_bytes_out / actual_window_sec)
                 logger.debug(
                     f"[telemetry] Calculated rates using {bucket_count} bucket(s) "
                     f"(actual window: {actual_window_sec}s, requested: {window_sec}s)."
@@ -166,10 +172,14 @@ class TelemetryHandler(BaseSubscriptionHandler):
                     "direction_out": {
                         "packets_per_sec": pps_out,
                         "packets": total_out,
+                        "bytes_per_sec": bps_out,
+                        "bytes": total_bytes_out,
                     },
                     "direction_in": {
                         "packets_per_sec": pps_in,
                         "packets": total_in,
+                        "bytes_per_sec": bps_in,
+                        "bytes": total_bytes_in,
                     },
                 },
                 "timestamp": latest_bucket.isoformat() if latest_bucket else now.isoformat(),
@@ -178,7 +188,7 @@ class TelemetryHandler(BaseSubscriptionHandler):
 
             logger.debug(
                 f"[telemetry] Success for '{channel_id}': "
-                f"in={total_in} ({pps_in} pps), out={total_out} ({pps_out} pps) "
+                f"in={total_in} ({pps_in} pps, {bps_in} bps), out={total_out} ({pps_out} pps, {bps_out} bps) "
                 f"over {actual_window_sec}s."
             )
             return result

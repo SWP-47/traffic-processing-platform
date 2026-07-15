@@ -128,6 +128,7 @@ def create_batch(
             dst_ip="8.8.8.8",
             src_port=10000 + i,
             dst_port=80,
+            size=64,
         )
         for i in range(packet_count)
     ]

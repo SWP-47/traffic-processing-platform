@@ -1163,3 +1163,213 @@ async def test_simulated_traffic_multi_subscription(redis_setup, db_pool_setup):
     assert 53 in ports_list
     assert ports_list[53]["protocol"] == "UDP"
     assert abs(ports_list[53]["packets_per_sec"] - (20.0 / 12.0)) < 0.0001
+
+
+async def test_telemetry_packet_size_aggregation(redis_setup, db_pool_setup):
+    """
+    Architecture §2.2.2 & §4.3: Verify that the 'size' field from packet_flows
+    is correctly aggregated into bytes_in/bytes_out in the telemetry_1s continuous
+    aggregate, and that the TelemetryHandler returns accurate bytes_per_sec metrics.
+    """
+    redis = redis_setup
+    db_pool = db_pool_setup
+    query_hash = "integration-test-query-hash-telemetry-size"
+    listeners_key = f"{LISTENERS_KEY_PREFIX}{query_hash}"
+    registry_key = f"{REGISTRY_KEY_PREFIX}{query_hash}"
+
+    # Setup active hash and registry
+    subscribe_json = json.dumps(
+        {
+            "action": "subscribe",
+            "id": "sub-telemetry-size",
+            "channel_id": TEST_CHANNEL_ID_TELEMETRY,
+            "target": "telemetry",
+            "params": {"window_sec": 5.0},
+        }
+    )
+    await redis.set(registry_key, subscribe_json)
+    await redis.sadd(ACTIVE_HASHES_KEY, query_hash)
+
+    # Add active listener and session
+    await redis.sadd(listeners_key, "client_poller:sub-telemetry-size")
+    await redis.hset(f"{SESSION_KEY_PREFIX}client_poller", "client_id", "client_poller")
+
+    # Insert channel and packet flows with specific sizes:
+    # direction=0 (IN): 2 packets with sizes 100 and 200 bytes -> bytes_in = 300
+    # direction=1 (OUT): 1 packet with size 500 bytes -> bytes_out = 500
+    now = datetime.now(timezone.utc)
+    async with db_pool.acquire() as conn:
+        await conn.execute(
+            "INSERT INTO channels (channel_id, is_active, dropped, last_activity_at) VALUES ($1, $2, $3, $4)",
+            TEST_CHANNEL_ID_TELEMETRY,
+            True,
+            0,
+            now,
+        )
+
+        await conn.execute(
+            """
+            INSERT INTO packet_flows (time, channel_id, direction, src_ip, dst_ip, src_port, dst_port, protocol, size)
+            VALUES (NOW() - INTERVAL '2 seconds', $1, 0, '192.168.1.10', '8.8.8.8', 12345, 80, 'TCP', 100),
+                   (NOW() - INTERVAL '2 seconds', $1, 0, '192.168.1.11', '8.8.8.8', 12345, 53, 'UDP', 200),
+                   (NOW() - INTERVAL '2 seconds', $1, 1, '8.8.8.8', '192.168.1.10', 80, 12345, 'TCP', 500)
+            """,
+            TEST_CHANNEL_ID_TELEMETRY,
+        )
+
+        await refresh_telemetry_1s(conn)
+
+    # Set up Poller
+    poller = Poller()
+    handler = TelemetryHandler()
+    poller.register_handler("telemetry", handler)
+
+    # Setup Pub/Sub listener
+    pubsub = redis.pubsub()
+    await pubsub.subscribe(f"{PUSH_CHANNEL_PREFIX}{query_hash}")
+
+    # Run poller tick
+    await poller._tick()
+
+    # Get published message
+    msg = None
+    try:
+        async with asyncio.timeout(2.0):
+            async for message in pubsub.listen():
+                if message["type"] == "message":
+                    msg = message
+                    break
+    except asyncio.TimeoutError:
+        pass
+
+    assert msg is not None
+
+    # Parse and validate message data
+    payload = json.loads(msg["data"])
+    assert payload["type"] == "telemetry_update"
+    assert payload["channel_id"] == TEST_CHANNEL_ID_TELEMETRY
+
+    metrics = payload["metrics"]
+
+    # bytes_in: 100 + 200 = 300 bytes
+    assert metrics["direction_in"]["bytes"] == 300
+    # bytes_per_sec: 300 / 1s = 300 bps (1 bucket at NOW()-2s)
+    assert metrics["direction_in"]["bytes_per_sec"] == 300
+
+    # bytes_out: 500 bytes
+    assert metrics["direction_out"]["bytes"] == 500
+    # bytes_per_sec: 500 / 1s = 500 bps
+    assert metrics["direction_out"]["bytes_per_sec"] == 500
+
+    # Verify packet counts still correct
+    assert metrics["direction_in"]["packets"] == 2
+    assert metrics["direction_out"]["packets"] == 1
+
+
+async def test_telemetry_packet_size_across_multiple_buckets(redis_setup, db_pool_setup):
+    """
+    Architecture §2.2.2: Verify that packet sizes are correctly aggregated across
+    multiple 1-second buckets in telemetry_1s, and that bytes_per_sec is calculated
+    using the actual bucket count.
+    """
+    redis = redis_setup
+    db_pool = db_pool_setup
+    query_hash = "integration-test-query-hash-telemetry-size-multi"
+    listeners_key = f"{LISTENERS_KEY_PREFIX}{query_hash}"
+    registry_key = f"{REGISTRY_KEY_PREFIX}{query_hash}"
+
+    # Setup active hash and registry
+    subscribe_json = json.dumps(
+        {
+            "action": "subscribe",
+            "id": "sub-telemetry-size-multi",
+            "channel_id": TEST_CHANNEL_ID_TELEMETRY_PROTO,
+            "target": "telemetry",
+            "params": {"window_sec": 5.0},
+        }
+    )
+    await redis.set(registry_key, subscribe_json)
+    await redis.sadd(ACTIVE_HASHES_KEY, query_hash)
+
+    # Add active listener and session
+    await redis.sadd(listeners_key, "client_poller:sub-telemetry-size-multi")
+    await redis.hset(f"{SESSION_KEY_PREFIX}client_poller", "client_id", "client_poller")
+
+    # Insert packet flows across multiple buckets with varying sizes:
+    # Bucket at NOW() - 2 seconds:
+    #   - 2 IN packets: size 150 + 250 = 400 bytes
+    #   - 1 OUT packet: size 300 bytes
+    # Bucket at NOW() - 3 seconds:
+    #   - 1 IN packet: size 100 bytes
+    # Total IN bytes: 500, Total OUT bytes: 300
+    # Actual window: 2 buckets = 2 seconds
+    # bytes_per_sec IN: 500 / 2 = 250, bytes_per_sec OUT: 300 / 2 = 150
+    now = datetime.now(timezone.utc)
+    async with db_pool.acquire() as conn:
+        await conn.execute(
+            "INSERT INTO channels (channel_id, is_active, dropped, last_activity_at) VALUES ($1, $2, $3, $4)",
+            TEST_CHANNEL_ID_TELEMETRY_PROTO,
+            True,
+            0,
+            now,
+        )
+
+        await conn.execute(
+            """
+            INSERT INTO packet_flows (time, channel_id, direction, src_ip, dst_ip, src_port, dst_port, protocol, size)
+            VALUES (NOW() - INTERVAL '2 seconds', $1, 0, '192.168.1.10', '8.8.8.8', 12345, 80, 'TCP', 150),
+                   (NOW() - INTERVAL '2 seconds', $1, 0, '192.168.1.11', '8.8.8.8', 12345, 53, 'UDP', 250),
+                   (NOW() - INTERVAL '2 seconds', $1, 1, '8.8.8.8', '192.168.1.10', 80, 12345, 'TCP', 300),
+                   (NOW() - INTERVAL '3 seconds', $1, 0, '192.168.1.11', '8.8.8.8', 12345, 53, 'UDP', 100)
+            """,
+            TEST_CHANNEL_ID_TELEMETRY_PROTO,
+        )
+
+        await refresh_telemetry_1s(conn)
+
+    # Set up Poller
+    poller = Poller()
+    handler = TelemetryHandler()
+    poller.register_handler("telemetry", handler)
+
+    # Setup Pub/Sub listener
+    pubsub = redis.pubsub()
+    await pubsub.subscribe(f"{PUSH_CHANNEL_PREFIX}{query_hash}")
+
+    # Run poller tick
+    await poller._tick()
+
+    # Get published message
+    msg = None
+    try:
+        async with asyncio.timeout(2.0):
+            async for message in pubsub.listen():
+                if message["type"] == "message":
+                    msg = message
+                    break
+    except asyncio.TimeoutError:
+        pass
+
+    assert msg is not None
+
+    # Parse and validate message data
+    payload = json.loads(msg["data"])
+    assert payload["type"] == "telemetry_update"
+    assert payload["channel_id"] == TEST_CHANNEL_ID_TELEMETRY_PROTO
+
+    metrics = payload["metrics"]
+
+    # Verify window is 2 seconds (2 buckets)
+    assert payload["window_ms"] == 2000
+
+    # Total bytes
+    assert metrics["direction_in"]["bytes"] == 500
+    assert metrics["direction_out"]["bytes"] == 300
+
+    # bytes_per_sec calculated using actual bucket count (2 seconds)
+    assert metrics["direction_in"]["bytes_per_sec"] == 250
+    assert metrics["direction_out"]["bytes_per_sec"] == 150
+
+    # Verify packet counts
+    assert metrics["direction_in"]["packets"] == 3
+    assert metrics["direction_out"]["packets"] == 1

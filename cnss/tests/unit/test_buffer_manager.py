@@ -39,8 +39,8 @@ def sample_batch():
         sequence=100,
         window_ms=1000,
         packets=[
-            PacketMeta(direction=0, src_ip="10.0.0.1", dst_ip="10.0.0.2", src_port=1234, dst_port=80),
-            PacketMeta(direction=1, src_ip="10.0.0.2", dst_ip="10.0.0.1", src_port=80, dst_port=1234),
+            PacketMeta(direction=0, src_ip="10.0.0.1", dst_ip="10.0.0.2", src_port=1234, dst_port=80, size=64),
+            PacketMeta(direction=1, src_ip="10.0.0.2", dst_ip="10.0.0.1", src_port=80, dst_port=1234, size=128),
         ],
     )
 
@@ -180,7 +180,7 @@ async def test_push_drops_batch_when_too_large(buffer_manager, mock_redis):
         sequence=100,
         window_ms=1000,
         packets=[
-            PacketMeta(direction=i % 2, src_ip="10.0.0.1", dst_ip="10.0.0.2", src_port=8080, dst_port=80)
+            PacketMeta(direction=i % 2, src_ip="10.0.0.1", dst_ip="10.0.0.2", src_port=8080, dst_port=80, size=0)
             for i in range(settings.redis_udp_buffer_max_len + 100)
         ],
     )
@@ -292,9 +292,9 @@ async def test_multiple_packets_serialized_correctly(buffer_manager, mock_redis)
         sequence=100,
         window_ms=1000,
         packets=[
-            PacketMeta(direction=0, src_ip="192.168.1.1", dst_ip="8.8.8.8", src_port=5000, dst_port=53),
-            PacketMeta(direction=1, src_ip="10.0.0.5", dst_ip="172.16.0.1", src_port=8080, dst_port=443),
-            PacketMeta(direction=0, src_ip="192.168.1.100", dst_ip="1.1.1.1", src_port=6000, dst_port=123),
+            PacketMeta(direction=0, src_ip="192.168.1.1", dst_ip="8.8.8.8", src_port=5000, dst_port=53, size=512),
+            PacketMeta(direction=1, src_ip="10.0.0.5", dst_ip="172.16.0.1", src_port=8080, dst_port=443, size=1024),
+            PacketMeta(direction=0, src_ip="192.168.1.100", dst_ip="1.1.1.1", src_port=6000, dst_port=123, size=256),
         ],
     )
 

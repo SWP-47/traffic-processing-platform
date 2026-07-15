@@ -127,6 +127,8 @@ class HostDetailsHandler(BaseSubscriptionHandler):
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                     "tx_per_sec": 0.0,
                     "rx_per_sec": 0.0,
+                    "tx_bytes_per_sec": 0.0,
+                    "rx_bytes_per_sec": 0.0,
                 }
 
             # --- Response Formatting ---
@@ -137,11 +139,14 @@ class HostDetailsHandler(BaseSubscriptionHandler):
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "tx_per_sec": float(row["tx_per_sec"]) if row["tx_per_sec"] else 0.0,
                 "rx_per_sec": float(row["rx_per_sec"]) if row["rx_per_sec"] else 0.0,
+                "tx_bytes_per_sec": float(row.get("tx_bytes_per_sec", 0.0)) if row.get("tx_bytes_per_sec") else 0.0,
+                "rx_bytes_per_sec": float(row.get("rx_bytes_per_sec", 0.0)) if row.get("rx_bytes_per_sec") else 0.0,
             }
 
             logger.debug(
                 f"[host_details] Success for host '{params.host_ip}' in channel '{channel_id}': "
-                f"tx={result['tx_per_sec']:.2f} pps, rx={result['rx_per_sec']:.2f} pps."
+                f"tx={result['tx_per_sec']:.2f} pps ({result['tx_bytes_per_sec']:.2f} bps), "
+                f"rx={result['rx_per_sec']:.2f} pps ({result['rx_bytes_per_sec']:.2f} bps)."
             )
             return result
 

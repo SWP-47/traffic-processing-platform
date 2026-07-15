@@ -518,6 +518,14 @@ components:
           type: number
           format: float
           description: Aggregated outgoing packet rate.
+        bytes_in_per_sec:
+          type: number
+          format: float
+          description: Aggregated incoming bytes rate.
+        bytes_out_per_sec:
+          type: number
+          format: float
+          description: Aggregated outgoing bytes rate.
         is_active:
           type: boolean
           description: Channel activity status at this specific timestamp (Channel History only).
@@ -566,6 +574,14 @@ components:
           type: number
           format: float
           description: Aggregated outgoing packet rate for the host.
+        bytes_in_per_sec:
+          type: number
+          format: float
+          description: Aggregated incoming bytes rate for the host.
+        bytes_out_per_sec:
+          type: number
+          format: float
+          description: Aggregated outgoing bytes rate for the host.
 
     # --- Error Schema ---
     ErrorResponse:
@@ -623,8 +639,10 @@ components:
           type: integer
         protocol:
           type: string
-          enum: [TCP, UDP]
-          description: "Protocol (e.g., TCP/UDP). Required for accurate host_top_ports protocol reporting."
+          description: "Network protocol identifier (e.g., TCP, UDP, ICMP). Defaults to 'UNKNOWN'."
+        size:
+          type: integer
+          description: "Packet size in bytes."
 
     # --- WebSocket Schemas ---
     WSControlMessage:
@@ -776,12 +794,20 @@ components:
                   type: number
                 packets:
                   type: integer
+                bytes_per_sec:
+                  type: number
+                bytes:
+                  type: integer
             direction_in:
               type: object
               properties:
                 packets_per_sec:
                   type: number
                 packets:
+                  type: integer
+                bytes_per_sec:
+                  type: number
+                bytes:
                   type: integer
         timestamp:
           type: string
@@ -827,6 +853,10 @@ components:
           type: number
         rx_per_sec:
           type: number
+        tx_bytes_per_sec:
+          type: number
+        rx_bytes_per_sec:
+          type: number
         last_activity:
           type: string
           format: date-time
@@ -849,6 +879,10 @@ components:
         tx_per_sec:
           type: number
         rx_per_sec:
+          type: number
+        tx_bytes_per_sec:
+          type: number
+        rx_bytes_per_sec:
           type: number
 
     HostTopDestinationsUpdate:
@@ -883,6 +917,8 @@ components:
           enum: [LAN, WAN]
         received_per_sec:
           type: number
+        received_bytes_per_sec:
+          type: number
         last_seen:
           type: string
           format: date-time
@@ -916,6 +952,8 @@ components:
           type: integer
         protocol:
           type: string
-          enum: [TCP, UDP]
+          description: "Network protocol identifier (e.g., TCP, UDP, ICMP)."
         packets_per_sec:
+          type: number
+        bytes_per_sec:
           type: number

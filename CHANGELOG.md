@@ -8,17 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Automatic token refresh and request retry mechanism for REST API 401 Unauthorized responses (excluding login and refresh endpoints). ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
-- Automatic WebSocket reconnection with a new access token upon authentication error (close code 4001). ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
-- Session initialization and validation on protected route access to restore authentication state on page load. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
-- Logout functionality triggered by clicking the user avatar in the Header, which now invokes the `/api/v1/auth/logout` endpoint. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
+- Packet size field (`size` in bytes) to `PacketMeta` UDP contract, enabling end-to-end bandwidth/throughput metrics across the entire CnSS pipeline. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- Alembic migration `004_add_size_field.py` adding a `size BIGINT NOT NULL DEFAULT 0` column to the `packet_flows` hypertable, with backward compatibility for older CNs that do not send the `size` field. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- Bytes aggregation (`bytes_in`, `bytes_out`) to the `telemetry_1s` continuous aggregate via `SUM(size) FILTER (WHERE direction = 0/1)`, enabling real-time bytes-per-second calculations in the Reporting Worker. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- `bytes_per_sec` and `bytes` metrics to the `telemetry_update` WebSocket payload via `TelemetryHandler`, calculated using the actual bucket count from `telemetry_1s` for accurate rates. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- `tx_bytes_per_sec`/`rx_bytes_per_sec` to the `host_details_update`, `hosts_table_update`, `host_top_destinations_update`, and `host_top_ports_update` WebSocket payloads, computed from raw `packet_flows.size` aggregations in their respective handlers. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- `bytes_in_per_sec`/`bytes_out_per_sec` fields to the REST History API (`HistoryPoint` and `HostHistoryPoint` schemas) and corresponding route handlers, returned from `telemetry_1s` continuous aggregate queries. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- Buffer manager serialization and background flusher INSERT statements updated to include the `size` field, with fallback to `0` for legacy buffered records missing the field. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- Integration tests `test_telemetry_packet_size_aggregation` and `test_telemetry_packet_size_across_multiple_buckets` validating correct `bytes`/`bytes_per_sec` aggregation in `telemetry_1s` for single and multi-bucket scenarios. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- Updated unit tests across `test_buffer_manager`, `test_flusher`, `test_state_manager`, and `test_udp_server` to include the `size` field in `PacketMeta` fixtures. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- Added to hardware pert of TP shift register to detect packet to block before the transmission starts([#250](https://github.com/SWP-47/traffic-processing-platform/issues/250))
+- New module added with receiving IP address form specific packets sent by TP-CN device to FPGA board([#294](https://github.com/SWP-47/traffic-processing-platform/issues/294))
 
 ### Changed
+
+- Updated `docs/api.md` and `docs/architecture.md` to document the new `size` field in `TelemetryBatch`/`PacketMeta` and the bytes-per-second metrics in all WebSocket push payloads and REST history responses. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- Updated OpenAPI schema (`api/openapi.yaml`) to include `size` in the UDP ingestion payload and `bytes_in_per_sec`/`bytes_out_per_sec` in history and telemetry responses. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
 - REST API (`POST /api/v1/auth/login` and `POST /api/v1/auth/refresh`): Response structure now includes a nested `user` object containing `id`, `username`, `role`, and `scope` fields. Flat `role` and `scope` fields at the root level have been removed.
 - REST API (`POST /api/v1/auth/refresh`): Now fetches the latest user profile from the database to ensure real-time scope updates and role changes are immediately reflected upon page reload.
 - CnSS: Added `db_fetch_user_profile()` function to centralized database query module `core/db.py` for fetching complete user profiles with current scope information.
 - Integration tests (`tests/integration/test_api.py`): Updated `test_api_login_success_viewer`, `test_api_login_success_admin`, and `test_api_token_refresh_lifecycle` to validate nested user profile fields in authentication responses.
-
 - Updated authentication error handling in `AuthenticationService` to prevent concurrent token refresh requests using promise deduplication. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
 
 ### Deprecated

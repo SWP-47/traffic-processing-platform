@@ -38,6 +38,9 @@ set_property PULLTYPE PULLUP [get_ports e4_mdio]
 set_property PACKAGE_PIN E17 [get_ports led]
 set_property IOSTANDARD LVCMOS33 [get_ports led]
 
+set_property PACKAGE_PIN F16 [get_ports debug_led]
+set_property IOSTANDARD LVCMOS33 [get_ports debug_led]
+
 set_property PACKAGE_PIN D16 [get_ports block_but_key]
 set_property IOSTANDARD LVCMOS33 [get_ports block_but_key]
 ############## ethernet PORT1 RX define############
@@ -358,7 +361,18 @@ set_false_path -reset_path -from [get_clocks sys_clk_p] -to [get_clocks e2_rx_cl
 set_false_path -reset_path -from [get_clocks sys_clk_p] -to [get_clocks e3_rx_clk]
 set_false_path -reset_path -from [get_clocks sys_clk_p] -to [get_clocks e4_rx_clk]
 
+# --------------------------------------------------------------------------------------------------
+set_clock_groups -asynchronous \
+    -group [get_clocks -of_objects [get_ports e1_rxc]] \
+    -group [get_clocks -of_objects [get_ports e2_rxc]] \
+    -group [get_clocks -of_objects [get_ports e3_rxc]] \
+    -group [get_clocks -of_objects [get_ports e4_rxc]] \
+    -group [get_clocks -of_objects [get_ports sys_clk_p]]
 
+set_false_path -from [get_clocks *rx_clk*] -to [get_clocks *rx_clk*]
+set_false_path -from [get_clocks *rx_clk*] -to [get_clocks -of_objects [get_ports sys_clk_p]]
+set_false_path -from [get_clocks -of_objects [get_ports sys_clk_p]] -to [get_clocks *rx_clk*]
+# --------------------------------------------------------------------------------------------------
 
 
 set_property MARK_DEBUG false [get_nets {inst_dummy/e3_txd[5]}]
@@ -474,3 +488,11 @@ set_property MARK_DEBUG false [get_nets {e4_txd_OBUF[1]}]
 set_property MARK_DEBUG false [get_nets {e4_txd_OBUF[4]}]
 set_property MARK_DEBUG false [get_nets {e4_txd_OBUF[5]}]
 set_property MARK_DEBUG false [get_nets {e4_txd_OBUF[6]}]
+
+create_generated_clock -name out_rxc_generated \
+    -source [get_ports e1_rxc] \
+    [get_pins receiver_inst_out_e1/e1_rx_clk_buf/O]
+
+create_generated_clock -name in_rxc_generated \
+    -source [get_ports e4_rxc] \
+    [get_pins receiver_inst_in_e4/e1_rx_clk_buf/O]

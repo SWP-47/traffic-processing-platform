@@ -2,11 +2,11 @@
 
 ## Setup instructions 
 
-note: The whole CN code was containerised using Docker. The `docket-compose.yml` file for it builds both TP and CN systems simultaniously. 
+note: The whole CN code was containerised using Docker. The `docker-compose.yml` file for it builds both TP and CN systems simultaneously. 
 
 1. Create a file of environment using command `cp .env.example .env` for bash or `copy .env.example .env` for PowerShell. Edit `.env` file if necessary
 2. Navigate to `./cn-tp-deployment` directory
-3. Run `docket-compose up --build` command
+3. Run `docker-compose up --build` command
 
 ## Communication Node (CN) Smoke Check
 Step 1: Preparation and Execution.

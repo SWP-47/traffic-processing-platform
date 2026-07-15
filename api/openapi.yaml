@@ -28,7 +28,7 @@ info:
 
     ## Time Parameters Note
     To ensure scalability and avoid the limitations of hardcoded Enums, all time-based parameters (e.g., `window_sec`, `period_sec`) are strictly defined in **seconds** as numeric values. This allows the frontend to request custom aggregation windows (e.g., 45 minutes, 3 hours) without requiring backend code changes or schema updates.
-  version: 2.0.1
+  version: 3.0.0
 
 servers:
   - url: https://{{cnss_host}}
@@ -365,6 +365,29 @@ components:
           format: password
           example: "secretpassword"
 
+    UserProfile:
+      type: object
+      description: User context required by the frontend to restore UI state.
+      properties:
+        id:
+          type: string
+          description: Internal user identifier (UUID).
+          example: "usr_8f7a9b2c"
+        username:
+          type: string
+          description: Human-readable username for UI display.
+          example: "admin"
+        role:
+          type: string
+          enum: [admin, viewer]
+          description: User role.
+        scope:
+          type: array
+          items:
+            type: string
+          description: List of accessible channel_ids. Empty or omitted for admin role.
+          example: ["bridge-berlin-01", "bridge-prague-01"]
+
     TokenResponse:
       type: object
       properties:
@@ -381,28 +404,28 @@ components:
         issued_at:
           type: string
           format: date-time
-        role:
-          type: string
-          enum: [admin, viewer]
-        scope:
-          type: array
-          items:
-            type: string
-          description: List of accessible channel_ids. Empty for admin.
+        user:
+          $ref: '#/components/schemas/UserProfile'
 
     RefreshTokenResponse:
       type: object
+      description: Response for token refresh. Includes user profile to allow frontend state restoration on page reload without additional requests.
       properties:
         access_token:
           type: string
+          example: "new_access_token_eyJhbG..."
         token_type:
           type: string
           enum: [Bearer]
+          example: "Bearer"
         expires_in:
           type: integer
+          example: 86400
         issued_at:
           type: string
           format: date-time
+        user:
+          $ref: '#/components/schemas/UserProfile'
 
     LogoutResponse:
       type: object

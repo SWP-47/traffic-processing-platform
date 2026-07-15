@@ -57,6 +57,17 @@ async def db_fetch_user_by_username(username: str, pool: Optional[Any] = None) -
         return dict(row) if row else None
 
 
+async def db_fetch_user_by_id(user_id: Any, pool: Optional[Any] = None) -> Optional[dict[str, Any]]:
+    """Fetches user information (id, username, role) by user ID."""
+    db_p = pool or get_db_pool()
+    async with db_p.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT id, username, role FROM users WHERE id = $1",
+            user_id,
+        )
+        return dict(row) if row else None
+
+
 async def db_fetch_user_scopes(user_id: Any, pool: Optional[Any] = None) -> list[str]:
     """Fetches list of permitted channel scopes for a viewer user."""
     db_p = pool or get_db_pool()
@@ -74,6 +85,39 @@ async def db_fetch_all_channels(pool: Optional[Any] = None) -> list[str]:
     async with db_p.acquire() as conn:
         rows = await conn.fetch("SELECT channel_id FROM channels")
         return [str(row["channel_id"]) for row in rows]
+
+
+async def db_fetch_user_profile(user_id: Any, pool: Optional[Any] = None) -> Optional[dict[str, Any]]:
+    """
+    Fetches complete user profile including id, username, role, and scope.
+    For admin users, scope includes all registered channels.
+    For viewer users, scope includes only assigned channels from user_channel_scopes.
+    """
+    db_p = pool or get_db_pool()
+    async with db_p.acquire() as conn:
+        # Fetch user data
+        user_row = await conn.fetchrow(
+            "SELECT id, username, role FROM users WHERE id = $1",
+            user_id,
+        )
+        if not user_row:
+            return None
+
+        # Fetch scope based on role
+        scope: list[str] = []
+        if user_row["role"] == "admin":
+            # Admin: scope includes all registered channels
+            scope = await db_fetch_all_channels(pool=db_p)
+        else:
+            # Viewer: scope includes only assigned channels
+            scope = await db_fetch_user_scopes(user_id, pool=db_p)
+
+        return {
+            "id": str(user_row["id"]),
+            "username": user_row["username"],
+            "role": user_row["role"],
+            "scope": scope,
+        }
 
 
 # --- Channel & Discovery queries ---

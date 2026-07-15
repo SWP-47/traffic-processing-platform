@@ -8,6 +8,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Automatic token refresh and request retry mechanism for REST API 401 Unauthorized responses (excluding login and refresh endpoints). ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
+- Automatic WebSocket reconnection with a new access token upon authentication error (close code 4001). ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
+- Session initialization and validation on protected route access to restore authentication state on page load. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
+- Logout functionality triggered by clicking the user avatar in the Header, which now invokes the `/api/v1/auth/logout` endpoint. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
+
+### Changed
+- REST API (`POST /api/v1/auth/login` and `POST /api/v1/auth/refresh`): Response structure now includes a nested `user` object containing `id`, `username`, `role`, and `scope` fields. Flat `role` and `scope` fields at the root level have been removed.
+- REST API (`POST /api/v1/auth/refresh`): Now fetches the latest user profile from the database to ensure real-time scope updates and role changes are immediately reflected upon page reload.
+- CnSS: Added `db_fetch_user_profile()` function to centralized database query module `core/db.py` for fetching complete user profiles with current scope information.
+- Integration tests (`tests/integration/test_api.py`): Updated `test_api_login_success_viewer`, `test_api_login_success_admin`, and `test_api_token_refresh_lifecycle` to validate nested user profile fields in authentication responses.
+
+- Updated authentication error handling in `AuthenticationService` to prevent concurrent token refresh requests using promise deduplication. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
+
+### Deprecated
+
+### Removed
+- Deprecated `requestTokenRenewal` method in favor of the new robust `handleAuthError` and `attemptTokenRefresh` flow. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
+
+### Fixed
+
+### Security
+
+## [3.0.0] - 2026-07-12
+
+### Added
+
 - Centralized database query module `core/db.py` consolidating SQL query definitions for all microservices. ([#263](https://github.com/SWP-47/traffic-processing-platform/issues/263))
 - Dedicated unit test suite in `tests/unit/test_db.py` achieving 98% coverage for the centralized database helper functions. ([#227](https://github.com/SWP-47/traffic-processing-platform/issues/227))
 - Comprehensive end-to-end integration tests in `tests/integration/test_reporting.py` simulating active traffic and multi-target subscriptions validation. ([#227](https://github.com/SWP-47/traffic-processing-platform/issues/227))
@@ -21,6 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - WebSocket Subscriptions: `params.period` (string Enum) has been **replaced** with `params.period_sec` (number, e.g., `300` for 5 minutes). ([#247](https://github.com/SWP-47/traffic-processing-platform/issues/247))
 - Refactored REST API endpoints (`auth.py`, `channels.py`, `health.py`, `history.py`), WebSocket server (`server.py`, `snapshot.py`), Reporting Worker channel state syncer (`channel_state_syncer.py`), and all five Reporting handlers (`telemetry`, `hosts_table`, `host_details`, `host_top_destinations`, `host_top_ports`) to call the centralized functions in `core/db.py` instead of executing inline raw SQL queries. ([#263](https://github.com/SWP-47/traffic-processing-platform/issues/263))
 - Updated unit and integration test mocks in `tests/unit/test_ws_server.py` and `tests/integration/test_api.py` to target the new centralized `core/db.py` helper methods directly. ([#227](https://github.com/SWP-47/traffic-processing-platform/issues/227))
+- Updated root `docs/` documentation (`testing.md`, `quality-requirements.md`, `quality-requirement-tests.md`, `system-documentation.md`) to accurately reflect the current state of the codebase: 253-test suite inventory, correct `--cov=core --cov=services` coverage command, `protocol` field in `packet_flows` and `TelemetryBatch`, all 5 subscription targets and handlers, token refresh/logout endpoints, `HttpOnly` refresh token cookie flow, `id` field in subscription control messages and push payloads, Nginx infrastructure layer, MUI services and hooks inventory, and corrected Redis key table.
+- Updated root `README.md`, `traffic-processor/README.md`, and `communication-node/README.md` to correct local setup and execution instructions, fix folder names (`hardware-part`, `software-part`), resolve `docker-compose` typos (`docket-compose`), update Vivado project initialization steps, and fix Makefile targets (`dev-all` and `down`).
 
 ### Deprecated
 
@@ -33,6 +61,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed the way of working with queues to gain correct working of whole demo stend. TP now extracts packets from queue more often so all demo stand works without delays ([#251](https://github.com/SWP-47/traffic-processing-platform/issues/251))
+- Fixed missing `channel_id` field in WebSocket subscription examples in `docs/system-documentation.md`.
+- Fixed outdated Vivado project setup instructions in `docs/customer-handover.md`, aligning them with the SystemVerilog/constraints source compilation workflow.
 
 ### Security
 
@@ -254,8 +284,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added JWT-based authentication for all REST and WebSocket endpoints to protect telemetry data and prevent unauthorized access. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 - CnSS now sanitizes access logs to prevent `access_token` leakage via query parameters. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 
-[Unreleased]: https://github.com/SWP-47/traffic-processing-platform/compare/v2.0.1...HEAD
-[2.0.1]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v2.0.0
+[Unreleased]: https://github.com/SWP-47/traffic-processing-platform/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v3.0.0
+[2.0.1]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v2.0.1
 [2.0.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v2.0.0
 [1.1.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.1.0
 [1.0.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.0.0

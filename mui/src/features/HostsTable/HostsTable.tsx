@@ -1,5 +1,5 @@
 import FullTable from "@/components/FullTable";
-import { useHostsUpdate, type HostsTableParams } from "@/hooks/useHostsUpdate";
+import { useHostsUpdate, type HostsTableParams, type HostsUpdate } from "@/hooks/useHostsUpdate";
 import { useState } from "react";
 import styles from './HostsTable.module.css';
 import Modal from "@/components/Modal";
@@ -8,15 +8,26 @@ import AggregationSelector from "./components/AggregationSelector/AggregationSel
 import Select from "./components/Select/Select";
 import useAggregationPeriod from "./hooks/useAggregationPeriod";
 import { secondsToHumanReadable } from "@/utils/time";
+import { formatBytesPerSecond } from "@/utils/information";
+import type { UnitContextValue } from "@/contexts/UnitContext/UnitContext";
+import { useUnit } from "@/contexts/UnitContext/useUnit";
 
-function ProgressPktsValue(value: number, maxValue: number) {
+function ProgressPktsValue(value: number, maxValue: number, unit: UnitContextValue['unit']) {
   const widthPercent = maxValue > 0 ? (value / maxValue) * 100 : 0;
+
+  let formattedValue: string = '';
+  if (unit === 'bytes') {
+    formattedValue = formatBytesPerSecond(value);
+  } else if (unit === 'packets') {
+    formattedValue = value.toFixed(0) + ' pkt/s';
+  }
+
   return (
     <div className={styles.progress}>
       <div className={styles.progress_bar}>
         <div className={styles.progress_bar_value} style={{ width: `${widthPercent}%` }}></div>
       </div>
-      <p className={styles.progress_value}>{Math.round(value)} pkt/s</p>
+      <p className={styles.progress_value}>{formattedValue}</p>
     </div>
   );
 }
@@ -31,6 +42,8 @@ const columns = [
 ];
 
 function HostsTable() {
+  const { unit } = useUnit();
+
   const [currentPage, setCurrentPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [sortColumn, setSortColumn] = useState('ip');
@@ -55,13 +68,15 @@ function HostsTable() {
   });
 
   const maxPages = hostsTable?.total_count ?? 0;
+  const getUnitRxValue = (host: HostsUpdate['hosts'][number]): number => (unit === 'bytes' ? host.rx_bytes_per_sec : host.rx_per_sec) ?? 0;
+  const getUnitTxValue = (host: HostsUpdate['hosts'][number]): number => (unit === 'bytes' ? host.tx_bytes_per_sec : host.tx_per_sec) ?? 0;
 
   const maxReceivedValue = hostsTable && hostsTable.hosts.length > 0
-    ? Math.max(...hostsTable.hosts.map(data => data.rx_per_sec ?? 0))
+    ? Math.max(...hostsTable.hosts.map(data => getUnitRxValue(data)))
     : 0;
     
   const maxSentValue = hostsTable && hostsTable.hosts.length > 0
-    ? Math.max(...hostsTable.hosts.map(data => data.tx_per_sec ?? 0))
+    ? Math.max(...hostsTable.hosts.map(data => getUnitTxValue(data)))
     : 0;
 
   const sortedHosts = hostsTable ? [...hostsTable.hosts].sort((a, b) => {
@@ -93,8 +108,8 @@ function HostsTable() {
       d.location,
       d.ip,
       d.unique_destinations,
-      ProgressPktsValue(d.rx_per_sec!, maxReceivedValue),
-      ProgressPktsValue(d.tx_per_sec!, maxSentValue),
+      ProgressPktsValue(getUnitRxValue(d), maxReceivedValue, unit),
+      ProgressPktsValue(getUnitTxValue(d), maxSentValue, unit),
       new Date(d.last_activity).toLocaleTimeString()
     ]
   );

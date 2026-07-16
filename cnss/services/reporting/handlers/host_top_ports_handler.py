@@ -159,6 +159,7 @@ class HostTopPortsHandler(BaseSubscriptionHandler):
                         "port": port_num,
                         "protocol": row["protocol"],  # Read directly from the database
                         "packets_per_sec": float(row["packets_per_sec"]),
+                        "bytes_per_sec": float(row.get("bytes_per_sec", 0.0)),
                     }
                 )
 

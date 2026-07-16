@@ -122,6 +122,8 @@ async def get_channel_history(
             timestamp=row["timestamp"],
             packets_in_per_sec=float(row["packets_in_per_sec"]),
             packets_out_per_sec=float(row["packets_out_per_sec"]),
+            bytes_in_per_sec=float(row.get("bytes_in_per_sec", 0.0)),
+            bytes_out_per_sec=float(row.get("bytes_out_per_sec", 0.0)),
             is_active=row["is_active"],
         )
         for row in rows
@@ -180,6 +182,8 @@ async def get_host_history(
             timestamp=row["timestamp"],
             packets_in_per_sec=float(row["packets_in_per_sec"]),
             packets_out_per_sec=float(row["packets_out_per_sec"]),
+            bytes_in_per_sec=float(row.get("bytes_in_per_sec", 0.0)),
+            bytes_out_per_sec=float(row.get("bytes_out_per_sec", 0.0)),
         )
         for row in rows
     ]

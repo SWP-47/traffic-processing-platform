@@ -110,6 +110,8 @@ class HistoryPoint(BaseModel):
     timestamp: datetime = Field(..., description="ISO 8601 timestamp of the data point.")
     packets_in_per_sec: float = Field(..., description="Aggregated incoming packet rate.")
     packets_out_per_sec: float = Field(..., description="Aggregated outgoing packet rate.")
+    bytes_in_per_sec: float = Field(default=0.0, description="Aggregated incoming bytes-per-second.")
+    bytes_out_per_sec: float = Field(default=0.0, description="Aggregated outgoing bytes-per-second.")
     is_active: Optional[bool] = Field(
         None, description="Channel activity status at this specific timestamp (Channel History only)."
     )
@@ -137,6 +139,8 @@ class HostHistoryPoint(BaseModel):
     timestamp: datetime = Field(..., description="ISO 8601 timestamp of the data point.")
     packets_in_per_sec: float = Field(..., description="Aggregated incoming packet rate for the host.")
     packets_out_per_sec: float = Field(..., description="Aggregated outgoing packet rate for the host.")
+    bytes_in_per_sec: float = Field(default=0.0, description="Aggregated incoming bytes-per-second for the host.")
+    bytes_out_per_sec: float = Field(default=0.0, description="Aggregated outgoing bytes-per-second for the host.")
 
 
 class HostHistoryResponse(BaseModel):

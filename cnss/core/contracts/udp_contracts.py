@@ -30,6 +30,9 @@ class PacketMeta(BaseModel):
     # Network protocol (e.g., TCP, UDP, ICMP). Defaults to 'UNKNOWN' for backward compatibility with older CNs.
     protocol: str = Field(default="UNKNOWN", max_length=20, description="Network protocol identifier.")
 
+    # Packet size in bytes
+    size: int = Field(..., ge=0, description="Packet size in bytes.")
+
 
 # --- Telemetry Batch Model ---
 # Represents a batch of packets sent from a CN to the CnSS Ingestion Worker.

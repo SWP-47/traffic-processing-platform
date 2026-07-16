@@ -82,7 +82,9 @@ def valid_batch_payload():
         "timestamp": 1700000000,
         "sequence": 100,
         "window_ms": 1000,
-        "packets": [{"direction": 0, "src_ip": "10.0.0.1", "dst_ip": "10.0.0.2", "src_port": 1234, "dst_port": 80}],
+        "packets": [
+            {"direction": 0, "src_ip": "10.0.0.1", "dst_ip": "10.0.0.2", "src_port": 1234, "dst_port": 80, "size": 128}
+        ],
     }
 
 
@@ -181,7 +183,9 @@ class TestUDPIngestionServer:
             timestamp=1700000000,
             sequence=100,
             window_ms=1000,
-            packets=[PacketMeta(direction=0, src_ip="10.0.0.1", dst_ip="10.0.0.2", src_port=1234, dst_port=80)],
+            packets=[
+                PacketMeta(direction=0, src_ip="10.0.0.1", dst_ip="10.0.0.2", src_port=1234, dst_port=80, size=128)
+            ],
         )
         addr = ("192.168.1.1", 5000)
 

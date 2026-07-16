@@ -163,7 +163,7 @@ async def db_channel_exists(channel_id: str, pool: Optional[Any] = None) -> bool
 async def db_fetch_channel_history(
     channel_id: str, start_time: datetime, end_time: datetime, interval_sec: int, pool: Optional[Any] = None
 ) -> list[dict[str, Any]]:
-    """Lazy-loads historical telemetry data for a channel."""
+    """Lazy-loads historical telemetry data and bytes-per-second for a channel."""
     query = """
     WITH time_buckets AS (
         SELECT generate_series($1::timestamptz, $2::timestamptz, ($3::int || ' seconds')::interval) AS bucket_start
@@ -172,7 +172,9 @@ async def db_fetch_channel_history(
         SELECT
             tb.bucket_start,
             SUM(t.packets_in) AS packets_in,
-            SUM(t.packets_out) AS packets_out
+            SUM(t.packets_out) AS packets_out,
+            SUM(t.bytes_in) AS bytes_in,
+            SUM(t.bytes_out) AS bytes_out
         FROM time_buckets tb
         LEFT JOIN telemetry_1s t
             ON t.channel_id = $4
@@ -184,6 +186,8 @@ async def db_fetch_channel_history(
         a.bucket_start AS timestamp,
         COALESCE(a.packets_in, 0) / $3::float AS packets_in_per_sec,
         COALESCE(a.packets_out, 0) / $3::float AS packets_out_per_sec,
+        COALESCE(a.bytes_in, 0) / $3::float AS bytes_in_per_sec,
+        COALESCE(a.bytes_out, 0) / $3::float AS bytes_out_per_sec,
         (COALESCE(a.packets_in, 0) + COALESCE(a.packets_out, 0)) > 0 AS is_active
     FROM aggregated a
     ORDER BY a.bucket_start;
@@ -202,7 +206,7 @@ async def db_fetch_host_history(
     interval_sec: int,
     pool: Optional[Any] = None,
 ) -> list[dict[str, Any]]:
-    """Lazy-loads historical telemetry Rx/Tx data for a specific host."""
+    """Lazy-loads historical telemetry Rx/Tx data and bytes-per-second for a specific host."""
     query = """
     WITH time_buckets AS (
         SELECT generate_series($1::timestamptz, $2::timestamptz, ($3::int || ' seconds')::interval) AS bucket_start
@@ -211,7 +215,9 @@ async def db_fetch_host_history(
         SELECT
             tb.bucket_start,
             COUNT(*) FILTER (WHERE pf.dst_ip = $4::inet) AS packets_in,
-            COUNT(*) FILTER (WHERE pf.src_ip = $4::inet) AS packets_out
+            COUNT(*) FILTER (WHERE pf.src_ip = $4::inet) AS packets_out,
+            SUM(pf.size) FILTER (WHERE pf.dst_ip = $4::inet) AS bytes_in,
+            SUM(pf.size) FILTER (WHERE pf.src_ip = $4::inet) AS bytes_out
         FROM time_buckets tb
         LEFT JOIN packet_flows pf
             ON pf.channel_id = $5
@@ -223,7 +229,9 @@ async def db_fetch_host_history(
     SELECT
         a.bucket_start AS timestamp,
         COALESCE(a.packets_in, 0) / $3::float AS packets_in_per_sec,
-        COALESCE(a.packets_out, 0) / $3::float AS packets_out_per_sec
+        COALESCE(a.packets_out, 0) / $3::float AS packets_out_per_sec,
+        COALESCE(a.bytes_in, 0) / $3::float AS bytes_in_per_sec,
+        COALESCE(a.bytes_out, 0) / $3::float AS bytes_out_per_sec
     FROM aggregated a
     ORDER BY a.bucket_start;
     """
@@ -307,13 +315,15 @@ async def db_execute_fetchrow(query: str, params: list[Any], pool: Optional[Any]
 async def db_fetch_telemetry_data(
     channel_id: str, window_sec: float, pool: Optional[Any] = None
 ) -> Optional[dict[str, Any]]:
-    """Queries aggregated telemetry packet rates for a channel over a given window."""
+    """Queries aggregated telemetry packet rates and bytes-per-second for a channel over a given window."""
     query = """
         SELECT
             c.is_active,
             c.dropped,
             COALESCE(SUM(t.packets_in), 0) AS total_in,
             COALESCE(SUM(t.packets_out), 0) AS total_out,
+            COALESCE(SUM(t.bytes_in), 0) AS total_bytes_in,
+            COALESCE(SUM(t.bytes_out), 0) AS total_bytes_out,
             COUNT(DISTINCT t.bucket) AS bucket_count,
             MAX(t.bucket) AS latest_bucket
         FROM channels c
@@ -338,7 +348,7 @@ async def db_fetch_hosts_table_data(
     params: list[Any],
     pool: Optional[Any] = None,
 ) -> list[dict[str, Any]]:
-    """Queries and aggregates host flow traffic statistics for a channel."""
+    """Queries and aggregates host flow traffic statistics and bytes-per-second for a channel."""
     query = f"""
     WITH host_flows AS (
         SELECT
@@ -347,6 +357,7 @@ async def db_fetch_hosts_table_data(
             'LAN' AS host_location,
             CASE WHEN direction = 1 THEN 1 ELSE 0 END AS is_tx,
             CASE WHEN direction = 0 THEN 1 ELSE 0 END AS is_rx,
+            size,
             time
         FROM packet_flows
         WHERE channel_id = {channel_ph} AND time > NOW() - ({interval_ph}::text)::interval
@@ -357,6 +368,7 @@ async def db_fetch_hosts_table_data(
             'WAN' AS host_location,
             CASE WHEN direction = 0 THEN 1 ELSE 0 END AS is_tx,
             CASE WHEN direction = 1 THEN 1 ELSE 0 END AS is_rx,
+            size,
             time
         FROM packet_flows
         WHERE channel_id = {channel_ph} AND time > NOW() - ({interval_ph}::text)::interval
@@ -373,6 +385,8 @@ async def db_fetch_hosts_table_data(
             COUNT(DISTINCT remote_ip) AS unique_destinations,
             SUM(is_tx)::float / {period_sec} AS tx_per_sec,
             SUM(is_rx)::float / {period_sec} AS rx_per_sec,
+            SUM(CASE WHEN is_tx = 1 THEN size ELSE 0 END)::float / {period_sec} AS tx_bytes_per_sec,
+            SUM(CASE WHEN is_rx = 1 THEN size ELSE 0 END)::float / {period_sec} AS rx_bytes_per_sec,
             MAX(time) AS last_activity
         FROM host_flows
         GROUP BY host_ip
@@ -383,6 +397,8 @@ async def db_fetch_hosts_table_data(
         unique_destinations,
         tx_per_sec,
         rx_per_sec,
+        tx_bytes_per_sec,
+        rx_bytes_per_sec,
         last_activity,
         COUNT(*) OVER() AS total_count
     FROM aggregated
@@ -404,7 +420,7 @@ async def db_fetch_host_top_destinations_data(
     params: list[Any],
     pool: Optional[Any] = None,
 ) -> list[dict[str, Any]]:
-    """Queries top destination IPs for a specific host in a channel."""
+    """Queries top destination IPs and bytes-per-second for a specific host in a channel."""
     query = f"""
     WITH host_flows AS (
         SELECT
@@ -422,6 +438,7 @@ async def db_fetch_host_top_destinations_data(
                 END) THEN 'WAN'
                 ELSE 'LAN'
             END AS location,
+            size,
             time
         FROM packet_flows
         WHERE channel_id = {channel_ph}
@@ -441,6 +458,7 @@ async def db_fetch_host_top_destinations_data(
                 ELSE 'WAN'
             END AS location,
             COUNT(*)::float / {period_sec} AS received_per_sec,
+            SUM(size)::float / {period_sec} AS received_bytes_per_sec,
             MAX(time) AS last_seen
         FROM host_flows
         WHERE remote_ip IS NOT NULL
@@ -450,6 +468,7 @@ async def db_fetch_host_top_destinations_data(
         remote_ip,
         location,
         received_per_sec,
+        received_bytes_per_sec,
         last_seen,
         COUNT(*) OVER() AS total_count
     FROM destination_stats
@@ -467,11 +486,13 @@ async def db_fetch_host_details_data(
     params: list[Any],
     pool: Optional[Any] = None,
 ) -> Optional[dict[str, Any]]:
-    """Queries detailed packet rates (Rx/Tx) for a specific host in a channel."""
+    """Queries detailed packet rates and bytes-per-second (Rx/Tx) for a specific host in a channel."""
     query = f"""
     SELECT
         COUNT(*) FILTER (WHERE src_ip = {host_ip_ph}::inet)::float / {period_sec} AS tx_per_sec,
-        COUNT(*) FILTER (WHERE dst_ip = {host_ip_ph}::inet)::float / {period_sec} AS rx_per_sec
+        COUNT(*) FILTER (WHERE dst_ip = {host_ip_ph}::inet)::float / {period_sec} AS rx_per_sec,
+        SUM(size) FILTER (WHERE src_ip = {host_ip_ph}::inet)::float / {period_sec} AS tx_bytes_per_sec,
+        SUM(size) FILTER (WHERE dst_ip = {host_ip_ph}::inet)::float / {period_sec} AS rx_bytes_per_sec
     FROM packet_flows
     WHERE channel_id = {channel_ph}
     AND time > NOW() - ({interval_ph}::text)::interval
@@ -491,7 +512,7 @@ async def db_fetch_host_top_ports_data(
     params: list[Any],
     pool: Optional[Any] = None,
 ) -> list[dict[str, Any]]:
-    """Queries top remote ports and protocols for a specific host in a channel."""
+    """Queries top remote ports and bytes-per-second for a specific host in a channel."""
     query = f"""
     WITH port_flows AS (
         SELECT
@@ -500,6 +521,7 @@ async def db_fetch_host_top_ports_data(
                 WHEN direction = 1 AND src_ip = {host_ip_ph}::inet THEN dst_port
             END AS remote_port,
             protocol,
+            size,
             time
         FROM packet_flows
         WHERE channel_id = {channel_ph}
@@ -511,7 +533,8 @@ async def db_fetch_host_top_ports_data(
         SELECT
             remote_port,
             protocol,
-            COUNT(*)::float / {period_sec} AS packets_per_sec
+            COUNT(*)::float / {period_sec} AS packets_per_sec,
+            SUM(size)::float / {period_sec} AS bytes_per_sec
         FROM port_flows
         WHERE remote_port IS NOT NULL
         GROUP BY remote_port, protocol
@@ -520,6 +543,7 @@ async def db_fetch_host_top_ports_data(
         remote_port,
         protocol,
         packets_per_sec,
+        bytes_per_sec,
         COUNT(*) OVER() AS total_count
     FROM port_stats
     {order_by_sql}

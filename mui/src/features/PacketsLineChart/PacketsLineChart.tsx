@@ -31,19 +31,6 @@ function PacketsLineChart({ dataProvider, timeScale, selectedSeries, unit } : Pa
 
   const showLoading = useDelayedVisibility(isDataFetched, 200);
 
-  const formatYAxis = (value: number) => {
-    if (unit === 'bytes') {
-      if (value >= 1_000_000_000) return (value / 1_000_000_000).toFixed(0) + ' GB/s';
-      if (value >= 1_000_000) return (value / 1_000_000).toFixed(0) + ' MB/s';
-      if (value >= 1_000) return (value / 1_000).toFixed(0) + ' KB/s';
-      return value.toFixed(0) + ' B/s';
-    }
-
-    if (value >= 1_000_000) return (value / 1_000_000).toFixed(0) + ' M pkt/s';
-    if (value >= 1_000) return (value / 1_000).toFixed(0) + ' k pkt/s';
-    return value.toFixed(0) + ' pkt/s';
-  };
-
   // Init chart
   useEffect(() => {
     if (!chartElementRef.current) return;
@@ -52,6 +39,19 @@ function PacketsLineChart({ dataProvider, timeScale, selectedSeries, unit } : Pa
 
     const chart = init(chartElementRef.current);
     chartRef.current = chart;
+
+    const formatYAxis = (value: number) => {
+      if (unit === 'bytes') {
+        if (value >= 1_000_000_000) return (value / 1_000_000_000).toFixed(0) + ' GB/s';
+        if (value >= 1_000_000) return (value / 1_000_000).toFixed(0) + ' MB/s';
+        if (value >= 1_000) return (value / 1_000).toFixed(0) + ' KB/s';
+        return value.toFixed(0) + ' B/s';
+      }
+
+      if (value >= 1_000_000) return (value / 1_000_000).toFixed(0) + ' M pkt/s';
+      if (value >= 1_000) return (value / 1_000).toFixed(0) + ' k pkt/s';
+      return value.toFixed(0) + ' pkt/s';
+    };
 
     chart.setOption(chartOptions);
     chart.setOption({

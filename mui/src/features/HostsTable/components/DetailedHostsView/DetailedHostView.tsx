@@ -7,6 +7,7 @@ import TopDestinationsTable from '../TopDestinationsTable';
 import AggregationSelector from '../AggregationSelector/AggregationSelector';
 import useAggregationPeriod from '../../hooks/useAggregationPeriod';
 import { secondsToHumanReadable } from '@/utils/time';
+import UnitToggle from '@/components/Header/components/UnitToggle/UnitToggle';
 
 interface DetailedHostsViewOptions {
   onClose: () => void,
@@ -28,6 +29,7 @@ function DetailedHostView({ ip, onClose, defaultTimeScale }: DetailedHostsViewOp
           <h1 className={styles.title}>
             {ip}
           </h1>
+          <UnitToggle />
         </div>
         <div className={styles.right}>
           <p

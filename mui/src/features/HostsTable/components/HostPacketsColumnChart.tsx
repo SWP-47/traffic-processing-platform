@@ -1,10 +1,10 @@
 import PacketsColumnChart from "@/features/PacketsColumnChart";
 import { useHostDetailsUpdate } from "@/hooks/useHostDetails";
 
-function HostPacketsColumnChart({ ip }: { ip: string }) {
+function HostPacketsColumnChart({ ip, aggregationPeriod }: { ip: string, aggregationPeriod: number }) {
     const hostDetails = useHostDetailsUpdate({
         host_ip: ip,
-        period_sec: 5
+        period_sec: Math.max(aggregationPeriod, 5) // If aggregationPeriod is less then 5, values are not displayed
     });
     
     return (

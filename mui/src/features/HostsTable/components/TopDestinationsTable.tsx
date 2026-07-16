@@ -22,11 +22,11 @@ const columns = [
   { id: 'last_seen',   name: 'Last seen',  allowSorting: true },
 ];
 
-function TopDestinationsTable({ ip }: { ip: string }) {
+function TopDestinationsTable({ ip, aggregationPeriod }: { ip: string, aggregationPeriod: number }) {
   const [sorting, setSorting] = useState<HostTopDestinationsParams["sort_by"]>('received');
   const [sortingDir, setSortingDir] = useState<"asc" | "desc">("desc");
   const hosts = useHostTopDestinations({
-    period_sec: 30,
+    period_sec: Math.max(aggregationPeriod, 5), // If aggregationPeriod is less then 5, values are not displayed
     sort_by: sorting as HostTopDestinationsParams["sort_by"],
     sort_order: sortingDir,
     limit: 10,
@@ -39,8 +39,6 @@ function TopDestinationsTable({ ip }: { ip: string }) {
   const maxReceivedValue = destinationsList.length > 0 
     ? Math.max(...destinationsList.map(data => data.received_per_sec ?? 0)) 
     : 0;
-
-  console.log(sorting);
 
   const sortedTable = [...destinationsList].sort((a, b) => {
     const valA = a[sorting as keyof typeof a];

@@ -1,9 +1,12 @@
-import { useEffect, useState, type MouseEvent } from 'react';
+import { useEffect, useState } from 'react';
 import styles from './DetailedHostView.module.css';
 import closeIcon from '@/assets/close.svg';
 import HostPacketsColumnChart from '../HostPacketsColumnChart';
 import HostPacketsLineChart from '../HostPacketsLineChart';
 import TopDestinationsTable from '../TopDestinationsTable';
+import AggregationSelector from '../AggregationSelector/AggregationSelector';
+import { getHostHistory } from '@/services/history';
+import { useWebSocket } from '@/hooks/useWebSocket';
 
 interface DetailedHostsViewOptions {
   onClose: () => void,
@@ -11,19 +14,22 @@ interface DetailedHostsViewOptions {
 };
 
 function DetailedHostView({ ip, onClose }: DetailedHostsViewOptions) {
-  const [timeScale, setTimeScale] = useState<number>(60 * 5);
+  const [timeScale, setTimeScale] = useState<number | undefined>();
+  const [aggregationPeriod, setAggregationWindow] = useState<number>(30);
 
-  // Configure time scale
-  const selectScale = (event: MouseEvent<HTMLButtonElement>) => {
-    const newScale = +(event.target as HTMLSpanElement).getAttribute("data-value")!;
-    setTimeScale(newScale);
-  };
+  const { params } = useWebSocket();
+  const channelId = params?.channel_id;
 
+  // Effect to get aggregationWindow from history response.
   useEffect(() => {
-    // Update CSS classes
-    document.querySelectorAll(`.${styles.selector}`).forEach(e => e.classList.remove(styles.active!));
-    document.querySelector(`.${styles.selector}[data-value="${timeScale}"]`)?.classList.add(styles.active!);
-  }, [timeScale])
+    if (!channelId || !timeScale) return;
+
+    getHostHistory(channelId, ip, timeScale).then(response => {
+      setAggregationWindow(response.interval_sec);
+    });
+    
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channelId, timeScale]); // Change only on timeScale or channelId change to prevent redundant requests.
 
   return (
     <>
@@ -36,23 +42,16 @@ function DetailedHostView({ ip, onClose }: DetailedHostsViewOptions) {
             {ip}
           </h1>
         </div>
-        <div className={styles.selectors}>
-          <button onClick={selectScale} data-value={60 * 5} className={styles.selector}>5m</button>
-          <button onClick={selectScale} data-value={60 * 15} className={styles.selector}>15m</button>
-          <button onClick={selectScale} data-value={3600} className={`${styles.selector}`}>1h</button>
-          <button onClick={selectScale} data-value={3600 * 24} className={styles.selector}>24h</button>
-          <button onClick={selectScale} data-value={3600 * 24 * 7} className={styles.selector}>7d</button>
-          <button onClick={selectScale} data-value={3600 * 24 * 30} className={styles.selector}>30d</button>
-        </div>
+        <AggregationSelector onTimeScaleChange={(value) => setTimeScale(value)} />
       </div>
 
       <div className={styles.body}>
         <div className={styles.row}>
-          <HostPacketsColumnChart ip={ip} />
-          <HostPacketsLineChart ip={ip} timeScale={timeScale} />
+          <HostPacketsColumnChart ip={ip} aggregationPeriod={aggregationPeriod} />
+          <HostPacketsLineChart ip={ip} timeScale={timeScale ?? 300} />
         </div>
         <div className={styles.row}>
-          <TopDestinationsTable ip={ip} />
+          <TopDestinationsTable ip={ip} aggregationPeriod={aggregationPeriod} />
         </div>
       </div>
     </>

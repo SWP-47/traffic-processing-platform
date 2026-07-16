@@ -15,7 +15,7 @@ export function UnitProvider({ children }: { children: ReactNode }) {
   };
 
   const toggleUnit = () => {
-    setUnitState((prev) => (prev === 'packets' ? 'bytes' : 'packets'));
+    setUnit(unit === 'packets' ? 'bytes' : 'packets');
   };
 
   useEffect(() => {

@@ -14,8 +14,6 @@ interface DetailedHostsViewOptions {
   defaultTimeScale?: number
 };
 
-
-
 function DetailedHostView({ ip, onClose, defaultTimeScale }: DetailedHostsViewOptions) {
   const [timeScale, setTimeScale] = useState<number>(defaultTimeScale ?? 600);
   const aggregationPeriod = useAggregationPeriod(timeScale ?? 1);

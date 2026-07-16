@@ -1,15 +1,8 @@
 import style from './PacketsLineChart.module.css';
 import { colors } from '@/styles/theme';
+import { secondsToHumanReadable } from '@/utils/timeUtils';
 import type { EChartsOption } from 'echarts';
 import type { OptionDataValue } from 'echarts/types/src/util/types.js';
-
-const timeMapping: { [index: number]: string } = {
-  [1]: '1s',
-  [5]: '5s',
-  [300]: '5m',
-  [600]: '10m',
-  [3600]: '1h',
-}
 
 const chartOptions: EChartsOption = {
     // Margins
@@ -83,7 +76,7 @@ const chartOptions: EChartsOption = {
             const time = new Date(timestamp);
             const timeLabel = time.toLocaleString();
 
-            const windowSizeString = timeMapping[Math.ceil(windowSize / 1000)] ?? `${Math.ceil(windowSize / 1000)}s`
+            const windowSizeString = secondsToHumanReadable(Math.ceil(windowSize / 1000));
 
             return `
                 <div class="${style.tooltip}">

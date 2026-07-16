@@ -7,6 +7,7 @@ import DetailedHostView from "./components/DetailedHostsView/DetailedHostView";
 import AggregationSelector from "./components/AggregationSelector/AggregationSelector";
 import Select from "./components/Select/Select";
 import useAggregationPeriod from "./hooks/useAggregationPeriod";
+import { secondsToHumanReadable } from "@/utils/timeUtils";
 
 function ProgressPktsValue(value: number, maxValue: number) {
   const widthPercent = maxValue > 0 ? (value / maxValue) * 100 : 0;
@@ -18,14 +19,6 @@ function ProgressPktsValue(value: number, maxValue: number) {
       <p className={styles.progress_value}>{Math.round(value)} pkt/s</p>
     </div>
   );
-}
-
-const timeMapping: { [index: number]: string } = {
-  [1]: '1s',
-  [5]: '5s',
-  [300]: '5m',
-  [600]: '10m',
-  [3600]: '1h',
 }
 
 const columns = [
@@ -111,13 +104,13 @@ function HostsTable() {
       <div className={styles.header}>
         <input type="text" className={styles.filter} onChange={(e) => setIpFilter(e.target.value ?? null)} placeholder="Enter IP address" />
         <Select elements={['Both', 'LAN', 'WAN']} onSelect={(v) => setLocationFilter((v == 'LAN' || v == 'WAN') ? v : null)}/>
-        <AggregationSelector onTimeScaleChange={(value) => setTimeScale(value)} />
         <p
           className={styles.aggregaion_period}
-          title={`Data is aggregated for the last ${timeMapping[aggregationPeriod] ?? `${aggregationPeriod}s`}`}
+          title={`Data is aggregated for the last ${secondsToHumanReadable(aggregationPeriod)}`}
         >
-          AG: {timeMapping[aggregationPeriod] ?? `${aggregationPeriod}s`}
+          AG: {secondsToHumanReadable(aggregationPeriod)}
         </p>
+        <AggregationSelector onTimeScaleChange={(value) => setTimeScale(value)} />
       </div>
       <FullTable
         columns={columns}

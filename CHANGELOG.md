@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Reduced the default target point count for history endpoints from 1200 to 1000 points in `calculate_optimal_bucket`, lowering the number of data points returned by the `/history` and `/hosts/{host_ip}/history` endpoints.
 - Updated `docs/api.md` and `docs/architecture.md` to document the new `size` field in `TelemetryBatch`/`PacketMeta` and the bytes-per-second metrics in all WebSocket push payloads and REST history responses. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
 - Updated OpenAPI schema (`api/openapi.yaml`) to include `size` in the UDP ingestion payload and `bytes_in_per_sec`/`bytes_out_per_sec` in history and telemetry responses. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
 - REST API (`POST /api/v1/auth/login` and `POST /api/v1/auth/refresh`): Response structure now includes a nested `user` object containing `id`, `username`, `role`, and `scope` fields. Flat `role` and `scope` fields at the root level have been removed.

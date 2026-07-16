@@ -219,7 +219,7 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 
 #### `GET /api/v1/channel/{channel_id}/history`
 
-**Description**: Lazy-loads historical telemetry data for the Channel Line Chart. CnSS dynamically calculates the optimal `time_bucket` interval (approximately 1400 point).
+**Description**: Lazy-loads historical telemetry data for the Channel Line Chart. CnSS dynamically calculates the optimal `time_bucket` interval (approximately 1000 point).
 
 **Path Parameters**:
 

@@ -32,7 +32,7 @@ RETENTION_DAYS = settings.retention_days
 
 
 # --- Helper Functions ---
-def calculate_optimal_bucket(period_sec: int, target_points: int = 1200) -> int:
+def calculate_optimal_bucket(period_sec: int, target_points: int = 1000) -> int:
     """
     Dynamically calculates the optimal time_bucket size in seconds
     to return approximately `target_points` on the chart.
@@ -41,8 +41,8 @@ def calculate_optimal_bucket(period_sec: int, target_points: int = 1200) -> int:
     # Calculate raw bucket size to hit the target point count
     raw_bucket = max(1, period_sec // target_points)
 
-    # Logical time steps (in seconds) for snapping: 1s, 5s, 10s, 30s, 1m, 5m, 10m, 30m, 1h
-    logical_steps = [1, 5, 10, 30, 60, 300, 600, 1800, 3600]
+    # Logical time steps (in seconds) for snapping
+    logical_steps = [1, 2, 3, 5, 6, 8, 10, 15, 20, 30, 40, 60, 100, 200, 300, 400, 600, 1800, 3600]
 
     # Find the first logical step that is >= raw_bucket
     for step in logical_steps:

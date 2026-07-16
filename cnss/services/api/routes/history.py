@@ -16,6 +16,7 @@ from core.db import db_channel_exists, db_fetch_channel_history, db_fetch_host_h
 from core.exceptions import ResourceNotFoundError, ValidationError
 from services.api.deps import get_current_user, require_channel_access
 from services.api.schemas import (
+    BucketIntervalResponse,
     ChannelHistoryResponse,
     HistoryPoint,
     HostHistoryPoint,
@@ -197,3 +198,19 @@ async def get_host_history(
         interval_sec=interval_sec,
         points=points,
     )
+
+
+# ==============================================================================
+# GET /api/v1/utils/bucket-interval
+# ==============================================================================
+@router.get("/utils/bucket-interval", response_model=BucketIntervalResponse)
+async def get_bucket_interval(
+    period_sec: int = Query(..., gt=0, description="Duration of the time window in seconds."),
+    current_user: TokenPayload = Depends(get_current_user),
+) -> BucketIntervalResponse:
+    """
+    Returns the optimal time_bucket interval (interval_sec) for a given period_sec.
+    Pure calculation — no database query is performed.
+    """
+    interval_sec = calculate_optimal_bucket(period_sec)
+    return BucketIntervalResponse(period_sec=period_sec, interval_sec=interval_sec)

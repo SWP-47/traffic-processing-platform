@@ -158,6 +158,16 @@ class HostHistoryResponse(BaseModel):
     points: List[HostHistoryPoint] = Field(..., description="Array of aggregated data points.")
 
 
+# --- Utility Response Schema ---
+class BucketIntervalResponse(BaseModel):
+    """
+    Response payload for the lightweight bucket-interval utility endpoint.
+    """
+
+    period_sec: int = Field(..., description="Requested period duration in seconds.")
+    interval_sec: int = Field(..., description="Calculated optimal time bucket size in seconds.")
+
+
 # --- Error Response Schema ---
 # Standardized error format for all REST API failures.
 class ErrorResponse(BaseModel):

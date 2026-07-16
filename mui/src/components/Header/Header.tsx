@@ -4,6 +4,7 @@ import avatarImg from '@/assets/avatar.png';
 import ChannelSelector from './components/ChannelSelector/ChannelSelector.tsx';
 import { NavLink } from "react-router";
 import authentication from '@/services/authentication.ts';
+import UnitToggle from './components/UnitToggle/UnitToggle.tsx';
 
 function Header() {
   const { username } = useAuth();
@@ -16,6 +17,7 @@ function Header() {
           <h1 className={styles.name}>Hello, {username}!</h1>
         </div>
         <ChannelSelector />
+        <UnitToggle />
       </div>
       <div className={styles.links}>
         <NavLink

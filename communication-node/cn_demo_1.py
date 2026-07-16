@@ -18,6 +18,7 @@ MY_IP = os.getenv("MY_IP")
 CNSS_IP = os.getenv("CNSS_IP")
 TIME_WINDOW = os.getenv("TIME_WINDOW")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
+LOGGING = os.getenv("LOGGING")
 
 required_vars = {
     "SNIFF_INTERFACE_IN": SNIFF_INTERFACE,
@@ -27,6 +28,7 @@ required_vars = {
     "CNSS_IP": CNSS_IP,
     "TIME_WINDOW": TIME_WINDOW,
     "CHANNEL_ID": CHANNEL_ID,
+    "LOGGING": LOGGING,
 }
 
 for var_name, var_value in required_vars.items():
@@ -61,6 +63,8 @@ json_from_tp_schema = {
         "dst_ip": {"type": ["string", "null"]},
         "src_port": {"type": ["integer", "null"]},
         "dst_port": {"type": ["integer", "null"]},
+        "protocol": {"type": ["string", "null"]},
+        "size": {"type": "integer", "minimum": 26},
     },
     "required": ["direction", "src_ip", "dst_ip", "src_port", "dst_port"],
 }
@@ -92,7 +96,8 @@ def sending_data_to_cnss():
             packet_to_cnss = make_json_for_cnss(packets_to_send, sequence)
             packet_to_cnss = json.dumps(packet_to_cnss).encode("utf-8")
             udp_socket.sendto(packet_to_cnss, (CNSS_IP, 5140))
-            print(f"PACKET WAS SENT, sequence: {sequence}")
+            if int(LOGGING) == 1:
+                print(f"PACKET WAS SENT, sequence: {sequence}")
 
 
 def process_packet(pkt):
@@ -104,7 +109,8 @@ def process_packet(pkt):
                 validate(instance=parsed_json, schema=json_from_tp_schema)
             except ValidationError:
                 return
-            print(parsed_json)
+            if int(LOGGING) == 1:
+                print(parsed_json)
 
             packet_queue.put(parsed_json)
 

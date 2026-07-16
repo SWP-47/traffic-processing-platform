@@ -8,6 +8,28 @@ import time
 from dotenv import load_dotenv
 from scapy.all import IP, sniff
 
+# -----------------------------
+# json format
+
+# {
+# "channel_id": "{{channel_id}}",
+#     "timestamp": 1718625600,
+#     "sequence": 1042,
+#     "window_ms": 50,
+#     "packets": [
+#         {
+#             "direction": 0,
+#             "src_ip": "192.168.1.100",
+#             "dst_ip": "8.8.8.8",
+#             "src_port": 12345,
+#             "dst_port": 53,
+#             "protocol": "UDP",
+#             "size": 128  // in bytes
+#         }
+#     ]
+# }
+# -----------------------------
+
 load_dotenv()
 
 SNIFF_INTERFACE_IN = os.getenv("SNIFF_INTERFACE_IN")
@@ -16,6 +38,7 @@ OUT_INTERFACE = os.getenv("OUT_INTERFACE")
 MY_MAC = os.getenv("MY_MAC")
 MY_IP = os.getenv("MY_IP")
 CN_IP = os.getenv("CN_IP")
+LOGGING = os.getenv("LOGGING")
 
 required_vars = {
     "SNIFF_INTERFACE_IN": SNIFF_INTERFACE_IN,
@@ -24,6 +47,7 @@ required_vars = {
     "MY_MAC": MY_MAC,
     "MY_IP": MY_IP,
     "CN_IP": CN_IP,
+    "LOGGING": LOGGING,
 }
 
 for var_name, var_value in required_vars.items():
@@ -50,6 +74,7 @@ def get_json_payload(pkt, direction):
     dst_ip = 0
     src_port = 0
     dst_port = 0
+    proto = ""
 
     if IP in pkt:
         src_ip = pkt[IP].src
@@ -60,11 +85,20 @@ def get_json_payload(pkt, direction):
         except AttributeError:
             src_port = None
             dst_port = None
+
+        try:
+            proto = pkt[IP].payload.name
+            if proto == "Raw":
+                proto = None
+        except AttributeError:
+            proto = None
+
     else:
         src_ip = None
         dst_ip = None
         src_port = None
         dst_port = None
+        proto = None
 
     json_payload = {
         "direction": direction,
@@ -72,6 +106,8 @@ def get_json_payload(pkt, direction):
         "dst_ip": dst_ip,
         "src_port": src_port,
         "dst_port": dst_port,
+        "protocol": proto,
+        "size": len(pkt) + 12,  # + preamble (8) + crc (4)
     }
     return json_payload
 
@@ -84,15 +120,17 @@ def sending_data_to_cnss():
                 packet_to_cn = json.dumps(packet_to_cn).encode("utf-8")
                 udp_socket.sendto(packet_to_cn, (CN_IP, 5140))
                 # sendp(Ether(src=MY_MAC)/IP(src=MY_IP, dst=CN_IP)/UDP()/packet_to_cn)
-                print("PACKET WAS SENT")
-                print(list(packet_queue_in.queue))
+                if int(LOGGING) == 1:
+                    print("PACKET WAS SENT")
+                    print(list(packet_queue_in.queue))
 
             if not packet_queue_out.empty():
                 packet_to_cn = packet_queue_out.get_nowait()
                 packet_to_cn = json.dumps(packet_to_cn).encode("utf-8")
                 udp_socket.sendto(packet_to_cn, (CN_IP, 5140))
                 # sendp(Ether(src=MY_MAC)/IP(src=MY_IP, dst=CN_IP)/UDP()/packet_to_cn)
-                print("PACKET WAS SENT")
+                if int(LOGGING) == 1:
+                    print("PACKET WAS SENT")
 
             time.sleep(0.000001)
         except queue.Empty:

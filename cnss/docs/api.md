@@ -378,6 +378,45 @@ GET /api/v1/channel/bridge-berlin-01/hosts/192.168.1.100/history?period_sec=3600
 # → Returns data for [2026-06-17T10:00:00Z, 2026-06-17T11:00:00Z]
 ```
 
+### 3.4 Chart Configuration Utilities
+Lightweight endpoints to help the MUI configure charting libraries (e.g., ECharts, Chart.js) before fetching heavy historical data payloads.
+
+#### `GET /api/v1/utils/bucket-interval`
+**Description**: Calculates the optimal time bucket size (`interval_sec`) for chart rendering based on the requested period. This allows the MUI to set up the X-axis scale and pagination *before* requesting the actual data points.
+**Auth**: `Bearer {{access_token}}`
+
+**Query Parameters**:
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `period_sec` | integer | Yes | Duration of the time window in seconds (e.g., `3600` for 1 hour, `86400` for 24h). |
+
+**Response 200**:
+
+```json
+{
+  "period_sec": 86400,
+  "interval_sec": 60
+}
+```
+
+**Response Fields**:
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `period_sec` | integer | The requested period duration in seconds. |
+| `interval_sec` | integer | The calculated optimal time bucket size in seconds. |
+
+**Examples**:
+
+```bash
+# Get bucket size for a 24-hour chart
+GET /api/v1/utils/bucket-interval?period_sec=86400
+# → Returns { "period_sec": 86400, "interval_sec": 60 }
+
+# Get bucket size for a 1-hour chart
+GET /api/v1/utils/bucket-interval?period_sec=3600
+# → Returns { "period_sec": 3600, "interval_sec": 5 }
+```
+
 ---
 
 ## 4. WebSocket API (Real-Time Push)

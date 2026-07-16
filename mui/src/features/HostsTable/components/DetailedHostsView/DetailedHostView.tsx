@@ -6,7 +6,7 @@ import HostPacketsLineChart from '../HostPacketsLineChart';
 import TopDestinationsTable from '../TopDestinationsTable';
 import AggregationSelector from '../AggregationSelector/AggregationSelector';
 import useAggregationPeriod from '../../hooks/useAggregationPeriod';
-import { secondsToHumanReadable } from '@/utils/timeUtils';
+import { secondsToHumanReadable } from '@/utils/time';
 
 interface DetailedHostsViewOptions {
   onClose: () => void,

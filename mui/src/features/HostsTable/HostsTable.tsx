@@ -7,7 +7,7 @@ import DetailedHostView from "./components/DetailedHostsView/DetailedHostView";
 import AggregationSelector from "./components/AggregationSelector/AggregationSelector";
 import Select from "./components/Select/Select";
 import useAggregationPeriod from "./hooks/useAggregationPeriod";
-import { secondsToHumanReadable } from "@/utils/timeUtils";
+import { secondsToHumanReadable } from "@/utils/time";
 
 function ProgressPktsValue(value: number, maxValue: number) {
   const widthPercent = maxValue > 0 ? (value / maxValue) * 100 : 0;

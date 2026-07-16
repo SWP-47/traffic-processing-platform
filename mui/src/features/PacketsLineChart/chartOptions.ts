@@ -1,6 +1,6 @@
 import style from './PacketsLineChart.module.css';
 import { colors } from '@/styles/theme';
-import { secondsToHumanReadable } from '@/utils/timeUtils';
+import { secondsToHumanReadable } from '@/utils/time';
 import type { EChartsOption } from 'echarts';
 import type { OptionDataValue } from 'echarts/types/src/util/types.js';
 

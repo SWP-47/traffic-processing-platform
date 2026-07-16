@@ -55,7 +55,7 @@ def create_packet_meta(direction: int = 0) -> Dict[str, Any]:
         "src_port": src_port,
         "dst_port": dst_port,
         "protocol": protocol,
-        "size": random.randint(60, 1200)
+        "size": random.randint(60, 1200),
     }
 
 

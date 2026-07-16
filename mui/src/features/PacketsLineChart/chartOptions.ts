@@ -1,5 +1,6 @@
 import style from './PacketsLineChart.module.css';
 import { colors } from '@/styles/theme';
+import { secondsToHumanReadable } from '@/utils/timeUtils';
 import type { EChartsOption } from 'echarts';
 import type { OptionDataValue } from 'echarts/types/src/util/types.js';
 
@@ -75,10 +76,12 @@ const chartOptions: EChartsOption = {
             const time = new Date(timestamp);
             const timeLabel = time.toLocaleString();
 
+            const windowSizeString = secondsToHumanReadable(Math.ceil(windowSize / 1000));
+
             return `
                 <div class="${style.tooltip}">
                     <p class="${style.date}">${timeLabel}</p>
-                    <p class="${style.window}">${Math.ceil(windowSize / 1000)} s window size</p>
+                    <p class="${style.window}">${windowSizeString} window size</p>
                     <div class="${style.props}">
                         <div class="${style.prop}">
                         <span class="${style.title}">Status:</span>

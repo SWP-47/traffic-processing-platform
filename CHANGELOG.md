@@ -28,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Replaced the raw text-based regex filter in the Hosts Table with dedicated, user-friendly IP address input and Location dropdown filters. ([#246](https://github.com/SWP-47/traffic-processing-platform/issues/246))
+- Updated chart data providers (`ChannelDataProvider`, `HostDataProvider`) to prevent redundant initializations and ensure proper state cleanup on disposal. ([#246](https://github.com/SWP-47/traffic-processing-platform/issues/246))
+- Enhanced line chart tooltips to display human-readable aggregation window sizes (e.g., "10m" instead of "10 s"). ([#246](https://github.com/SWP-47/traffic-processing-platform/issues/246))
 - Reduced the default target point count for history endpoints from 1200 to 1000 points in `calculate_optimal_bucket`, lowering the number of data points returned by the `/history` and `/hosts/{host_ip}/history` endpoints.
 - Updated `docs/api.md` and `docs/architecture.md` to document the new `size` field in `TelemetryBatch`/`PacketMeta` and the bytes-per-second metrics in all WebSocket push payloads and REST history responses. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
 - Updated OpenAPI schema (`api/openapi.yaml`) to include `size` in the UDP ingestion payload and `bytes_in_per_sec`/`bytes_out_per_sec` in history and telemetry responses. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
@@ -44,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deprecated `requestTokenRenewal` method in favor of the new robust `handleAuthError` and `attemptTokenRefresh` flow. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
 
 ### Fixed
+- Fixed WebSocket subscription reconnection logic in `SubscriptionManager` to verify `ActivityStatus.Active` before reconnecting, preventing unnecessary reconnection attempts during inactive channel states. ([#246](https://github.com/SWP-47/traffic-processing-platform/issues/246))
 
 ### Security
 

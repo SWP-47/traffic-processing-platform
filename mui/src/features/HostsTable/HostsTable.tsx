@@ -4,6 +4,10 @@ import { useState } from "react";
 import styles from './HostsTable.module.css';
 import Modal from "@/components/Modal";
 import DetailedHostView from "./components/DetailedHostsView/DetailedHostView";
+import AggregationSelector from "./components/AggregationSelector/AggregationSelector";
+import Select from "./components/Select/Select";
+import useAggregationPeriod from "./hooks/useAggregationPeriod";
+import { secondsToHumanReadable } from "@/utils/timeUtils";
 
 function ProgressPktsValue(value: number, maxValue: number) {
   const widthPercent = maxValue > 0 ? (value / maxValue) * 100 : 0;
@@ -31,19 +35,17 @@ function HostsTable() {
   const [limit, setLimit] = useState(10);
   const [sortColumn, setSortColumn] = useState('ip');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const [filter, setFilter] = useState<string>();
+  const [ipFilter, setIpFilter] = useState<string | null>(null);
+  const [locationFilter, setLocationFilter] = useState<string | null>(null);
 
   const [selectedIP, setSelectedIp] = useState<string>();
   const [modalOpened, setModalOpened] = useState<boolean>(false);
 
-  const ipRegexp = /((?<=ip: )\S*)/;
-  const ipFilter = filter?.match(ipRegexp) ? filter?.match(ipRegexp)![0] : null;
-  const locationRegexp = /((?<=location: )\S*)/;
-  let locationFilter = filter?.match(locationRegexp) ? filter?.match(locationRegexp)![0] : null;
-  if (!['LAN', 'WAN', null].includes(locationFilter)) locationFilter = null;
+  const [timeScale, setTimeScale] = useState<number>(600);
+  const aggregationPeriod = useAggregationPeriod(timeScale);
 
   const hostsTable = useHostsUpdate({
-    period_sec: 30,
+    period_sec: Math.max(aggregationPeriod, 5),
     sort_by: (columns.find(c => c.id === sortColumn)?.sortId || sortColumn) as HostsTableParams["sort_by"],
     sort_order: sortDir,
     limit: limit,
@@ -99,7 +101,17 @@ function HostsTable() {
 
   return (
     <>
-      <input type="text" className={styles.filter} onChange={(e) => setFilter(e.target.value)} />
+      <div className={styles.header}>
+        <input type="text" className={styles.filter} onChange={(e) => setIpFilter(e.target.value ?? null)} placeholder="Enter IP address" />
+        <Select elements={['Both', 'LAN', 'WAN']} onSelect={(v) => setLocationFilter((v == 'LAN' || v == 'WAN') ? v : null)}/>
+        <p
+          className={styles.aggregaion_period}
+          title={`Data is aggregated for the last ${secondsToHumanReadable(aggregationPeriod)}`}
+        >
+          AG: {secondsToHumanReadable(aggregationPeriod)}
+        </p>
+        <AggregationSelector onTimeScaleChange={(value) => setTimeScale(value)} />
+      </div>
       <FullTable
         columns={columns}
         
@@ -129,6 +141,7 @@ function HostsTable() {
             <DetailedHostView
               ip={selectedIP}
               onClose={() => setModalOpened(false)}
+              defaultTimeScale={timeScale}
             />
           )
         }

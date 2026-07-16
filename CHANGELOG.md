@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated unit tests across `test_buffer_manager`, `test_flusher`, `test_state_manager`, and `test_udp_server` to include the `size` field in `PacketMeta` fixtures. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
 - Added to hardware pert of TP shift register to detect packet to block before the transmission starts([#250](https://github.com/SWP-47/traffic-processing-platform/issues/250))
 - New module added with receiving IP address form specific packets sent by TP-CN device to FPGA board([#294](https://github.com/SWP-47/traffic-processing-platform/issues/294))
+- Lightweight `GET /api/v1/utils/bucket-interval` endpoint that returns the optimal `interval_sec` for a given `period_sec` without querying the database, enabling the MUI to configure chart bucket sizing independently. ([#303](https://github.com/SWP-47/traffic-processing-platform/issues/303))
 
 ### Changed
 

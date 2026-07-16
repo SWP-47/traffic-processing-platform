@@ -3,6 +3,14 @@ import { colors } from '@/styles/theme';
 import type { EChartsOption } from 'echarts';
 import type { OptionDataValue } from 'echarts/types/src/util/types.js';
 
+const timeMapping: { [index: number]: string } = {
+  [1]: '1s',
+  [5]: '5s',
+  [300]: '5m',
+  [600]: '10m',
+  [3600]: '1h',
+}
+
 const chartOptions: EChartsOption = {
     // Margins
     grid: { top: 15, right: 15, left: 15, bottom: 30 },
@@ -75,10 +83,12 @@ const chartOptions: EChartsOption = {
             const time = new Date(timestamp);
             const timeLabel = time.toLocaleString();
 
+            const windowSizeString = timeMapping[Math.ceil(windowSize / 1000)] ?? `${Math.ceil(windowSize / 1000)}s`
+
             return `
                 <div class="${style.tooltip}">
                     <p class="${style.date}">${timeLabel}</p>
-                    <p class="${style.window}">${Math.ceil(windowSize / 1000)} s window size</p>
+                    <p class="${style.window}">${windowSizeString} window size</p>
                     <div class="${style.props}">
                         <div class="${style.prop}">
                         <span class="${style.title}">Status:</span>

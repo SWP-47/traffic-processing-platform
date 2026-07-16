@@ -13,8 +13,16 @@ interface DetailedHostsViewOptions {
   defaultTimeScale?: number
 };
 
+const timeMapping: { [index: number]: string } = {
+  [1]: '1s',
+  [5]: '5s',
+  [300]: '5m',
+  [600]: '10m',
+  [3600]: '1h',
+}
+
 function DetailedHostView({ ip, onClose, defaultTimeScale }: DetailedHostsViewOptions) {
-  const [timeScale, setTimeScale] = useState<number>(defaultTimeScale ?? 300);
+  const [timeScale, setTimeScale] = useState<number>(defaultTimeScale ?? 600);
   const aggregationPeriod = useAggregationPeriod(timeScale ?? 1);
 
   return (
@@ -28,7 +36,15 @@ function DetailedHostView({ ip, onClose, defaultTimeScale }: DetailedHostsViewOp
             {ip}
           </h1>
         </div>
-        <AggregationSelector onTimeScaleChange={(value) => setTimeScale(value)} defaultValue={timeScale} />
+        <div className={styles.right}>
+          <AggregationSelector onTimeScaleChange={(value) => setTimeScale(value)} defaultValue={timeScale} />
+            <p
+              className={styles.aggregaion_period}
+              title={`Data is aggregated for the last ${timeMapping[aggregationPeriod] ?? `${aggregationPeriod}s`}`}
+            >
+              AG: {timeMapping[aggregationPeriod] ?? `${aggregationPeriod}s`}
+            </p>
+        </div>
       </div>
 
       <div className={styles.body}>
@@ -37,7 +53,7 @@ function DetailedHostView({ ip, onClose, defaultTimeScale }: DetailedHostsViewOp
           <HostPacketsLineChart ip={ip} timeScale={timeScale} />
         </div>
         <div className={styles.row}>
-          <TopDestinationsTable ip={ip} aggregationPeriod={timeScale} />
+          <TopDestinationsTable ip={ip} aggregationPeriod={aggregationPeriod} />
         </div>
       </div>
     </>

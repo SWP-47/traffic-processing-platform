@@ -44,3 +44,14 @@
 
     color: var(--color-text);
 }
+
+.aggregaion_period {
+    background-color: var(--color-surface);
+    padding: 12px 12px;
+    border-radius: 15px;
+    user-select: none;
+
+    opacity: .5;
+
+    cursor: help;
+}

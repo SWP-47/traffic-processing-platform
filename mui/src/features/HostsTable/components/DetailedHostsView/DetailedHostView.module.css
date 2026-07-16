@@ -7,9 +7,9 @@
     margin-bottom: 35px;
 }
 
-.left {
+.left, .right {
     display: flex;
-    gap: 30px;
+    gap: 20px;
 
     align-items: center;
 }
@@ -48,4 +48,15 @@
 
 .row > * {
     flex-grow: 1;
+}
+
+.aggregaion_period {
+    background-color: var(--color-surface);
+    padding: 12px 12px;
+    border-radius: 15px;
+    user-select: none;
+
+    opacity: .5;
+
+    cursor: help;
 }

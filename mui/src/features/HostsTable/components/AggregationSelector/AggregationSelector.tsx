@@ -2,8 +2,7 @@ import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import styles from './AggregationSelector.module.css';
 
 const SCALES = [
-  { value: 300,       label: '5m'  },
-  { value: 900,       label: '15m' },
+  { value: 600,       label: '10m' },
   { value: 3600,      label: '1h'  },
   { value: 86_400,    label: '24h' },
   { value: 604_800,   label: '7d'  },

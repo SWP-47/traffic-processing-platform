@@ -6,6 +6,7 @@ import Modal from "@/components/Modal";
 import DetailedHostView from "./components/DetailedHostsView/DetailedHostView";
 import AggregationSelector from "./components/AggregationSelector/AggregationSelector";
 import Select from "./components/Select/Select";
+import useAggregationPeriod from "./hooks/useAggregationPeriod";
 
 function ProgressPktsValue(value: number, maxValue: number) {
   const widthPercent = maxValue > 0 ? (value / maxValue) * 100 : 0;
@@ -17,6 +18,14 @@ function ProgressPktsValue(value: number, maxValue: number) {
       <p className={styles.progress_value}>{Math.round(value)} pkt/s</p>
     </div>
   );
+}
+
+const timeMapping: { [index: number]: string } = {
+  [1]: '1s',
+  [5]: '5s',
+  [300]: '5m',
+  [600]: '10m',
+  [3600]: '1h',
 }
 
 const columns = [
@@ -39,10 +48,11 @@ function HostsTable() {
   const [selectedIP, setSelectedIp] = useState<string>();
   const [modalOpened, setModalOpened] = useState<boolean>(false);
 
-  const [timeScale, setTimeScale] = useState<number>(300);
+  const [timeScale, setTimeScale] = useState<number>(600);
+  const aggregationPeriod = useAggregationPeriod(timeScale);
 
   const hostsTable = useHostsUpdate({
-    period_sec: Math.max(timeScale, 5),
+    period_sec: Math.max(aggregationPeriod, 5),
     sort_by: (columns.find(c => c.id === sortColumn)?.sortId || sortColumn) as HostsTableParams["sort_by"],
     sort_order: sortDir,
     limit: limit,
@@ -102,6 +112,12 @@ function HostsTable() {
         <input type="text" className={styles.filter} onChange={(e) => setIpFilter(e.target.value ?? null)} placeholder="Enter IP address" />
         <Select elements={['Both', 'LAN', 'WAN']} onSelect={(v) => setLocationFilter((v == 'LAN' || v == 'WAN') ? v : null)}/>
         <AggregationSelector onTimeScaleChange={(value) => setTimeScale(value)} />
+        <p
+          className={styles.aggregaion_period}
+          title={`Data is aggregated for the last ${timeMapping[aggregationPeriod] ?? `${aggregationPeriod}s`}`}
+        >
+          AG: {timeMapping[aggregationPeriod] ?? `${aggregationPeriod}s`}
+        </p>
       </div>
       <FullTable
         columns={columns}

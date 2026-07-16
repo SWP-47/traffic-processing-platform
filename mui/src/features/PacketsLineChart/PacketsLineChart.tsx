@@ -29,7 +29,6 @@ function PacketsLineChart({ dataProvider, timeScale, selectedSeries } : PacketsL
 
   // Init chart
   useEffect(() => {
-    console.info(dataProvider, timeScale);
     if (!chartElementRef.current) return;
     lastRenderedStartRef.current = Date.now();
 

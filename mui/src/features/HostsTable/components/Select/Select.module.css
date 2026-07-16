@@ -1,0 +1,117 @@
+@property --hover-color-beg {
+    syntax: '<color>';
+    initial-value: #2C2C2C;
+    inherits: false;
+}
+
+@property --hover-color-end {
+    syntax: '<color>';
+    initial-value: #2C2C2C;
+    inherits: false;
+}
+
+.selector {
+    border-radius: 20px;
+    color: var(--color-text);
+    position: relative;
+
+    transition: border-radius .3s;
+
+    .header {
+        z-index: 5;
+        position: relative;
+
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        padding: 12px 25px;
+        border-radius: 20px;
+        background: var(--gradient-card);
+
+        user-select: none;
+        cursor: pointer;
+
+        transition: box-shadow .3s;
+
+        .select_icon {
+            width: 11px;
+            height: 9px;
+
+            transition: transform .3s;
+        }
+
+        .selected_item {
+            font-size: 1rem;
+            font-weight: bold;
+        }
+    }
+
+    .content {
+        z-index: 4;
+        position: absolute;
+        background: var(--color-surface);
+        border-radius: 0 0 20px 20px;
+        width: 100%;
+        padding-top: 5px;
+        max-height: 350px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-surface-hover) var(--color-surface);
+
+        transition:
+            opacity .3s,
+            transform .3s,
+            visibility .3s;
+
+        .item {
+            padding: 12px 25px;
+
+            font-size: 1rem;
+            font-weight: bold;
+
+            cursor: pointer;
+
+            display: flex;
+            align-items: center;
+            gap: 15px;
+
+            border-radius: 20px;
+            background: linear-gradient(180deg, var(--hover-color-beg), var(--hover-color-end));
+
+            transition: --hover-color-beg .3s, --hover-color-end .3s;
+        }
+
+        .item:hover {
+            --hover-color-beg: var(--color-surface);
+            --hover-color-end: var(--color-surface-hover);
+        }
+    }
+}
+
+.selector.opened {
+    background-color: var(--color-surface);
+    border-radius: 20px 20px 0 0;
+
+    .header {
+        box-shadow: 0px 5px 6px var(--color-background);
+
+        .select_icon {
+            transform: rotate(-90deg);
+        }
+    }
+
+    .content {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.selector:not(.opened) {
+    .content {
+        visibility: hidden;
+        user-select: none;
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}

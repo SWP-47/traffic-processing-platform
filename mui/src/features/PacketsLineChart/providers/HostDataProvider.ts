@@ -25,8 +25,8 @@ export class HostDataProvider extends BaseChartDataProvider implements ChartData
 
     async initialize(timeScale: number): Promise<void> {
         if (this.isInitialized) return;
-
         this.isInitialized = true;
+
         const response = await getHostHistory(this.channelId, this.hostIp, timeScale);
         this.setBucketSize(response.interval_sec * 1000);
 
@@ -75,6 +75,7 @@ export class HostDataProvider extends BaseChartDataProvider implements ChartData
 
     dispose(): void {
         if (!this.isInitialized) return;
+        this.isInitialized = false;
 
         this.unsubscribeFromTelemetry?.();
         this.unsubscribeFromTelemetry = undefined;

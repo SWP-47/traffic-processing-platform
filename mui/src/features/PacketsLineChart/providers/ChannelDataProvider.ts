@@ -13,6 +13,7 @@ export interface ChannelDataProviderOptions {
 export class ChannelDataProvider extends BaseChartDataProvider implements ChartDataProvider {
     private readonly channelId: string;
     private readonly windowSec: number;
+    private isInitialized: boolean = false;
     private unsubscribeFromTelemetry?: () => void;
 
     constructor(options: ChannelDataProviderOptions) {
@@ -22,6 +23,9 @@ export class ChannelDataProvider extends BaseChartDataProvider implements ChartD
     }
 
     async initialize(timeScale: number): Promise<void> {
+        if (this.isInitialized) return;
+        this.isInitialized = true;
+
         const response = await getHistory(this.channelId, timeScale);
         this.setBucketSize(response.interval_sec * 1000);
 
@@ -66,6 +70,9 @@ export class ChannelDataProvider extends BaseChartDataProvider implements ChartD
     }
 
     dispose(): void {
+        if (!this.isInitialized) return;
+        this.isInitialized = false;
+
         this.unsubscribeFromTelemetry?.();
         this.unsubscribeFromTelemetry = undefined;
         super.dispose();

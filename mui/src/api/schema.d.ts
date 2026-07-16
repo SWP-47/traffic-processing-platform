@@ -635,6 +635,16 @@ export interface components {
              * @description Aggregated outgoing packet rate.
              */
             packets_out_per_sec: number;
+            /**
+             * Format: float
+             * @description Aggregated incoming bytes rate.
+             */
+            bytes_in_per_sec: number;
+            /**
+             * Format: float
+             * @description Aggregated outgoing bytes rate.
+             */
+            bytes_out_per_sec: number;
             /** @description Channel activity status at this specific timestamp (Channel History only). */
             is_active: boolean;
         };
@@ -676,6 +686,16 @@ export interface components {
              * @description Aggregated outgoing packet rate for the host.
              */
             packets_out_per_sec: number;
+            /**
+             * Format: float
+             * @description Aggregated incoming bytes rate for the host.
+             */
+            bytes_in_per_sec: number;
+            /**
+             * Format: float
+             * @description Aggregated outgoing bytes rate for the host.
+             */
+            bytes_out_per_sec: number;
         };
         ErrorResponse: {
             /**
@@ -714,11 +734,10 @@ export interface components {
             dst_ip: string;
             src_port: number;
             dst_port: number;
-            /**
-             * @description Protocol (e.g., TCP/UDP). Required for accurate host_top_ports protocol reporting.
-             * @enum {string}
-             */
-            protocol: "TCP" | "UDP";
+            /** @description Network protocol identifier (e.g., TCP, UDP, ICMP). Defaults to 'UNKNOWN'. */
+            protocol: string;
+            /** @description Packet size in bytes. */
+            size: number;
         };
         /**
          * @description Text frame sent from MUI to CnSS to manage WebSocket subscriptions.
@@ -815,10 +834,14 @@ export interface components {
                 direction_out: {
                     packets_per_sec: number;
                     packets: number;
+                    bytes_per_sec: number;
+                    bytes: number;
                 };
                 direction_in: {
                     packets_per_sec: number;
                     packets: number;
+                    bytes_per_sec: number;
+                    bytes: number;
                 };
             };
             /** Format: date-time */
@@ -845,6 +868,8 @@ export interface components {
             unique_destinations: number;
             tx_per_sec: number;
             rx_per_sec: number;
+            tx_bytes_per_sec: number;
+            rx_bytes_per_sec: number;
             /** Format: date-time */
             last_activity: string;
         };
@@ -858,6 +883,8 @@ export interface components {
             timestamp: string;
             tx_per_sec: number;
             rx_per_sec: number;
+            tx_bytes_per_sec: number;
+            rx_bytes_per_sec: number;
         };
         HostTopDestinationsUpdate: {
             /** @enum {string} */
@@ -875,6 +902,7 @@ export interface components {
             /** @enum {string} */
             location: "LAN" | "WAN";
             received_per_sec: number;
+            received_bytes_per_sec: number;
             /** Format: date-time */
             last_seen: string;
         };
@@ -891,9 +919,10 @@ export interface components {
         };
         PortEntry: {
             port: number;
-            /** @enum {string} */
-            protocol: "TCP" | "UDP";
+            /** @description Network protocol identifier (e.g., TCP, UDP, ICMP). */
+            protocol: string;
             packets_per_sec: number;
+            bytes_per_sec: number;
         };
     };
     responses: never;

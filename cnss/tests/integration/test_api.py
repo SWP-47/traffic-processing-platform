@@ -696,3 +696,49 @@ async def test_api_health_check_redis_unhealthy(redis_setup, db_pool_setup, api_
         assert response.status_code == 503
         data = response.json()
         assert data["error"] == "unhealthy"
+
+
+async def test_api_utils_bucket_interval(redis_setup, db_pool_setup, api_client):
+    """
+    Architecture §3.4: Test GET /api/v1/utils/bucket-interval endpoint.
+    Verifies pure calculation (no DB query), validation errors, and auth enforcement.
+    """
+    db_pool = db_pool_setup
+    viewer_id = uuid.uuid4()
+
+    # Seed viewer
+    async with db_pool.acquire() as conn:
+        pwd_hash = hash_password(TEST_PASSWORD)
+        await conn.execute(
+            "INSERT INTO users (id, username, password_hash, role) VALUES ($1, $2, $3, $4)",
+            viewer_id,
+            TEST_VIEWER_USERNAME,
+            pwd_hash,
+            "viewer",
+        )
+
+    # Login to obtain auth token
+    login_response = await api_client.post(
+        "/api/v1/auth/login", json={"username": TEST_VIEWER_USERNAME, "password": TEST_PASSWORD}
+    )
+    token = login_response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Case 1: Valid request (period_sec=3600) returns calculated interval_sec
+    resp = await api_client.get("/api/v1/utils/bucket-interval?period_sec=3600", headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["period_sec"] == 3600
+    assert data["interval_sec"] == 3  # raw_bucket=3600//1000=3, snaps to 3 in logical_steps
+
+    # Case 2: Missing period_sec returns 422 validation error
+    resp_missing = await api_client.get("/api/v1/utils/bucket-interval", headers=headers)
+    assert resp_missing.status_code == 422
+
+    # Case 3: Invalid period_sec (<= 0) returns 422 validation error
+    resp_invalid = await api_client.get("/api/v1/utils/bucket-interval?period_sec=0", headers=headers)
+    assert resp_invalid.status_code == 422
+
+    # Case 4: Unauthenticated request returns 401
+    resp_unauth = await api_client.get("/api/v1/utils/bucket-interval?period_sec=3600")
+    assert resp_unauth.status_code == 401

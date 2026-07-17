@@ -34,7 +34,9 @@ export class HostDataProvider extends BaseChartDataProvider implements ChartData
             const completedPoints: DataPoint[] = response.points.map(p => ({
                 timestamp: Date.parse(p.timestamp!),
                 packetsInPerSec: p.packets_in_per_sec ?? 0,
+                bytesInPerSec: p.bytes_in_per_sec ?? 0,
                 packetsOutPerSec: p.packets_out_per_sec ?? 0,
+                bytesOutPerSec: p.bytes_out_per_sec ?? 0,
                 isActive: true,
                 windowMs: this.getBucketSize(),
                 complete: true,
@@ -62,8 +64,10 @@ export class HostDataProvider extends BaseChartDataProvider implements ChartData
 
         const point: DataPoint = {
             timestamp,
-            packetsInPerSec: update.rx_per_sec,
-            packetsOutPerSec: update.tx_per_sec,
+            packetsInPerSec: update.rx_per_sec ?? 0,
+            bytesInPerSec: update.rx_bytes_per_sec ?? 0,
+            packetsOutPerSec: update.tx_per_sec ?? 0,
+            bytesOutPerSec: update.tx_bytes_per_sec ?? 0,
             isActive: true,
             windowMs: 5,
             complete: false,

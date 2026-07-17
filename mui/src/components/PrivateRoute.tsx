@@ -4,6 +4,7 @@ import Header from "./Header/Header";
 import { useEffect, useState } from "react";
 import authentication from "@/services/authentication";
 import Loading from "@/pages/Loading/Loading";
+import { UnitProvider } from "@/contexts/UnitContext/UnitProvider";
 
 function PrivateRoute() {
   const { isAuthenticated } = useAuth();
@@ -29,8 +30,10 @@ function PrivateRoute() {
 
   return isAuthenticated ? (
     <>
-      <Header />
-      <Outlet />
+      <UnitProvider>
+        <Header />
+        <Outlet />
+      </UnitProvider>
     </>
   ) : (
     <Navigate

@@ -5,17 +5,21 @@ import chartOptions from './chartOptions';
 import loadingIcon from '@/assets/loading.svg';
 import useDelayedVisibility from '@/hooks/useDelayedVisibility';
 import type { ChartDataProvider, DataPoint } from './types';
+import type { UnitContextValue } from '@/contexts/UnitContext/UnitContext';
 
 export interface PacketsLineChartOptions {
   dataProvider: ChartDataProvider,
   timeScale: number,
   selectedSeries: {
-    Received: boolean,
-    Sent: boolean
-  }
+    Received_pkts: boolean,
+    Sent_pkts: boolean,
+    Received_bytes: boolean,
+    Sent_bytes: boolean,
+  },
+  unit: UnitContextValue['unit'];
 };
 
-function PacketsLineChart({ dataProvider, timeScale, selectedSeries } : PacketsLineChartOptions) {
+function PacketsLineChart({ dataProvider, timeScale, selectedSeries, unit } : PacketsLineChartOptions) {
   const chartElementRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<EChartsType>(null);
   const showRealTimeRef = useRef(true);
@@ -36,10 +40,28 @@ function PacketsLineChart({ dataProvider, timeScale, selectedSeries } : PacketsL
     const chart = init(chartElementRef.current);
     chartRef.current = chart;
 
+    const formatYAxis = (value: number) => {
+      if (unit === 'bytes') {
+        if (value >= 1_000_000_000) return (value / 1_000_000_000).toFixed(0) + ' GB/s';
+        if (value >= 1_000_000) return (value / 1_000_000).toFixed(0) + ' MB/s';
+        if (value >= 1_000) return (value / 1_000).toFixed(0) + ' KB/s';
+        return value.toFixed(0) + ' B/s';
+      }
+
+      if (value >= 1_000_000) return (value / 1_000_000).toFixed(0) + ' M pkt/s';
+      if (value >= 1_000) return (value / 1_000).toFixed(0) + ' k pkt/s';
+      return value.toFixed(0) + ' pkt/s';
+    };
+
     chart.setOption(chartOptions);
     chart.setOption({
-      xAxis: { dataMin: Date.now() - timeScale * 1000, dataMax: Date.now() }
-    })
+      xAxis: { dataMin: Date.now() - timeScale * 1000, dataMax: Date.now() },
+      yAxis: {
+        axisLabel: {
+          formatter: formatYAxis
+        }
+      }
+    });
 
     const resizeObserver = new ResizeObserver(() => chart.resize());
     resizeObserver.observe(chartElementRef.current);
@@ -95,22 +117,36 @@ function PacketsLineChart({ dataProvider, timeScale, selectedSeries } : PacketsL
       }
 
       // Map to ECharts format with incomplete point styling
-      const receivedData = dataToRender.map(p => ({
+      const receivedPktsData = dataToRender.map(p => ({
         name: p.timestamp,
         value: [p.timestamp, p.packetsInPerSec, p.isActive ? 1 : 0, p.windowMs],
         itemStyle: p.complete ? undefined : { opacity: 0.4 }
       }));
 
-      const sentData = dataToRender.map(p => ({
+      const sentPktsData = dataToRender.map(p => ({
         name: p.timestamp,
         value: [p.timestamp, p.packetsOutPerSec, p.isActive ? 1 : 0, p.windowMs],
         itemStyle: p.complete ? undefined : { opacity: 0.4 }
       }));
 
+      const receivedBytesData = dataToRender.map(p => ({
+        name: p.timestamp,
+        value: [p.timestamp, p.bytesInPerSec, p.isActive ? 1 : 0, p.windowMs],
+        itemStyle: p.complete ? undefined : { opacity: 0.4 }
+      }));
+
+      const sentBytesData = dataToRender.map(p => ({
+        name: p.timestamp,
+        value: [p.timestamp, p.bytesOutPerSec, p.isActive ? 1 : 0, p.windowMs],
+        itemStyle: p.complete ? undefined : { opacity: 0.4 }
+      }));
+
       chart.setOption({
         series: [
-          { name: 'Received', data: receivedData },
-          { name: 'Sent', data: sentData }
+          { name: 'Received_pkts', data: receivedPktsData },
+          { name: 'Sent_pkts', data: sentPktsData },
+          { name: 'Received_bytes', data: receivedBytesData },
+          { name: 'Sent_bytes', data: sentBytesData }
         ]
       });
 
@@ -171,13 +207,13 @@ function PacketsLineChart({ dataProvider, timeScale, selectedSeries } : PacketsL
       chartElementCopy?.removeEventListener('mouseenter', handleMouseEnter);
       chartElementCopy?.removeEventListener('mouseleave', handleMouseLeave);
     }
-  }, [dataProvider, timeScale]);
+  }, [dataProvider, timeScale, unit]);
 
   // Update legend
   useEffect(() => {
     if (!chartRef.current) return;
     chartRef.current.setOption({ legend: { selected: selectedSeries } });
-  }, [selectedSeries]);
+  }, [selectedSeries, timeScale]);
 
   return (
     <div className={styles.chart_wrapper}>

@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Global traffic unit toggle (Packets/Bytes) in the Header and Detailed Host View, allowing users to switch metric displays dynamically. ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
+- React Context (`UnitContext`) to manage and persist the user's traffic unit preference across the application and browser tabs via `localStorage`. ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
+- Utility functions (`formatBytesPerSecond`, `formatSplit`) to automatically format byte rates into human-readable units (B/s, KB/s, MB/s, GB/s). ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
 - Automatic token refresh and request retry mechanism for REST API 401 Unauthorized responses (excluding login and refresh endpoints). ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
 - Automatic WebSocket reconnection with a new access token upon authentication error (close code 4001). ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
 - Session initialization and validation on protected route access to restore authentication state on page load. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
@@ -28,6 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated all traffic visualization components (Column Charts, Line Charts, Hosts Table, Top Destinations, and Top Hosts tables) to dynamically render, calculate max values, and sort data based on the selected unit (packets or bytes). ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
+- Enhanced Line Chart Y-axis labels and tooltips to automatically format and display the correct unit suffixes (e.g., "MB/s", "k pkt/s") based on the active selection. ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
+- Refactored chart data providers (`BaseChartDataProvider`, `ChannelDataProvider`, `HostDataProvider`) to aggregate and expose both packet and byte rates per second (`bytesInPerSec`, `bytesOutPerSec`). ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
+- Renamed `timeUtils.ts` to `time.ts` for better naming consistency across the codebase. ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
 - Replaced the raw text-based regex filter in the Hosts Table with dedicated, user-friendly IP address input and Location dropdown filters. ([#246](https://github.com/SWP-47/traffic-processing-platform/issues/246))
 - Updated chart data providers (`ChannelDataProvider`, `HostDataProvider`) to prevent redundant initializations and ensure proper state cleanup on disposal. ([#246](https://github.com/SWP-47/traffic-processing-platform/issues/246))
 - Enhanced line chart tooltips to display human-readable aggregation window sizes (e.g., "10m" instead of "10 s"). ([#246](https://github.com/SWP-47/traffic-processing-platform/issues/246))

@@ -1,28 +1,40 @@
 import TopTable from '@/components/TopTable';
 import styles from '@/pages/Dashboard/components/TopHostsTable/TopHostsTable.module.css';
 import { useState } from 'react';
-import { useHostTopDestinations, type HostTopDestinationsParams } from '@/hooks/useHostTopDestinations';
+import { useHostTopDestinations, type HostTopDestinationsParams, type HostTopDestinationsUpdate } from '@/hooks/useHostTopDestinations';
+import { useUnit } from '@/contexts/UnitContext/useUnit';
+import type { UnitContextValue } from '@/contexts/UnitContext/UnitContext';
+import { formatBytesPerSecond } from '@/utils/information';
 
-function ProgressPktsValue(value: number, maxValue: number) {
+function ProgressPktsValue(value: number, maxValue: number, unit: UnitContextValue['unit']) {
   const widthPercent = maxValue > 0 ? (value / maxValue) * 100 : 0;
+
+  let formattedValue: string = '';
+  if (unit === 'bytes') {
+    formattedValue = formatBytesPerSecond(value);
+  } else if (unit === 'packets') {
+    formattedValue = value.toFixed(0) + ' pkt/s';
+  }
+  
   return (
     <div className={styles.progress}>
       <div className={styles.progress_bar}>
         <div className={styles.progress_bar_value} style={{ width: `${widthPercent}%` }}></div>
       </div>
-      <p className={styles.progress_value}>{Math.round(value)} pkt/s</p>
+      <p className={styles.progress_value}>{formattedValue}</p>
     </div>
   );
 }
 
 const columns = [
   { id: 'ip',         name: 'IP',          allowSorting: true },
-  { id: 'location',   name: 'Location',    allowSorting: true },
-  { id: 'received',         name: 'Received',    allowSorting: true },
-  { id: 'last_seen',   name: 'Last seen',  allowSorting: true },
+  { id: 'received',   name: 'Received',    allowSorting: true },
+  { id: 'last_seen',  name: 'Last seen',   allowSorting: true },
 ];
 
 function TopDestinationsTable({ ip, aggregationPeriod }: { ip: string, aggregationPeriod: number }) {
+  const { unit } = useUnit();
+
   const [sorting, setSorting] = useState<HostTopDestinationsParams["sort_by"]>('received');
   const [sortingDir, setSortingDir] = useState<"asc" | "desc">("desc");
   const hosts = useHostTopDestinations({
@@ -35,9 +47,10 @@ function TopDestinationsTable({ ip, aggregationPeriod }: { ip: string, aggregati
   });
 
   const destinationsList = hosts?.destinations ?? [];
+  const getUnitRxValue = (host: HostTopDestinationsUpdate['destinations'][number]): number => (unit === 'bytes' ? host.received_bytes_per_sec : host.received_per_sec) ?? 0;
 
   const maxReceivedValue = destinationsList.length > 0 
-    ? Math.max(...destinationsList.map(data => data.received_per_sec ?? 0)) 
+    ? Math.max(...destinationsList.map(data => getUnitRxValue(data))) 
     : 0;
 
   const sortedTable = [...destinationsList].sort((a, b) => {
@@ -66,8 +79,7 @@ function TopDestinationsTable({ ip, aggregationPeriod }: { ip: string, aggregati
 
   const data = sortedTable.map(d => [
     d.ip,
-    d.location,
-    ProgressPktsValue(d.received_per_sec ?? 0, maxReceivedValue),
+    ProgressPktsValue(getUnitRxValue(d), maxReceivedValue, unit),
     new Date(d.last_seen).toLocaleTimeString()
   ]);
 

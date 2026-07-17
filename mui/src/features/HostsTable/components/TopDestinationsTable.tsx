@@ -3,28 +3,7 @@ import styles from '@/pages/Dashboard/components/TopHostsTable/TopHostsTable.mod
 import { useState } from 'react';
 import { useHostTopDestinations, type HostTopDestinationsParams, type HostTopDestinationsUpdate } from '@/hooks/useHostTopDestinations';
 import { useUnit } from '@/contexts/UnitContext/useUnit';
-import type { UnitContextValue } from '@/contexts/UnitContext/UnitContext';
-import { formatBytesPerSecond } from '@/utils/information';
-
-function ProgressPktsValue(value: number, maxValue: number, unit: UnitContextValue['unit']) {
-  const widthPercent = maxValue > 0 ? (value / maxValue) * 100 : 0;
-
-  let formattedValue: string = '';
-  if (unit === 'bytes') {
-    formattedValue = formatBytesPerSecond(value);
-  } else if (unit === 'packets') {
-    formattedValue = value.toFixed(0) + ' pkt/s';
-  }
-  
-  return (
-    <div className={styles.progress}>
-      <div className={styles.progress_bar}>
-        <div className={styles.progress_bar_value} style={{ width: `${widthPercent}%` }}></div>
-      </div>
-      <p className={styles.progress_value}>{formattedValue}</p>
-    </div>
-  );
-}
+import Progress from '@/components/Progress/Progress';
 
 const columns = [
   { id: 'ip',         name: 'IP',          allowSorting: true },
@@ -79,7 +58,7 @@ function TopDestinationsTable({ ip, aggregationPeriod }: { ip: string, aggregati
 
   const data = sortedTable.map(d => [
     d.ip,
-    ProgressPktsValue(getUnitRxValue(d), maxReceivedValue, unit),
+    Progress(getUnitRxValue(d), maxReceivedValue, unit),
     new Date(d.last_seen).toLocaleTimeString()
   ]);
 

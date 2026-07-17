@@ -8,29 +8,8 @@ import AggregationSelector from "./components/AggregationSelector/AggregationSel
 import Select from "./components/Select/Select";
 import useAggregationPeriod from "./hooks/useAggregationPeriod";
 import { secondsToHumanReadable } from "@/utils/time";
-import { formatBytesPerSecond } from "@/utils/information";
-import type { UnitContextValue } from "@/contexts/UnitContext/UnitContext";
 import { useUnit } from "@/contexts/UnitContext/useUnit";
-
-function ProgressPktsValue(value: number, maxValue: number, unit: UnitContextValue['unit']) {
-  const widthPercent = maxValue > 0 ? (value / maxValue) * 100 : 0;
-
-  let formattedValue: string = '';
-  if (unit === 'bytes') {
-    formattedValue = formatBytesPerSecond(value);
-  } else if (unit === 'packets') {
-    formattedValue = value.toFixed(0) + ' pkt/s';
-  }
-
-  return (
-    <div className={styles.progress}>
-      <div className={styles.progress_bar}>
-        <div className={styles.progress_bar_value} style={{ width: `${widthPercent}%` }}></div>
-      </div>
-      <p className={styles.progress_value}>{formattedValue}</p>
-    </div>
-  );
-}
+import Progress from "@/components/Progress/Progress";
 
 const columns = [
   { id: 'location', name: 'Location', allowSorting: true },
@@ -108,8 +87,8 @@ function HostsTable() {
       d.location,
       d.ip,
       d.unique_destinations,
-      ProgressPktsValue(getUnitRxValue(d), maxReceivedValue, unit),
-      ProgressPktsValue(getUnitTxValue(d), maxSentValue, unit),
+      Progress(getUnitRxValue(d), maxReceivedValue, unit),
+      Progress(getUnitTxValue(d), maxSentValue, unit),
       new Date(d.last_activity).toLocaleTimeString()
     ]
   );

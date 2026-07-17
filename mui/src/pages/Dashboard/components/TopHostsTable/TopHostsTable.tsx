@@ -4,28 +4,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from "react-router";
 import { useHostsUpdate, type HostsTableParams, type HostsUpdate } from '@/hooks/useHostsUpdate';
 import { useUnit } from '@/contexts/UnitContext/useUnit';
-import type { UnitContextValue } from '@/contexts/UnitContext/UnitContext';
-import { formatBytesPerSecond } from '@/utils/information';
-
-function ProgressPktsValue(value: number, maxValue: number, unit: UnitContextValue['unit']) {
-  const widthPercent = maxValue > 0 ? (value / maxValue) * 100 : 0;
-
-  let formattedValue: string = '';
-  if (unit === 'bytes') {
-    formattedValue = formatBytesPerSecond(value);
-  } else if (unit === 'packets') {
-    formattedValue = value.toFixed(0) + ' pkt/s';
-  }
-
-  return (
-    <div className={styles.progress}>
-      <div className={styles.progress_bar}>
-        <div className={styles.progress_bar_value} style={{ width: `${widthPercent}%` }}></div>
-      </div>
-      <p className={styles.progress_value}>{formattedValue}</p>
-    </div>
-  );
-}
+import Progress from '@/components/Progress/Progress';
 
 function TopHostsTable({ mode }: { mode: 'lan' | 'wan' }) {
   const navigate = useNavigate();
@@ -63,8 +42,8 @@ function TopHostsTable({ mode }: { mode: 'lan' | 'wan' }) {
 
   const data = hostsList.map(d => [
     d.ip,
-    ProgressPktsValue(getUnitTxValue(d), maxSentValue, unit),
-    ProgressPktsValue(getUnitRxValue(d), maxReceivedValue, unit),
+    Progress(getUnitTxValue(d), maxSentValue, unit),
+    Progress(getUnitRxValue(d), maxReceivedValue, unit),
     new Date(d.last_activity).toLocaleTimeString()
   ]);
 

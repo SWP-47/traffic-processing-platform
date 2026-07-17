@@ -3,8 +3,8 @@ import { useHostsUpdate, type HostsTableParams, type HostsUpdate } from "@/hooks
 import { useState } from "react";
 import styles from './HostsTable.module.css';
 import Modal from "@/components/Modal";
-import DetailedHostView from "./components/DetailedHostsView/DetailedHostView";
-import AggregationSelector from "./components/AggregationSelector/AggregationSelector";
+import DetailedHostView from "../DetailedHostsView/DetailedHostView";
+import AggregationSelector from "../../components/AggregationSelector/AggregationSelector";
 import Select from "./components/Select/Select";
 import useAggregationPeriod from "./hooks/useAggregationPeriod";
 import { secondsToHumanReadable } from "@/utils/time";

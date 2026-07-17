@@ -4,7 +4,7 @@ import closeIcon from '@/assets/close.svg';
 import HostPacketsColumnChart from '../HostPacketsColumnChart';
 import HostPacketsLineChart from '../HostPacketsLineChart';
 import TopDestinationsTable from '../TopDestinationsTable';
-import AggregationSelector from '../AggregationSelector/AggregationSelector';
+import AggregationSelector from '../../../../components/AggregationSelector/AggregationSelector';
 import useAggregationPeriod from '../../hooks/useAggregationPeriod';
 import { secondsToHumanReadable } from '@/utils/time';
 import UnitToggle from '@/components/Header/components/UnitToggle/UnitToggle';

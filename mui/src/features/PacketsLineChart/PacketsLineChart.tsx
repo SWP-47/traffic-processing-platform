@@ -27,9 +27,9 @@ function PacketsLineChart({ dataProvider, timeScale, selectedSeries, unit } : Pa
   const zoomStartRef = useRef<number | null>(null);
   const zoomEndRef = useRef<number | null>(null);
   const lastRenderedStartRef = useRef<number | null>(null);
-  const [isDataFetched, setIsDataFetched] = useState<boolean>(false);
+  const [isDataFetching, setIsDataFetching] = useState<boolean>(false);
 
-  const showLoading = useDelayedVisibility(isDataFetched, 200);
+  const showLoading = useDelayedVisibility(isDataFetching, 200);
 
   // Init chart
   useEffect(() => {
@@ -86,7 +86,12 @@ function PacketsLineChart({ dataProvider, timeScale, selectedSeries, unit } : Pa
       zoomEndRef.current = chart.getOption().dataZoom[0].endValue;
     });
 
+    let isDisposed = false;
+
     const updateChartFromProvider = () => {
+      console.log(isDisposed, isDataFetching);
+      if (isDisposed || isDataFetching) return;
+
       const allData = dataProvider.getData();
       let dataToRender: DataPoint[];
 
@@ -163,10 +168,12 @@ function PacketsLineChart({ dataProvider, timeScale, selectedSeries, unit } : Pa
     };
 
     const initializeChart = async () => {
-      setIsDataFetched(true);
+      setIsDataFetching(true);
       try {
         await dataProvider.initialize(timeScale);
         const bucketSizeMs = dataProvider.getBucketSize()!;
+        
+        if (isDisposed) return;
 
         chart.setOption({
           xAxis: {
@@ -191,7 +198,7 @@ function PacketsLineChart({ dataProvider, timeScale, selectedSeries, unit } : Pa
         updateChartFromProvider();
 
       } finally {
-        setIsDataFetched(false);
+        setIsDataFetching(false);
       }
     };
 
@@ -200,6 +207,7 @@ function PacketsLineChart({ dataProvider, timeScale, selectedSeries, unit } : Pa
     const unsubscribeData = dataProvider.subscribe(() => updateChartFromProvider());
 
     return () => {
+      isDisposed = true;
       unsubscribeData();
       dataProvider.dispose();
       resizeObserver.disconnect();

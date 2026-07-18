@@ -26,6 +26,13 @@ export class ChannelDataProvider extends BaseChartDataProvider implements ChartD
         if (this.isInitialized) return;
         this.isInitialized = true;
 
+        this.unsubscribeFromTelemetry = subscriptionManager.subscribe(
+            "telemetry",
+            { window_sec: this.windowSec },
+            (update) => this.handleTelemetryUpdate(update),
+            () => {}
+        );
+
         const response = await getHistory(this.channelId, timeScale);
         this.setBucketSize(response.interval_sec * 1000);
 
@@ -43,13 +50,6 @@ export class ChannelDataProvider extends BaseChartDataProvider implements ChartD
 
             this.loadCompletedPoints(completedPoints);
         }
-
-        this.unsubscribeFromTelemetry = subscriptionManager.subscribe(
-            "telemetry",
-            { window_sec: this.windowSec },
-            (update) => this.handleTelemetryUpdate(update),
-            () => {}
-        );
     }
 
     private handleTelemetryUpdate(update: Record<string, unknown>): void {

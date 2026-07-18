@@ -27,6 +27,16 @@ export class HostDataProvider extends BaseChartDataProvider implements ChartData
         if (this.isInitialized) return;
         this.isInitialized = true;
 
+        this.unsubscribeFromTelemetry = subscriptionManager.subscribe(
+            "host_details",
+            {
+                host_ip: this.hostIp,
+                period_sec: 5
+            },
+            (update) => this.handleHostDetailsUpdate(update),
+            () => {}
+        );
+
         const response = await getHostHistory(this.channelId, this.hostIp, timeScale);
         this.setBucketSize(response.interval_sec * 1000);
 
@@ -44,16 +54,6 @@ export class HostDataProvider extends BaseChartDataProvider implements ChartData
 
             this.loadCompletedPoints(completedPoints);
         }
-
-        this.unsubscribeFromTelemetry = subscriptionManager.subscribe(
-            "host_details",
-            {
-                host_ip: this.hostIp,
-                period_sec: 5
-            },
-            (update) => this.handleHostDetailsUpdate(update),
-            () => {}
-        );
     }
 
     private handleHostDetailsUpdate(update: Record<string, unknown>): void {

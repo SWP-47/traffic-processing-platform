@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Automated deployment script (`scripts/deploy.sh`) to orchestrate zero-to-hero backend setup, including environment validation, secure JWT generation, Docker infrastructure startup, Alembic migrations, and interactive test data seeding. ([#309](https://github.com/SWP-47/traffic-processing-platform/issues/309))
+- Production cleanup script (`scripts/clean_prod.sh`) to safely stop and remove all Docker containers, networks, and persistent volumes (including TimescaleDB data) for a clean environment reset. ([#309](https://github.com/SWP-47/traffic-processing-platform/issues/309))
 - Global traffic unit toggle (Packets/Bytes) in the Header and Detailed Host View, allowing users to switch metric displays dynamically. ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
 - React Context (`UnitContext`) to manage and persist the user's traffic unit preference across the application and browser tabs via `localStorage`. ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
 - Utility functions (`formatBytesPerSecond`, `formatSplit`) to automatically format byte rates into human-readable units (B/s, KB/s, MB/s, GB/s). ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
@@ -31,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated `Makefile` to include `deploy` and `clean` targets for streamlined execution of the new deployment and cleanup scripts. ([#309](https://github.com/SWP-47/traffic-processing-platform/issues/309))
 - Updated all traffic visualization components (Column Charts, Line Charts, Hosts Table, Top Destinations, and Top Hosts tables) to dynamically render, calculate max values, and sort data based on the selected unit (packets or bytes). ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
 - Enhanced Line Chart Y-axis labels and tooltips to automatically format and display the correct unit suffixes (e.g., "MB/s", "k pkt/s") based on the active selection. ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
 - Refactored chart data providers (`BaseChartDataProvider`, `ChannelDataProvider`, `HostDataProvider`) to aggregate and expose both packet and byte rates per second (`bytesInPerSec`, `bytesOutPerSec`). ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))

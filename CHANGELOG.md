@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Interactive console utility (`scripts/create_user.py`) for creating new users with secure Argon2id password hashing, role-based access control (`admin`/`viewer`), and channel scope assignment directly from the CLI.
+- New Makefile target `make create-user` to streamline the user provisioning workflow, accepting `USERNAME`, `ROLE`, and `SCOPES` parameters.
 - Automated deployment script (`scripts/deploy.sh`) to orchestrate zero-to-hero backend setup, including environment validation, secure JWT generation, Docker infrastructure startup, Alembic migrations, and interactive test data seeding. ([#309](https://github.com/SWP-47/traffic-processing-platform/issues/309))
 - Production cleanup script (`scripts/clean_prod.sh`) to safely stop and remove all Docker containers, networks, and persistent volumes (including TimescaleDB data) for a clean environment reset. ([#309](https://github.com/SWP-47/traffic-processing-platform/issues/309))
 - Global traffic unit toggle (Packets/Bytes) in the Header and Detailed Host View, allowing users to switch metric displays dynamically. ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))

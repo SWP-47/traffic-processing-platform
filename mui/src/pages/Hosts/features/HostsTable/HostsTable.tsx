@@ -12,25 +12,25 @@ import { useUnit } from "@/contexts/UnitContext/useUnit";
 import Progress from "@/components/Progress/Progress";
 import { useSearchParams } from "react-router";
 
-const columns = [
-  { id: 'location', name: 'Location', allowSorting: true },
-  { id: 'ip', name: 'IP', allowSorting: true },
-  { id: 'unique_destinations', name: 'Unique Destinations', allowSorting: true },
-  { id: 'rx_per_sec', sortId: 'rx', name: 'RX Rate', allowSorting: true },
-  { id: 'tx_per_sec', sortId: 'tx', name: 'TX Rate', allowSorting: true },
-  { id: 'last_activity', name: 'Last Seen', allowSorting: true },
-];
-
 function HostsTable() {
   const { unit } = useUnit();
   const [searchParams] = useSearchParams();
+
+  const columns: { id: HostsTableParams["sort_by"], name: string, sortId?: string, allowSorting: boolean }[] = [
+    { id: 'location', name: 'Location', allowSorting: true },
+    { id: 'ip', name: 'IP', allowSorting: true },
+    { id: 'unique_destinations', name: 'Unique Destinations', allowSorting: true },
+    { id: 'rx', sortId: 'rx', name: 'RX Rate', allowSorting: true },
+    { id: 'tx', sortId: 'tx', name: 'TX Rate', allowSorting: true },
+    { id: 'last_activity', name: 'Last Seen', allowSorting: true },
+  ];
 
   const prevUrlIpRef = useRef(searchParams.get("ip"));
   const prevUrlLocationRef = useRef(searchParams.get("location"));
 
   const [currentPage, setCurrentPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [sortColumn, setSortColumn] = useState('ip');
+  const [sortColumn, setSortColumn] = useState<HostsTableParams["sort_by"]>('ip');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   
   const [ipFilter, setIpFilter] = useState<string | null>(searchParams.get("ip"));
@@ -47,7 +47,7 @@ function HostsTable() {
 
   const hostsTable = useHostsUpdate({
     period_sec: Math.max(aggregationPeriod, 5),
-    sort_by: (columns.find(c => c.id === sortColumn)?.sortId || sortColumn) as HostsTableParams["sort_by"],
+    sort_by: sortColumn,
     sort_order: sortDir,
     limit: limit,
     ip: ipFilter,
@@ -158,7 +158,7 @@ function HostsTable() {
         data={data}
         sortColumnId={sortColumn}
         sortDirection={sortDir}
-        onSortChange={(col, dir) => { setSortColumn(col); setSortDir(dir); setCurrentPage(1); }}
+        onSortChange={(col, dir) => { setSortColumn(col as HostsTableParams["sort_by"]); setSortDir(dir); setCurrentPage(1); }}
 
         // Pagination
         currentPage={currentPage}

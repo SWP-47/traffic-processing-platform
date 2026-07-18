@@ -72,6 +72,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+
+    min-width: 156px;
 }
 
 .expand_row .cell {

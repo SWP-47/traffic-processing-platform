@@ -7,6 +7,7 @@ import AggregationSelector from '../../components/AggregationSelector/Aggregatio
 import useAggregationPeriod from '../../hooks/useAggregationPeriod';
 import { secondsToHumanReadable } from '@/utils/time';
 import UnitToggle from '@/components/Header/components/UnitToggle/UnitToggle';
+import TopPortsTable from '../TopPortsTable/TopPortsTable';
 
 interface DetailedHostsViewOptions {
   ip: string,
@@ -44,6 +45,7 @@ function DetailedHostView({ ip, defaultTimeScale }: DetailedHostsViewOptions) {
         </div>
         <div className={styles.row}>
           <TopDestinationsTable ip={ip} aggregationPeriod={aggregationPeriod} />
+          <TopPortsTable ip={ip} aggregationPeriod={aggregationPeriod} />
         </div>
       </div>
     </>

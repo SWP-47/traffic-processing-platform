@@ -28,7 +28,7 @@ function TopDestinationsTable({ ip, aggregationPeriod }: { ip: string, aggregati
     period_sec: Math.max(aggregationPeriod, 5), // If aggregationPeriod is less then 5, values are not displayed
     sort_by: sorting as HostTopDestinationsParams["sort_by"],
     sort_order: sortingDir,
-    limit: 10,
+    limit: 5,
     host_ip: ip,
     offset: 0
   });
@@ -77,7 +77,7 @@ function TopDestinationsTable({ ip, aggregationPeriod }: { ip: string, aggregati
         <div className={styles.header}>
           <h1 className={styles.title}>Top destinations</h1>
           <p className={styles.stats}>
-            <span className={styles.stats_number}>{destinationsList.length}</span> destinations hosts
+            <span className={styles.stats_number}>{hosts?.total_count}</span> destinations hosts
           </p>
         </div>
         <TopTable

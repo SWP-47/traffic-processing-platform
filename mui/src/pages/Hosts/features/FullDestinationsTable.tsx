@@ -7,13 +7,6 @@ import { useNavigate, useSearchParams } from "react-router";
 
 type SortColumn = Exclude<HostTopDestinationsParams['sort_by'], undefined>;
 
-const columns: { id: SortColumn, name: string, allowSorting: boolean }[] = [
-  { id: 'location', name: 'Location', allowSorting: true },
-  { id: 'ip', name: 'IP', allowSorting: true },
-  { id: 'received', name: 'Unique Destinations', allowSorting: true },
-  { id: 'last_seen', name: 'Last Seen', allowSorting: true },
-];
-
 function FullDestinationsTable({ ip, aggregationPeriod, defaultSorting }: { ip: string, aggregationPeriod: number,defaultSorting: SortColumn }) {
   const { unit } = useUnit();
   const [searchParams] = useSearchParams(); 
@@ -23,6 +16,13 @@ function FullDestinationsTable({ ip, aggregationPeriod, defaultSorting }: { ip: 
   const [limit, setLimit] = useState(10);
   const [sortColumn, setSortColumn] = useState<SortColumn>(defaultSorting);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  const columns: { id: SortColumn, name: string, allowSorting: boolean, sortId?: string }[] = [
+    { id: 'location', name: 'Location', allowSorting: true },
+    { id: 'ip', name: 'IP', allowSorting: true },
+    { id: 'received', sortId: unit === 'bytes' ? 'received_bytes_per_sec' : 'received_per_sec', name: 'Received', allowSorting: true },
+    { id: 'last_seen', name: 'Last Seen', allowSorting: true },
+  ];
 
   const destinationsTable = useHostTopDestinations({
     host_ip: ip,
@@ -41,8 +41,10 @@ function FullDestinationsTable({ ip, aggregationPeriod, defaultSorting }: { ip: 
     : 0;
 
   const sortedHosts = destinationsTable ? [...destinationsTable.destinations].sort((a, b) => {
-    const valA = a[sortColumn as keyof typeof a];
-    const valB = b[sortColumn as keyof typeof b];
+    const sortKey = columns.find(c => c.id == sortColumn)?.sortId ?? sortColumn;
+
+    const valA = a[sortKey as keyof typeof a];
+    const valB = b[sortKey as keyof typeof b];
 
     if (valA == null) return 1;
     if (valB == null) return -1;

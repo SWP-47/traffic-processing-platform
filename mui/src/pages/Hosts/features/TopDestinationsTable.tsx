@@ -8,14 +8,14 @@ import Modal from '@/components/Modal';
 import FullDestinationsTableModal from './FullDestinationsTable';
 import { useNavigate, useSearchParams } from 'react-router';
 
-const columns = [
-  { id: 'ip', name: 'IP', allowSorting: true },
-  { id: 'received', name: 'Received', allowSorting: true },
-  { id: 'last_seen', name: 'Last seen', allowSorting: true },
-];
-
 function TopDestinationsTable({ ip, aggregationPeriod }: { ip: string, aggregationPeriod: number }) {
   const { unit } = useUnit();
+
+  const columns = [
+    { id: 'ip',        sortId: 'ip', name: 'IP', allowSorting: true },
+    { id: 'received',  sortId: unit === 'bytes' ? 'received_bytes_per_sec' : 'received_per_sec', name: 'Received', allowSorting: true },
+    { id: 'last_seen', sortId: 'last_seen', name: 'Last seen', allowSorting: true },
+  ];
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -41,8 +41,9 @@ function TopDestinationsTable({ ip, aggregationPeriod }: { ip: string, aggregati
     : 0;
 
   const sortedTable = [...destinationsList].sort((a, b) => {
-    const valA = a[sorting as keyof typeof a];
-    const valB = b[sorting as keyof typeof b];
+    const sortId = columns.find(c => c.id == sorting)?.sortId;
+    const valA = a[sortId as keyof typeof a];
+    const valB = b[sortId as keyof typeof b];
 
     if (valA == null) return 1;
     if (valB == null) return -1;

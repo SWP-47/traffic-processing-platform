@@ -114,25 +114,20 @@ This builds and starts the complete stack including:
 - Redis (ephemeral buffer and pub/sub)
 - Nginx (reverse proxy and TLS termination)
 
-## Project Structure
+### Interactive script
 
-```text
-cnss/
-├── core/                   # Shared core modules
-│   ├── contracts/          # Pydantic models for data contracts
-│   ├── models/             # SQLAlchemy ORM models
-│   ├── redis/              # Redis client and Lua scripts
-│   └── security/           # JWT, passwords, scopes
-├── services/               # Microservices
-│   ├── api/                # REST API & Auth service
-│   ├── ingestion/          # UDP ingestion worker
-│   ├── reporting/          # Background aggregator
-│   └── websocket/          # WebSocket gateway
-├── docker/                 # Dockerfiles and configs
-├── migrations/             # Alembic database migrations
-├── sql/                    # TimescaleDB setup scripts
-├── tests/                  # Test suite
-└── docs/                   # Documentation
+For deployment, you can use interactive script:
+
+```bash
+make deploy
+```
+
+### Production cleanup
+
+For cleanup, you can use:
+
+```bash
+make clean
 ```
 
 ## Documentation

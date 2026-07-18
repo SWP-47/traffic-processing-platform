@@ -4,7 +4,8 @@
 # ==============================================================================
 
 .PHONY: help install dev prod down test migrate lint format \
-        run-api run-ingestion run-reporting run-websocket dev-all stop-dev
+        run-api run-ingestion run-reporting run-websocket dev-all stop-dev \
+        deploy clean
 
 # Default target: show help
 .DEFAULT_GOAL := help
@@ -59,6 +60,14 @@ lint:
 format:
 	uv run black .
 	uv run ruff check --fix .
+
+## deploy: Run the automated zero-to-hero deployment script (deploy.sh)
+deploy:
+	@bash deploy.sh
+
+## clean: Run the production environment cleanup script (clean_prod.sh)
+clean:
+	@bash clean_prod.sh
 
 # ==============================================================================
 # Local Microservices (Run on Host)

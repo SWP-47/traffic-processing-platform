@@ -6,7 +6,7 @@ import Modal from "@/components/Modal";
 import DetailedHostView from "../DetailedHostsView/DetailedHostView";
 import AggregationSelector from "../../components/AggregationSelector/AggregationSelector";
 import Select from "./components/Select/Select";
-import useAggregationPeriod from "./hooks/useAggregationPeriod";
+import useAggregationPeriod from "../../hooks/useAggregationPeriod";
 import { secondsToHumanReadable } from "@/utils/time";
 import { useUnit } from "@/contexts/UnitContext/useUnit";
 import Progress from "@/components/Progress/Progress";
@@ -131,10 +131,9 @@ function HostsTable() {
       {/* Detailed Host's statistics modal */}
       <Modal opened={modalOpened} onClose={() => setModalOpened(false)}>
         {
-          selectedIP && modalOpened && (
+          selectedIP && (
             <DetailedHostView
               ip={selectedIP}
-              onClose={() => setModalOpened(false)}
               defaultTimeScale={timeScale}
             />
           )

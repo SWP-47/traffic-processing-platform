@@ -1,21 +1,19 @@
 import { useState } from 'react';
 import styles from './DetailedHostView.module.css';
-import closeIcon from '@/assets/close.svg';
 import HostPacketsColumnChart from '../HostPacketsColumnChart';
 import HostPacketsLineChart from '../HostPacketsLineChart';
 import TopDestinationsTable from '../TopDestinationsTable';
-import AggregationSelector from '../../../../components/AggregationSelector/AggregationSelector';
+import AggregationSelector from '../../components/AggregationSelector/AggregationSelector';
 import useAggregationPeriod from '../../hooks/useAggregationPeriod';
 import { secondsToHumanReadable } from '@/utils/time';
 import UnitToggle from '@/components/Header/components/UnitToggle/UnitToggle';
 
 interface DetailedHostsViewOptions {
-  onClose: () => void,
   ip: string,
   defaultTimeScale?: number
 };
 
-function DetailedHostView({ ip, onClose, defaultTimeScale }: DetailedHostsViewOptions) {
+function DetailedHostView({ ip, defaultTimeScale }: DetailedHostsViewOptions) {
   const [timeScale, setTimeScale] = useState<number>(defaultTimeScale ?? 600);
   const aggregationPeriod = useAggregationPeriod(timeScale ?? 1);
 
@@ -23,9 +21,6 @@ function DetailedHostView({ ip, onClose, defaultTimeScale }: DetailedHostsViewOp
     <>
       <div className={styles.header}>
         <div className={styles.left}>
-          <div className={styles.close_button} onClick={() => onClose()}>
-            <img src={closeIcon} alt="Close" />
-          </div>
           <h1 className={styles.title}>
             {ip}
           </h1>

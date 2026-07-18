@@ -26,28 +26,25 @@
     visibility: visible;
 }
 
+.content_wrapper {
+    display: flex;
+    gap: 20px;
+
+    align-items: start;
+}
+
 .content {
     background-color: var(--color-background);
-    padding: 40px;
+    padding: 30px;
 
     border-radius: 35px;
 
-    /* --- Новые свойства для скролла внутри --- */
     max-height: 90vh;
     max-width: 90vw;
     overflow-y: auto;
     overflow-x: hidden;
-    /* ----------------------------------------- */
-
-    transform: translateY(15px);
-    transition: transform .4s;
 }
 
-.modal.opened .content {
-    transform: translateY(0);
-}
-
-/* Опционально: стилизация скроллбара */
 .content::-webkit-scrollbar {
     width: 8px;
 }
@@ -60,4 +57,22 @@
 }
 .content::-webkit-scrollbar-thumb:hover {
     background: #555;
+}
+
+.close_button {
+    border-radius: 100%;
+    background-color: var(--color-text);
+
+    padding: 10px;
+
+    cursor: pointer;
+
+    transition: background-color .3s;
+    user-select: none;
+
+    margin-top: 35px;
+}
+
+.close_button:hover {
+    background-color: #FF5757;
 }

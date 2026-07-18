@@ -457,6 +457,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/utils/bucket-interval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Calculate Optimal Chart Bucket Interval
+         * @description Calculates the optimal time bucket size (`interval_sec`) for chart rendering based on the requested period.
+         *     This allows the MUI to set up the X-axis scale and pagination *before* requesting the heavy historical data payload.
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description Duration of the time window in seconds (e.g., 3600 for 1 hour, 86400 for 24h). */
+                    period_sec: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Optimal bucket interval calculated successfully. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BucketIntervalResponse"];
+                    };
+                };
+                /** @description Bad request (invalid period_sec) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ws/telemetry": {
         parameters: {
             query?: never;
@@ -696,6 +748,19 @@ export interface components {
              * @description Aggregated outgoing bytes rate for the host.
              */
             bytes_out_per_sec: number;
+        };
+        /** @description Response containing the requested period and the calculated optimal bucket interval. */
+        BucketIntervalResponse: {
+            /**
+             * @description The requested period duration in seconds.
+             * @example 86400
+             */
+            period_sec: number;
+            /**
+             * @description The calculated optimal time bucket size in seconds.
+             * @example 60
+             */
+            interval_sec: number;
         };
         ErrorResponse: {
             /**

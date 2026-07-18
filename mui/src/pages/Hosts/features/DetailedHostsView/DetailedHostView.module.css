@@ -14,22 +14,6 @@
     align-items: center;
 }
 
-.close_button {
-    border-radius: 100%;
-    background-color: var(--color-text);
-
-    padding: 10px;
-
-    cursor: pointer;
-
-    transition: background-color .3s;
-    user-select: none;
-}
-
-.close_button:hover {
-    background-color: #FF5757;
-}
-
 .title {
     font-weight: normal;
 }

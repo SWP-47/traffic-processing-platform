@@ -4,32 +4,17 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from "react-router";
 import { useHostsUpdate, type HostsTableParams, type HostsUpdate } from '@/hooks/useHostsUpdate';
 import { useUnit } from '@/contexts/UnitContext/useUnit';
-import type { UnitContextValue } from '@/contexts/UnitContext/UnitContext';
-import { formatBytesPerSecond } from '@/utils/information';
-
-function ProgressPktsValue(value: number, maxValue: number, unit: UnitContextValue['unit']) {
-  const widthPercent = maxValue > 0 ? (value / maxValue) * 100 : 0;
-
-  let formattedValue: string = '';
-  if (unit === 'bytes') {
-    formattedValue = formatBytesPerSecond(value);
-  } else if (unit === 'packets') {
-    formattedValue = value.toFixed(0) + ' pkt/s';
-  }
-
-  return (
-    <div className={styles.progress}>
-      <div className={styles.progress_bar}>
-        <div className={styles.progress_bar_value} style={{ width: `${widthPercent}%` }}></div>
-      </div>
-      <p className={styles.progress_value}>{formattedValue}</p>
-    </div>
-  );
-}
+import Progress from '@/components/Progress/Progress';
+import Modal from '@/components/Modal';
+import DetailedHostView from '@/pages/Hosts/features/DetailedHostsView/DetailedHostView';
 
 function TopHostsTable({ mode }: { mode: 'lan' | 'wan' }) {
   const navigate = useNavigate();
   const { unit } = useUnit();
+
+  const [modalOpened, setModalOpened] = useState<boolean>(false);
+  const [selectedIp, setSelectedIp] = useState<string>();
+
   const [sorting, setSorting] = useState<HostsTableParams["sort_by"]>('last_activity');
   const [sortingDir, setSortingDir] = useState<"asc" | "desc">("desc");
   const hosts = useHostsUpdate({
@@ -63,8 +48,8 @@ function TopHostsTable({ mode }: { mode: 'lan' | 'wan' }) {
 
   const data = hostsList.map(d => [
     d.ip,
-    ProgressPktsValue(getUnitTxValue(d), maxSentValue, unit),
-    ProgressPktsValue(getUnitRxValue(d), maxReceivedValue, unit),
+    Progress(getUnitTxValue(d), maxSentValue, unit),
+    Progress(getUnitRxValue(d), maxReceivedValue, unit),
     new Date(d.last_activity).toLocaleTimeString()
   ]);
 
@@ -85,9 +70,23 @@ function TopHostsTable({ mode }: { mode: 'lan' | 'wan' }) {
           setSorting(columnId as HostsTableParams["sort_by"]);
           setSortingDir(direction);
         }}
+        onRowClick={(_, rowData) => {
+          const destinationIp = rowData[0] as string; 
+          setSelectedIp(destinationIp);
+          setModalOpened(true);
+        }}
 
         onExpanding={() => navigate('/hosts')}
       />
+
+      {/* Detailed Host's statistics modal */}
+      <Modal opened={modalOpened} onClose={() => setModalOpened(false)}>
+        {
+          selectedIp && (
+            <DetailedHostView ip={selectedIp} />
+          )
+        }
+      </Modal>
     </div>
   );
 }

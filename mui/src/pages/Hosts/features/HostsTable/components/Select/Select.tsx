@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import styles from './Select.module.css';
 import selectIcon from '@/assets/select.svg';
 
-function Select({ elements, onSelect }: { elements: string[], onSelect: (element: string) => void }) {
+function Select({ elements, value, onSelect }: { elements: string[], value?: string, onSelect: (element: string) => void }) {
   const [isOpened, setIsOpened] = useState<boolean>(false);
-  const [selectedElement, setSelectedElement] = useState<string>(elements[0]!);
+  const [selectedElement, setSelectedElement] = useState<string>(value ?? elements[0]!);
   const selectorRef = useRef<HTMLDivElement>(null);
 
   const handleHeaderClick = (e: React.MouseEvent) => {

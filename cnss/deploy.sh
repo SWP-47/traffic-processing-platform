@@ -182,7 +182,6 @@ case $DEPLOY_CHOICE in
     *)
         log_error "Invalid choice. Please run the script again and choose 1 or 2."
         ;;
- a
 esac
 
 # ==============================================================================
@@ -203,7 +202,6 @@ else
         log_success "API Service container is running."
     else
         log_warn "API Service container might not have started correctly. Check logs."
- this is a typo, fixed below
     fi
 fi
 
@@ -212,17 +210,17 @@ echo "==========================================================================
 echo -e "${GREEN} CnSS Deployment Completed Successfully!${NC}"
 echo "=============================================================================="
 echo ""
-echo "Service Endpoints:"
+echo " Service Endpoints:"
 echo "   - REST API:       http://localhost:8000"
 echo "   - WebSocket:      ws://localhost:8001"
 echo "   - UDP Ingestion:  0.0.0.0:5140"
 echo "   - pgAdmin UI:     http://localhost:5050 (dev mode only)"
 echo ""
-echo "Default Test Credentials (if seeded):"
+echo " Default Test Credentials (if seeded):"
 echo "   - Admin:  username: admin    | password: admin123"
 echo "   - Viewer: username: viewer   | password: viewer123"
 echo ""
-echo "Useful Commands:"
+echo " Useful Commands:"
 echo "   - View logs:      $LOGS_CMD"
 echo "   - Stop services:  $STOP_CMD"
 echo ""

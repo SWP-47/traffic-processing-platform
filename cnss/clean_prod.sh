@@ -52,7 +52,7 @@ REMAINING_VOLUMES=$(docker volume ls -q | grep -c "cnss" || true)
 
 if [ "$REMAINING_VOLUMES" -eq 0 ]; then
     echo -e "${GREEN}========================================================${NC}"
-    echo -e "${GREEN}тServer successfully cleaned from all CnSS data and containers!${NC}"
+    echo -e "${GREEN} Server successfully cleaned from all CnSS data and containers!${NC}"
     echo -e "${GREEN}========================================================${NC}"
 else
     echo -e "${YELLOW} Warning: Remaining volumes related to 'cnss' were found.${NC}"

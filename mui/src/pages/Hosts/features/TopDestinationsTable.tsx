@@ -1,18 +1,26 @@
 import TopTable from '@/components/TopTable';
-import styles from '@/pages/Dashboard/components/TopHostsTable/TopHostsTable.module.css';
+import styles from '@/pages/Dashboard/features/TopHostsTable/TopHostsTable.module.css';
 import { useState } from 'react';
 import { useHostTopDestinations, type HostTopDestinationsParams, type HostTopDestinationsUpdate } from '@/hooks/useHostTopDestinations';
 import { useUnit } from '@/contexts/UnitContext/useUnit';
 import Progress from '@/components/Progress/Progress';
+import Modal from '@/components/Modal';
+import FullDestinationsTableModal from './FullDestinationsTable';
+import { useNavigate, useSearchParams } from 'react-router';
 
 const columns = [
-  { id: 'ip',         name: 'IP',          allowSorting: true },
-  { id: 'received',   name: 'Received',    allowSorting: true },
-  { id: 'last_seen',  name: 'Last seen',   allowSorting: true },
+  { id: 'ip', name: 'IP', allowSorting: true },
+  { id: 'received', name: 'Received', allowSorting: true },
+  { id: 'last_seen', name: 'Last seen', allowSorting: true },
 ];
 
 function TopDestinationsTable({ ip, aggregationPeriod }: { ip: string, aggregationPeriod: number }) {
   const { unit } = useUnit();
+
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const [modalOpened, setModalOpened] = useState<boolean>(false);
 
   const [sorting, setSorting] = useState<HostTopDestinationsParams["sort_by"]>('received');
   const [sortingDir, setSortingDir] = useState<"asc" | "desc">("desc");
@@ -28,8 +36,8 @@ function TopDestinationsTable({ ip, aggregationPeriod }: { ip: string, aggregati
   const destinationsList = hosts?.destinations ?? [];
   const getUnitRxValue = (host: HostTopDestinationsUpdate['destinations'][number]): number => (unit === 'bytes' ? host.received_bytes_per_sec : host.received_per_sec) ?? 0;
 
-  const maxReceivedValue = destinationsList.length > 0 
-    ? Math.max(...destinationsList.map(data => getUnitRxValue(data))) 
+  const maxReceivedValue = destinationsList.length > 0
+    ? Math.max(...destinationsList.map(data => getUnitRxValue(data)))
     : 0;
 
   const sortedTable = [...destinationsList].sort((a, b) => {
@@ -63,24 +71,40 @@ function TopDestinationsTable({ ip, aggregationPeriod }: { ip: string, aggregati
   ]);
 
   return (
-    <div className={`card ${styles.table}`}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Top destinations</h1>
-        <p className={styles.stats}>
-          <span className={styles.stats_number}>{destinationsList.length}</span> destinations hosts
-        </p>
-      </div>
-      <TopTable
-        columns={columns}
-        data={data}
+    <>
+      <div className={`card ${styles.table}`}>
+        <div className={styles.header}>
+          <h1 className={styles.title}>Top destinations</h1>
+          <p className={styles.stats}>
+            <span className={styles.stats_number}>{destinationsList.length}</span> destinations hosts
+          </p>
+        </div>
+        <TopTable
+          columns={columns}
+          data={data}
 
-        defaultSortColumn={sorting!}
-        onSortChange={(columnId, direction) => {
-          setSorting(columnId as HostTopDestinationsParams["sort_by"]);
-          setSortingDir(direction);
-        }}
-      />
-    </div>
+          defaultSortColumn={sorting!}
+          onSortChange={(columnId, direction) => {
+            setSorting(columnId as HostTopDestinationsParams["sort_by"]);
+            setSortingDir(direction);
+          }}
+          onRowClick={(_, rowData) => {
+            const clickedIp = rowData.at(columns.findIndex(el => el.id === 'ip')) as string;
+
+            const newSearchParams = new URLSearchParams(searchParams);
+            newSearchParams.set('ip', clickedIp);
+
+            navigate(`/hosts?${newSearchParams.toString()}`);
+          }}
+
+          onExpanding={() => setModalOpened(true)}
+        />
+      </div>
+
+      <Modal opened={modalOpened} onClose={() => setModalOpened(false)}>
+        <FullDestinationsTableModal ip={ip} aggregationPeriod={aggregationPeriod} defaultSorting={sorting!} />
+      </Modal>
+    </>
   );
 }
 

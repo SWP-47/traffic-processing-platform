@@ -215,6 +215,7 @@ function PacketsLineChart({ dataProvider, timeScale, selectedSeries, unit } : Pa
       chartElementCopy?.removeEventListener('mouseenter', handleMouseEnter);
       chartElementCopy?.removeEventListener('mouseleave', handleMouseLeave);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataProvider, timeScale, unit]);
 
   // Update legend

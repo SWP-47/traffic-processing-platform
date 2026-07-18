@@ -5,10 +5,16 @@ import { useNavigate } from "react-router";
 import { useHostsUpdate, type HostsTableParams, type HostsUpdate } from '@/hooks/useHostsUpdate';
 import { useUnit } from '@/contexts/UnitContext/useUnit';
 import Progress from '@/components/Progress/Progress';
+import Modal from '@/components/Modal';
+import DetailedHostView from '@/pages/Hosts/features/DetailedHostsView/DetailedHostView';
 
 function TopHostsTable({ mode }: { mode: 'lan' | 'wan' }) {
   const navigate = useNavigate();
   const { unit } = useUnit();
+
+  const [modalOpened, setModalOpened] = useState<boolean>(false);
+  const [selectedIp, setSelectedIp] = useState<string>();
+
   const [sorting, setSorting] = useState<HostsTableParams["sort_by"]>('last_activity');
   const [sortingDir, setSortingDir] = useState<"asc" | "desc">("desc");
   const hosts = useHostsUpdate({
@@ -64,9 +70,23 @@ function TopHostsTable({ mode }: { mode: 'lan' | 'wan' }) {
           setSorting(columnId as HostsTableParams["sort_by"]);
           setSortingDir(direction);
         }}
+        onRowClick={(_, rowData) => {
+          const destinationIp = rowData[0] as string; 
+          setSelectedIp(destinationIp);
+          setModalOpened(true);
+        }}
 
         onExpanding={() => navigate('/hosts')}
       />
+
+      {/* Detailed Host's statistics modal */}
+      <Modal opened={modalOpened} onClose={() => setModalOpened(false)}>
+        {
+          selectedIp && (
+            <DetailedHostView ip={selectedIp} />
+          )
+        }
+      </Modal>
     </div>
   );
 }

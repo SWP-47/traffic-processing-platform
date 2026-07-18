@@ -1,6 +1,6 @@
 import FullTable from "@/components/FullTable";
 import { useHostsUpdate, type HostsTableParams, type HostsUpdate } from "@/hooks/useHostsUpdate";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from './HostsTable.module.css';
 import Modal from "@/components/Modal";
 import DetailedHostView from "../DetailedHostsView/DetailedHostView";
@@ -10,6 +10,7 @@ import useAggregationPeriod from "../../hooks/useAggregationPeriod";
 import { secondsToHumanReadable } from "@/utils/time";
 import { useUnit } from "@/contexts/UnitContext/useUnit";
 import Progress from "@/components/Progress/Progress";
+import { useSearchParams } from "react-router";
 
 const columns = [
   { id: 'location', name: 'Location', allowSorting: true },
@@ -22,13 +23,21 @@ const columns = [
 
 function HostsTable() {
   const { unit } = useUnit();
+  const [searchParams] = useSearchParams();
+
+  const prevUrlIpRef = useRef(searchParams.get("ip"));
+  const prevUrlLocationRef = useRef(searchParams.get("location"));
 
   const [currentPage, setCurrentPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [sortColumn, setSortColumn] = useState('ip');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const [ipFilter, setIpFilter] = useState<string | null>(null);
-  const [locationFilter, setLocationFilter] = useState<string | null>(null);
+  
+  const [ipFilter, setIpFilter] = useState<string | null>(searchParams.get("ip"));
+  const initialLocation = searchParams.get("location");
+  const [locationFilter, setLocationFilter] = useState<string | null>(
+    (initialLocation === 'LAN' || initialLocation === 'WAN') ? initialLocation : null
+  );
 
   const [selectedIP, setSelectedIp] = useState<string>();
   const [modalOpened, setModalOpened] = useState<boolean>(false);
@@ -93,11 +102,48 @@ function HostsTable() {
     ]
   );
 
+  useEffect(() => {
+    const currentUrlIp = searchParams.get("ip");
+    const currentUrlLocation = searchParams.get("location");
+
+    const urlChanged = prevUrlIpRef.current !== currentUrlIp || prevUrlLocationRef.current !== currentUrlLocation;
+
+    if (urlChanged) {
+      prevUrlIpRef.current = currentUrlIp;
+      prevUrlLocationRef.current = currentUrlLocation;
+
+      setIpFilter(currentUrlIp);
+      const validLocation = (currentUrlLocation === 'LAN' || currentUrlLocation === 'WAN') ? currentUrlLocation : null;
+      setLocationFilter(validLocation);
+      setCurrentPage(1);
+
+      setModalOpened(false);
+    }
+  }, [searchParams]);
+
   return (
     <>
       <div className={styles.header}>
-        <input type="text" className={styles.filter} onChange={(e) => setIpFilter(e.target.value ?? null)} placeholder="Enter IP address" />
-        <Select elements={['Both', 'LAN', 'WAN']} onSelect={(v) => setLocationFilter((v == 'LAN' || v == 'WAN') ? v : null)}/>
+        <input
+          type="text"
+          className={styles.filter}
+          value={ipFilter || ""}
+          onChange={(e) => {
+            setIpFilter(e.target.value.trim() || null);
+            setCurrentPage(1);
+          }}
+          placeholder="Enter IP address"
+        />
+        <Select
+          elements={['Both', 'LAN', 'WAN']}
+          value={locationFilter || 'Both'}
+          onSelect={(v) => {
+            const newValue = (v === 'LAN' || v === 'WAN') ? v : null;
+            
+            setLocationFilter(newValue);
+            setCurrentPage(1);
+          }}
+        />
         <p
           className={styles.aggregaion_period}
           title={`Data is aggregated for the last ${secondsToHumanReadable(aggregationPeriod)}`}

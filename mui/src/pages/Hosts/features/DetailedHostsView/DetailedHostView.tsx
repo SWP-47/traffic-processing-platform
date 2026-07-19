@@ -44,8 +44,8 @@ function DetailedHostView({ ip, defaultTimeScale }: DetailedHostsViewOptions) {
           <HostPacketsLineChart ip={ip} timeScale={timeScale} />
         </div>
         <div className={styles.row}>
-          <TopDestinationsTable ip={ip} aggregationPeriod={aggregationPeriod} />
-          <TopPortsTable ip={ip} aggregationPeriod={aggregationPeriod} />
+          <TopDestinationsTable ip={ip} timeScale={timeScale} aggregationPeriod={aggregationPeriod} />
+          <TopPortsTable ip={ip} timeScale={timeScale} aggregationPeriod={aggregationPeriod} />
         </div>
       </div>
     </>

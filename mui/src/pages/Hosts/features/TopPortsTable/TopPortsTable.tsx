@@ -2,14 +2,17 @@ import TopTable from '@/components/TopTable';
 import styles from '@/pages/Dashboard/features/TopHostsTable/TopHostsTable.module.css';
 import mstyles from './TopPortsTable.module.css';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useUnit } from '@/contexts/UnitContext/useUnit';
 import Progress from '@/components/Progress/Progress';
 import Modal from '@/components/Modal';
 import { useHostTopPorts, type HostsTopPortsParams, type HostsTopPortsUpdate } from '@/hooks/useHostTopPorts';
 import FullPortsTable from '../FullPortsTable';
+import { useTtlArrayCache } from '@/hooks/useTtlArrayCache';
 
-function TopPortsTable({ ip, aggregationPeriod }: { ip: string, aggregationPeriod: number }) {
+type Port = HostsTopPortsUpdate['ports'][number];
+
+function TopPortsTable({ ip, timeScale, aggregationPeriod }: { ip: string, timeScale: number, aggregationPeriod: number }) {
   const { unit } = useUnit();
 
   const columns = [
@@ -32,13 +35,31 @@ function TopPortsTable({ ip, aggregationPeriod }: { ip: string, aggregationPerio
   });
 
   const portsList = ports?.ports ?? [];
-  const getUnitRxValue = (host: HostsTopPortsUpdate['ports'][number]): number => (unit === 'bytes' ? host.bytes_per_sec : host.packets_per_sec) ?? 0;
+  const getUnitRxValue = (host: Port): number => (unit === 'bytes' ? host.bytes_per_sec : host.packets_per_sec) ?? 0;
 
   const maxReceivedValue = portsList.length > 0
     ? Math.max(...portsList.map(data => getUnitRxValue(data)))
     : 0;
+  
+  const timedPorts = useMemo(() => {
+    if (!ports) return null;
+    
+    return ports.ports.map(p => ({
+      ...p,
+      timestamp: new Date(ports.timestamp) 
+    }));
+  }, [ports]);
 
-  const sortedTable = [...portsList].sort((a, b) => {
+  const tableData = useTtlArrayCache(
+    timedPorts,
+    timeScale,
+    p =>  `${p.port}-${p.protocol}`,
+    p => p.timestamp,
+    (oldPort, newPort) => ({ ...oldPort, ...newPort }),
+    (p) => ({ ...p, packets_per_sec: 0, bytes_per_sec: 0 })
+  )
+
+  const sortedTable = tableData.toSorted((a, b) => {
     const sortId = columns.find(c => c.id == sorting)?.sortId;
     const valA = a[sortId as keyof typeof a];
     const valB = b[sortId as keyof typeof b];
@@ -55,7 +76,7 @@ function TopPortsTable({ ip, aggregationPeriod }: { ip: string, aggregationPerio
     }
 
     return 0;
-  });
+  }).slice(0, 5);
 
   const data = sortedTable.map(d => [
     d.port,
@@ -88,7 +109,7 @@ function TopPortsTable({ ip, aggregationPeriod }: { ip: string, aggregationPerio
 
       <Modal opened={modalOpened} onClose={() => setModalOpened(false)}>
         <div className={mstyles.full_table_modal}>
-            <FullPortsTable ip={ip} aggregationPeriod={aggregationPeriod} defaultSorting={sorting!} />
+            <FullPortsTable ip={ip} timeScale={timeScale} aggregationPeriod={aggregationPeriod} defaultSorting={sorting!} />
         </div>
       </Modal>
     </>

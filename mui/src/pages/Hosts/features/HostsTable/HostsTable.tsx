@@ -11,6 +11,9 @@ import { secondsToHumanReadable } from "@/utils/time";
 import { useUnit } from "@/contexts/UnitContext/useUnit";
 import Progress from "@/components/Progress/Progress";
 import { useSearchParams } from "react-router";
+import { useTtlArrayCache } from "@/hooks/useTtlArrayCache";
+
+type Host = HostsUpdate['hosts'][number];
 
 function HostsTable() {
   const { unit } = useUnit();
@@ -55,9 +58,8 @@ function HostsTable() {
     offset: limit * (currentPage - 1)
   });
 
-  const maxPages = hostsTable?.total_count ?? 0;
-  const getUnitRxValue = (host: HostsUpdate['hosts'][number]): number => (unit === 'bytes' ? host.rx_bytes_per_sec : host.rx_per_sec) ?? 0;
-  const getUnitTxValue = (host: HostsUpdate['hosts'][number]): number => (unit === 'bytes' ? host.tx_bytes_per_sec : host.tx_per_sec) ?? 0;
+  const getUnitRxValue = (host: Host): number => (unit === 'bytes' ? host.rx_bytes_per_sec : host.rx_per_sec) ?? 0;
+  const getUnitTxValue = (host: Host): number => (unit === 'bytes' ? host.tx_bytes_per_sec : host.tx_per_sec) ?? 0;
 
   const maxReceivedValue = hostsTable && hostsTable.hosts.length > 0
     ? Math.max(...hostsTable.hosts.map(data => getUnitRxValue(data)))
@@ -67,7 +69,25 @@ function HostsTable() {
     ? Math.max(...hostsTable.hosts.map(data => getUnitTxValue(data)))
     : 0;
 
-  const sortedHosts = hostsTable ? [...hostsTable.hosts].sort((a, b) => {
+  const resetHost = (host: Host): Host => ({
+    ...host,
+    unique_destinations: 0,
+    tx_per_sec: 0,
+    rx_per_sec: 0,
+    tx_bytes_per_sec: 0,
+    rx_bytes_per_sec: 0,
+  });
+
+  const tableData = useTtlArrayCache(
+    hostsTable?.hosts ?? null,
+    timeScale,
+    (host) => host.ip,
+    (host) => new Date(host.last_activity),
+    (oldHost, newHost) => ({ ...oldHost, ...newHost }),
+    resetHost
+  );
+
+  const sortedHosts = (ipFilter ? (hostsTable?.hosts || []) : tableData).toSorted((a, b) => {
     const valA = a[sortColumn as keyof typeof a];
     const valB = b[sortColumn as keyof typeof b];
 
@@ -89,7 +109,7 @@ function HostsTable() {
     }
 
     return 0;
-  }) : [];
+  }).slice(0, limit);
 
   const data = sortedHosts.map(d => 
     [
@@ -101,6 +121,8 @@ function HostsTable() {
       new Date(d.last_activity).toLocaleTimeString()
     ]
   );
+
+  const maxPages = Math.max(hostsTable?.total_count ?? 0, tableData.length);
 
   useEffect(() => {
     const currentUrlIp = searchParams.get("ip");

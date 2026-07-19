@@ -7,8 +7,9 @@ import Progress from '@/components/Progress/Progress';
 import Modal from '@/components/Modal';
 import FullDestinationsTableModal from './FullDestinationsTable';
 import { useNavigate, useSearchParams } from 'react-router';
+import { useTtlArrayCache } from '@/hooks/useTtlArrayCache';
 
-function TopDestinationsTable({ ip, aggregationPeriod }: { ip: string, aggregationPeriod: number }) {
+function TopDestinationsTable({ ip, timeScale, aggregationPeriod }: { ip: string, timeScale: number,  aggregationPeriod: number }) {
   const { unit } = useUnit();
 
   const columns = [
@@ -40,7 +41,16 @@ function TopDestinationsTable({ ip, aggregationPeriod }: { ip: string, aggregati
     ? Math.max(...destinationsList.map(data => getUnitRxValue(data)))
     : 0;
 
-  const sortedTable = [...destinationsList].sort((a, b) => {
+  const tableData = useTtlArrayCache(
+    hosts?.destinations ?? null,
+    timeScale,
+    (dest) => dest.ip,
+    (dest) => new Date(dest.last_seen),
+    (oldDest, newDest) => ({ ...oldDest, ...newDest }),
+    (dest) => ({ ...dest, received_bytes_per_sec: 0, received_per_sec: 0 })
+  );
+
+  const sortedTable = tableData.toSorted((a, b) => {
     const sortId = columns.find(c => c.id == sorting)?.sortId;
     const valA = a[sortId as keyof typeof a];
     const valB = b[sortId as keyof typeof b];
@@ -63,7 +73,7 @@ function TopDestinationsTable({ ip, aggregationPeriod }: { ip: string, aggregati
     }
 
     return 0;
-  });
+  }).slice(0, 5);
 
   const data = sortedTable.map(d => [
     d.ip,
@@ -103,7 +113,7 @@ function TopDestinationsTable({ ip, aggregationPeriod }: { ip: string, aggregati
       </div>
 
       <Modal opened={modalOpened} onClose={() => setModalOpened(false)}>
-        <FullDestinationsTableModal ip={ip} aggregationPeriod={aggregationPeriod} defaultSorting={sorting!} />
+        <FullDestinationsTableModal ip={ip} timeScale={timeScale} aggregationPeriod={aggregationPeriod} defaultSorting={sorting!} />
       </Modal>
     </>
   );

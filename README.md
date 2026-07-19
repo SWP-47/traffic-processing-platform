@@ -161,14 +161,14 @@ make down
 
 ## Maintained Documentation
 
-- **Architecture**: [docs/architecture/README.md](docs/architecture/README.md)
 - **System & API Docs**: [docs/system-documentation.md](docs/system-documentation.md) | [api/README.md](api/README.md)
 - **Development Process**: [docs/development-process.md](docs/development-process.md)
 - **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md)
 - **Agent Guidance**: [AGENTS.md](AGENTS.md)
+- **Architecture**: [docs/architecture/README.md](docs/architecture/README.md)
 
 ## Reports & Changelog
 
 - **Changelog**: [CHANGELOG.md](CHANGELOG.md)
 - **Weekly Reports**:
-  - [Week 6](reports/week6/README.md) | [Week 5](reports/week5/README.md) | [Week 4](reports/week4/README.md) | [Week 3](reports/week3/README.md) | [Week 2](reports/week2/README.md)
+  - [Week 7](reports/week7/README.md) | [Week 6](reports/week6/README.md) | [Week 5](reports/week5/README.md) | [Week 4](reports/week4/README.md) | [Week 3](reports/week3/README.md) | [Week 2](reports/week2/README.md)

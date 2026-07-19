@@ -30,7 +30,7 @@ async def main() -> None:
         timestamp=1700000000,
         sequence=100,
         window_ms=1000,
-        packets=[PacketMeta(direction=0, src_ip="10.0.0.1", dst_ip="10.0.0.2", src_port=1234, dst_port=80)],
+        packets=[PacketMeta(direction=0, src_ip="10.0.0.1", dst_ip="10.0.0.2", src_port=1234, dst_port=80, size=0)],
     )
     await state_manager.process_batch(batch1)
     await buffer_manager.push_packets(batch1)
@@ -83,7 +83,7 @@ async def main() -> None:
     print("\n[Test 3] Buffer capped list...")
     # Push 10 packets
     packets = [
-        PacketMeta(direction=i % 2, src_ip="10.0.0.1", dst_ip="10.0.0.2", src_port=1000 + i, dst_port=80)
+        PacketMeta(direction=i % 2, src_ip="10.0.0.1", dst_ip="10.0.0.2", src_port=1000 + i, dst_port=80, size=0)
         for i in range(10)
     ]
     batch4 = TelemetryBatch(

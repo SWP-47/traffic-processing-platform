@@ -42,7 +42,8 @@ The Control and Status Server (CnSS) provides a decoupled API for the Management
             "dst_ip": "8.8.8.8",
             "src_port": 12345,
             "dst_port": 53,
-            "protocol": "UDP"
+            "protocol": "UDP",
+            "size": 128                    // in bytes
         }
     ]
 }
@@ -53,6 +54,7 @@ The Control and Status Server (CnSS) provides a decoupled API for the Management
 - **MTU Limit**: CN must ensure the serialized JSON payload does not exceed **1400 bytes** to prevent IP fragmentation.
 - **Sequence Data Type**: CN **MUST** implement the `sequence` field as a **64-bit integer**. Using 32-bit integers will lead to silent data loss and incorrect drop calculations once the counter wraps around.
 - MTU & Payload Size: The addition of the protocol string field increases the payload size. CN must ensure the total serialized JSON does not exceed 1400 bytes. Batches may need to hold fewer packets per UDP datagram to accommodate the new field.
+- 
 
 ---
 
@@ -81,8 +83,12 @@ The Control and Status Server (CnSS) provides a decoupled API for the Management
   "token_type": "Bearer",
   "expires_in": 86400,
   "issued_at": "2026-06-18T12:00:00Z",
-  "role": "admin",
-  "scope": ["bridge-berlin-01", "bridge-prague-01"]
+  "user": {
+    "id": "usr_8f7a9b2c",
+    "username": "admin",
+    "role": "admin",
+    "scope": ["bridge-berlin-01", "bridge-prague-01"]
+  }
 }
 ```
 
@@ -115,7 +121,13 @@ Cookie: refresh_token=eyJhbG...
   "access_token": "new_access_token_eyJhbG...",
   "token_type": "Bearer",
   "expires_in": 86400,
-  "issued_at": "2026-06-19T12:00:00Z"
+  "issued_at": "2026-06-19T12:00:00Z",
+  "user": {
+    "id": "usr_8f7a9b2c",
+    "username": "admin",
+    "role": "admin",
+    "scope": ["bridge-berlin-01", "bridge-prague-01"]
+  }
 }
 ```
 
@@ -207,7 +219,7 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 
 #### `GET /api/v1/channel/{channel_id}/history`
 
-**Description**: Lazy-loads historical telemetry data for the Channel Line Chart. CnSS dynamically calculates the optimal `time_bucket` interval (approximately 1400 point).
+**Description**: Lazy-loads historical telemetry data for the Channel Line Chart. CnSS dynamically calculates the optimal `time_bucket` interval (approximately 1000 point).
 
 **Path Parameters**:
 
@@ -236,6 +248,8 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
             "timestamp": "2026-06-16T12:00:00Z",
             "packets_in_per_sec": 280.5,
             "packets_out_per_sec": 300.0,
+            "bytes_in_per_sec": 45000.0,
+            "bytes_out_per_sec": 52000.0,
             "is_active": true
         }
     ]
@@ -252,6 +266,16 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 | `end_time` | string (ISO 8601) | Actual end of the returned time range. |
 | `interval_sec` | integer | The calculated time bucket size in seconds. |
 | `points` | array | Array of aggregated data points. |
+
+**`points` Array Fields**:
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `timestamp` | string (ISO 8601) | Timestamp of the data point. |
+| `packets_in_per_sec` | float | Aggregated incoming packet rate. |
+| `packets_out_per_sec` | float | Aggregated outgoing packet rate. |
+| `bytes_in_per_sec` | float | Aggregated incoming bytes rate. |
+| `bytes_out_per_sec` | float | Aggregated outgoing bytes rate. |
+| `is_active` | boolean | Channel activity status at this timestamp. |
 
 **Error Responses**:
 
@@ -305,7 +329,9 @@ GET /api/v1/channel/bridge-berlin-01/history?period_sec=86400&start_time=2026-06
         {
             "timestamp": "2026-06-17T10:00:00Z",
             "packets_in_per_sec": 15.0,
-            "packets_out_per_sec": 5.5
+            "packets_out_per_sec": 5.5,
+            "bytes_in_per_sec": 24000.0,
+            "bytes_out_per_sec": 8800.0
         }
     ]
 }
@@ -322,6 +348,15 @@ GET /api/v1/channel/bridge-berlin-01/history?period_sec=86400&start_time=2026-06
 | `end_time` | string (ISO 8601) | Actual end of the returned time range. |
 | `interval_sec` | integer | The calculated time bucket size in seconds. |
 | `points` | array | Array of aggregated data points. |
+
+**`points` Array Fields**:
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `timestamp` | string (ISO 8601) | Timestamp of the data point. |
+| `packets_in_per_sec` | float | Aggregated incoming packet rate for the host. |
+| `packets_out_per_sec` | float | Aggregated outgoing packet rate for the host. |
+| `bytes_in_per_sec` | float | Aggregated incoming bytes rate for the host. |
+| `bytes_out_per_sec` | float | Aggregated outgoing bytes rate for the host. |
 
 **Error Responses**:
 
@@ -341,6 +376,45 @@ GET /api/v1/channel/bridge-berlin-01/hosts/192.168.1.100/history?period_sec=3600
 # Specific 1h window starting from a given timestamp
 GET /api/v1/channel/bridge-berlin-01/hosts/192.168.1.100/history?period_sec=3600&start_time=2026-06-17T10:00:00Z
 # → Returns data for [2026-06-17T10:00:00Z, 2026-06-17T11:00:00Z]
+```
+
+### 3.4 Chart Configuration Utilities
+Lightweight endpoints to help the MUI configure charting libraries (e.g., ECharts, Chart.js) before fetching heavy historical data payloads.
+
+#### `GET /api/v1/utils/bucket-interval`
+**Description**: Calculates the optimal time bucket size (`interval_sec`) for chart rendering based on the requested period. This allows the MUI to set up the X-axis scale and pagination *before* requesting the actual data points.
+**Auth**: `Bearer {{access_token}}`
+
+**Query Parameters**:
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `period_sec` | integer | Yes | Duration of the time window in seconds (e.g., `3600` for 1 hour, `86400` for 24h). |
+
+**Response 200**:
+
+```json
+{
+  "period_sec": 86400,
+  "interval_sec": 60
+}
+```
+
+**Response Fields**:
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `period_sec` | integer | The requested period duration in seconds. |
+| `interval_sec` | integer | The calculated optimal time bucket size in seconds. |
+
+**Examples**:
+
+```bash
+# Get bucket size for a 24-hour chart
+GET /api/v1/utils/bucket-interval?period_sec=86400
+# → Returns { "period_sec": 86400, "interval_sec": 60 }
+
+# Get bucket size for a 1-hour chart
+GET /api/v1/utils/bucket-interval?period_sec=3600
+# → Returns { "period_sec": 3600, "interval_sec": 5 }
 ```
 
 ---
@@ -436,8 +510,8 @@ Real-time channel packet rates.
    "window_ms": 5000,
    "dropped_batches": 0,
    "metrics": {
-     "direction_out": { "packets_per_sec": 300.0, "packets": 1500 },
-     "direction_in": { "packets_per_sec": 280.0, "packets": 1400 }
+     "direction_out": { "packets_per_sec": 300.0, "packets": 1500, "bytes_per_sec": 52000.0, "bytes": 260000 },
+     "direction_in": { "packets_per_sec": 280.0, "packets": 1400, "bytes_per_sec": 45000.0, "bytes": 225000 }
    },
    "timestamp": "2026-06-17T12:00:00Z",
    "received_at": "2026-06-17T12:00:05Z"
@@ -478,6 +552,8 @@ Aggregated table of all observed hosts with pagination and filtering.
             "unique_destinations": 12,
             "tx_per_sec": 15.5,
             "rx_per_sec": 120.0,
+            "tx_bytes_per_sec": 2500.5,
+            "rx_bytes_per_sec": 18000.0,
             "last_activity": "2026-06-17T12:00:04Z"
         }
     ]
@@ -506,7 +582,9 @@ Real-time Rx/Tx rate for a specific host (for the Host Details page header).
     "host_ip": "192.168.1.100",
     "timestamp": "2026-06-17T12:00:05Z",
     "tx_per_sec": 15.5,
-    "rx_per_sec": 120.0
+    "rx_per_sec": 120.0,
+    "tx_bytes_per_sec": 2500.5,
+    "rx_bytes_per_sec": 18000.0
 }
 ```
 
@@ -541,6 +619,7 @@ Top destinations for a specific host.
             "ip": "8.8.8.8",
             "location": "WAN",
             "received_per_sec": 10.5,
+            "received_bytes_per_sec": 1500.0,
             "last_seen": "2026-06-17T12:00:04Z"
         }
     ]
@@ -578,7 +657,8 @@ Top ports and protocols for a specific host.
         {
             "port": 443,
             "protocol": "TCP",
-            "packets_per_sec": 50.0
+            "packets_per_sec": 50.0,
+            "bytes_per_sec": 8500.0
         }
     ]
 }

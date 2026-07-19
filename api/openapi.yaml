@@ -28,7 +28,7 @@ info:
 
     ## Time Parameters Note
     To ensure scalability and avoid the limitations of hardcoded Enums, all time-based parameters (e.g., `window_sec`, `period_sec`) are strictly defined in **seconds** as numeric values. This allows the frontend to request custom aggregation windows (e.g., 45 minutes, 3 hours) without requiring backend code changes or schema updates.
-  version: 3.0.0
+  version: 3.1.0
 
 servers:
   - url: https://{{cnss_host}}
@@ -307,6 +307,37 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /api/v1/utils/bucket-interval:
+    get:
+      summary: Calculate Optimal Chart Bucket Interval
+      description: |
+        Calculates the optimal time bucket size (`interval_sec`) for chart rendering based on the requested period. 
+        This allows the MUI to set up the X-axis scale and pagination *before* requesting the heavy historical data payload.
+      tags: [Utilities]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: period_sec
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Duration of the time window in seconds (e.g., 3600 for 1 hour, 86400 for 24h).
+      responses:
+        '200':
+          description: Optimal bucket interval calculated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BucketIntervalResponse'
+        '400':
+          description: Bad request (invalid period_sec)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /api/v1/ws/telemetry:
     get:
       summary: Real-time WebSocket Gateway
@@ -365,6 +396,29 @@ components:
           format: password
           example: "secretpassword"
 
+    UserProfile:
+      type: object
+      description: User context required by the frontend to restore UI state.
+      properties:
+        id:
+          type: string
+          description: Internal user identifier (UUID).
+          example: "usr_8f7a9b2c"
+        username:
+          type: string
+          description: Human-readable username for UI display.
+          example: "admin"
+        role:
+          type: string
+          enum: [admin, viewer]
+          description: User role.
+        scope:
+          type: array
+          items:
+            type: string
+          description: List of accessible channel_ids. Empty or omitted for admin role.
+          example: ["bridge-berlin-01", "bridge-prague-01"]
+
     TokenResponse:
       type: object
       properties:
@@ -381,28 +435,28 @@ components:
         issued_at:
           type: string
           format: date-time
-        role:
-          type: string
-          enum: [admin, viewer]
-        scope:
-          type: array
-          items:
-            type: string
-          description: List of accessible channel_ids. Empty for admin.
+        user:
+          $ref: '#/components/schemas/UserProfile'
 
     RefreshTokenResponse:
       type: object
+      description: Response for token refresh. Includes user profile to allow frontend state restoration on page reload without additional requests.
       properties:
         access_token:
           type: string
+          example: "new_access_token_eyJhbG..."
         token_type:
           type: string
           enum: [Bearer]
+          example: "Bearer"
         expires_in:
           type: integer
+          example: 86400
         issued_at:
           type: string
           format: date-time
+        user:
+          $ref: '#/components/schemas/UserProfile'
 
     LogoutResponse:
       type: object
@@ -495,6 +549,14 @@ components:
           type: number
           format: float
           description: Aggregated outgoing packet rate.
+        bytes_in_per_sec:
+          type: number
+          format: float
+          description: Aggregated incoming bytes rate.
+        bytes_out_per_sec:
+          type: number
+          format: float
+          description: Aggregated outgoing bytes rate.
         is_active:
           type: boolean
           description: Channel activity status at this specific timestamp (Channel History only).
@@ -543,6 +605,28 @@ components:
           type: number
           format: float
           description: Aggregated outgoing packet rate for the host.
+        bytes_in_per_sec:
+          type: number
+          format: float
+          description: Aggregated incoming bytes rate for the host.
+        bytes_out_per_sec:
+          type: number
+          format: float
+          description: Aggregated outgoing bytes rate for the host.
+
+    # --- Utility Schemas ---
+    BucketIntervalResponse:
+      type: object
+      description: Response containing the requested period and the calculated optimal bucket interval.
+      properties:
+        period_sec:
+          type: integer
+          description: The requested period duration in seconds.
+          example: 86400
+        interval_sec:
+          type: integer
+          description: The calculated optimal time bucket size in seconds.
+          example: 60
 
     # --- Error Schema ---
     ErrorResponse:
@@ -600,8 +684,10 @@ components:
           type: integer
         protocol:
           type: string
-          enum: [TCP, UDP]
-          description: "Protocol (e.g., TCP/UDP). Required for accurate host_top_ports protocol reporting."
+          description: "Network protocol identifier (e.g., TCP, UDP, ICMP). Defaults to 'UNKNOWN'."
+        size:
+          type: integer
+          description: "Packet size in bytes."
 
     # --- WebSocket Schemas ---
     WSControlMessage:
@@ -753,12 +839,20 @@ components:
                   type: number
                 packets:
                   type: integer
+                bytes_per_sec:
+                  type: number
+                bytes:
+                  type: integer
             direction_in:
               type: object
               properties:
                 packets_per_sec:
                   type: number
                 packets:
+                  type: integer
+                bytes_per_sec:
+                  type: number
+                bytes:
                   type: integer
         timestamp:
           type: string
@@ -804,6 +898,10 @@ components:
           type: number
         rx_per_sec:
           type: number
+        tx_bytes_per_sec:
+          type: number
+        rx_bytes_per_sec:
+          type: number
         last_activity:
           type: string
           format: date-time
@@ -826,6 +924,10 @@ components:
         tx_per_sec:
           type: number
         rx_per_sec:
+          type: number
+        tx_bytes_per_sec:
+          type: number
+        rx_bytes_per_sec:
           type: number
 
     HostTopDestinationsUpdate:
@@ -860,6 +962,8 @@ components:
           enum: [LAN, WAN]
         received_per_sec:
           type: number
+        received_bytes_per_sec:
+          type: number
         last_seen:
           type: string
           format: date-time
@@ -893,6 +997,8 @@ components:
           type: integer
         protocol:
           type: string
-          enum: [TCP, UDP]
+          description: "Network protocol identifier (e.g., TCP, UDP, ICMP)."
         packets_per_sec:
+          type: number
+        bytes_per_sec:
           type: number

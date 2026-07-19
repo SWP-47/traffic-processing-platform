@@ -1,5 +1,7 @@
+import { formatBytesPerSecond } from '@/utils/information';
 import style from './PacketsLineChart.module.css';
 import { colors } from '@/styles/theme';
+import { secondsToHumanReadable } from '@/utils/time';
 import type { EChartsOption } from 'echarts';
 import type { OptionDataValue } from 'echarts/types/src/util/types.js';
 
@@ -75,22 +77,38 @@ const chartOptions: EChartsOption = {
             const time = new Date(timestamp);
             const timeLabel = time.toLocaleString();
 
+            const windowSizeString = secondsToHumanReadable(Math.ceil(windowSize / 1000));
+
             return `
                 <div class="${style.tooltip}">
                     <p class="${style.date}">${timeLabel}</p>
-                    <p class="${style.window}">${Math.ceil(windowSize / 1000)} s window size</p>
+                    <p class="${style.window}">${windowSizeString} window size</p>
                     <div class="${style.props}">
                         <div class="${style.prop}">
                         <span class="${style.title}">Status:</span>
                         <span>${channelIsActive ? "active" : "inactive"}</span>
                         </div>
                         ${
-                            params.map(param => (`
-                                <div class="${style.prop}">
-                                    <span class="${style.title}" data-name="${param.seriesName}">${param.seriesName}:</span>
-                                    <span>${((param.value as OptionDataValue[])[1] as number).toFixed(2)} pkt/s</span>
-                                </div>
-                            `)).join("\n")
+                            params.map(param => {
+                                // Remove `_bytes` and `_pkts` postfix
+                                const name = param.seriesName?.split('_')[0];
+                                const postfix = param.seriesName?.split('_')[1];
+                                const value = (param.value as OptionDataValue[])[1] as number;
+
+                                let formattedValue: string = value.toString();
+                                // If value is bytes
+                                if (postfix?.includes('bytes')) {
+                                    formattedValue = formatBytesPerSecond(value);
+                                } else if (postfix?.includes('pkts')) {
+                                    formattedValue = value.toFixed(1) + ' pkt/s';
+                                }
+                                return (`
+                                    <div class="${style.prop}">
+                                        <span class="${style.title}" data-name="${name}">${name}:</span>
+                                        <span>${formattedValue}</span>
+                                    </div>
+                                `)
+                            }).join("\n")
                         }
                     </div>
                 </div>
@@ -110,7 +128,7 @@ const chartOptions: EChartsOption = {
     // Series
     series: [
         {
-            name: 'Received',
+            name: 'Received_pkts',
             type: 'line',
 
             showSymbol: false,
@@ -137,7 +155,61 @@ const chartOptions: EChartsOption = {
         },
 
         {
-            name: 'Sent',
+            name: 'Received_bytes',
+            type: 'line',
+
+            showSymbol: false,
+            symbol: 'circle',
+            smooth: 0.2,
+            emphasis: { disabled: true },
+            itemStyle: { color: colors.primary, },
+            areaStyle: {
+                color: {
+                    type: 'linear',
+                    x: 0, y: 0,
+                    x2: 0, y2: 1,
+                    colorStops: [
+                        { offset: 0, color: colors.primary },
+                        { offset: 1, color: colors.surface }
+                    ],
+                },
+                opacity: 0.1
+            },
+            animationEasingUpdate: "linear",
+            animationDurationUpdate: 1000,
+
+            data: []
+        },
+
+        {
+            name: 'Sent_pkts',
+            type: 'line',
+
+            showSymbol: false,
+            symbol: 'circle',
+            smooth: 0.2,
+            emphasis: { disabled: true },
+            itemStyle: { color: colors.accent },
+            areaStyle: {
+                color: {
+                    type: 'linear',
+                    x: 0, y: 0,
+                    x2: 0, y2: 1,
+                    colorStops: [
+                        { offset: 0, color: colors.accent },
+                        { offset: 1, color: colors.surface }
+                    ],
+                },
+                opacity: 0.1
+            },
+            animationEasingUpdate: "linear",
+            animationDurationUpdate: 1000,
+
+            data: []
+        },
+
+        {
+            name: 'Sent_bytes',
             type: 'line',
 
             showSymbol: false,

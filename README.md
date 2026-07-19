@@ -1,6 +1,6 @@
 # Traffic Processing Platform
 
-[![Release](https://img.shields.io/badge/release-v3.0.0-orange)](https://github.com/SWP-47/traffic-processing-platform/releases/tag/v3.0.0)
+[![Release](https://img.shields.io/badge/release-v3.1.0-orange)](https://github.com/SWP-47/traffic-processing-platform/releases/tag/v3.1.0)
 
 ## Project Overview
 
@@ -24,6 +24,7 @@ This is a monorepo containing a minimally intrusive network traffic monitoring s
 - **Git**
 - **Python** (3.8+)
 - **Node.js** (18+) and **npm**
+- **Docker** and **Docker Compose**
 
 ### 1. Clone the Repository
 
@@ -131,43 +132,11 @@ python3 .\cn_demo_1.py
 
 #### **Control and Status Server (CnSS)**
 
-##### Local Development (Dev Build)
+Follow the iteractive script to deploy CnSS:
 
-Use this configuration for active local development. It includes hot-reload capabilities to reflect code changes instantly.
-
-1. Navigate to the `cnss/` directory:
-
-   ```bash
-   cd cnss/
-   ```
-
-2. (Optional) Create a local `.env` file based on the example:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-3. Start the development environment:
-
-   ```bash
-   make dev-all
-   ```
-
-   *The server will be available at `http://localhost:8000`.*
-
----
-
-##### Production Deployment (VM Build)
-
-Use this configuration for deploying the service on a production Virtual Machine. It is optimized for security (non-root user) and performance (multiple Uvicorn workers).
-
-1. Copy the `cnss/` directory to your target VM.
-2. Ensure a `.env` file is present with production-appropriate values (do not use default dev tokens).
-3. Start the production environment in detached mode:
-
-   ```bash
-   make prod
-   ```
+```bash
+make deploy
+```
 
 #### **Management User Interface (MUI)**
 
@@ -192,14 +161,14 @@ make down
 
 ## Maintained Documentation
 
-- **Architecture**: [docs/architecture/README.md](docs/architecture/README.md)
 - **System & API Docs**: [docs/system-documentation.md](docs/system-documentation.md) | [api/README.md](api/README.md)
 - **Development Process**: [docs/development-process.md](docs/development-process.md)
 - **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md)
 - **Agent Guidance**: [AGENTS.md](AGENTS.md)
+- **Architecture**: [docs/architecture/README.md](docs/architecture/README.md)
 
 ## Reports & Changelog
 
 - **Changelog**: [CHANGELOG.md](CHANGELOG.md)
 - **Weekly Reports**:
-  - [Week 6](reports/week6/README.md) | [Week 5](reports/week5/README.md) | [Week 4](reports/week4/README.md) | [Week 3](reports/week3/README.md) | [Week 2](reports/week2/README.md)
+  - [Week 7](reports/week7/README.md) | [Week 6](reports/week6/README.md) | [Week 5](reports/week5/README.md) | [Week 4](reports/week4/README.md) | [Week 3](reports/week3/README.md) | [Week 2](reports/week2/README.md)

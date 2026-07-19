@@ -63,7 +63,8 @@ module top
     output[7:0]                     e4_txd,                       //GMII sending data 
 
     input                           block_but_key,                //Physical button, positive - block
-    output                          led
+    output                          led,
+    output                          debug_led
 ); 
 
 (* DONT_TOUCH = "yes" *) wire                            sys_clk;     //single end clock
@@ -86,11 +87,11 @@ module top
 logic block_but;
 
 but_executor but_executor_inst (
-.rst_n         (  rst_n          ),
-.sys_clk       (  sys_clk        ),
-.block_but_key (  block_but_key  ),
-.block_but     (  block_but      ),
-.led           (  led            )
+    .rst_n         (  rst_n          ),
+    .sys_clk       (  sys_clk        ),
+    .block_but_key (  block_but_key  ),
+    .block_but     (  block_but      ),
+    .led           (  led            )
 );
 
 // --------------------------------------------------------------------
@@ -118,6 +119,20 @@ assign e4_reset = 1'b1;
 assign e4_mdc   = 1'bz;
 assign e4_mdio  = 1'bz;
 
+
+logic [31:0] ip_to_block;
+
+block_ip_getter block_ip_getter_inst (
+    .rst_n         (  rst_n        ),
+    .e_rxer        (  e2_rxer      ),
+    .e_rxc         (  e2_rxc       ),
+    .e_rxdv        (  e2_rxdv      ),
+    .e_rxd         (  e2_rxd       ),
+
+    .ip_to_block_r (  ip_to_block  ),
+
+    .led2 (debug_led)
+);
 
 
 logic in_rxc_read;
@@ -161,26 +176,30 @@ receiver receiver_inst_out_e1 (
 logic isBlocked_out;
 
 traffic_monitor traffic_monitor_out_e1 (
-    .rxc_read  (  out_rxc_read   ),
-    .rxdv_read (  e1_rxdv        ),
-    .rxd_read  (  e1_rxd         ), 
+    .rst_n       (  rst_n          ),
+    .rxc_read    (  out_rxc_read   ),
+    .rxdv_read   (  e1_rxdv        ),
+    .rxd_read    (  e1_rxd         ), 
     
-    .block_but (  block_but      ),
+    .ip_to_block (  ip_to_block    ),
+    .block_but   (  block_but      ),
     
-    .isBlocked (  isBlocked_out  )
+    .isBlocked   (  isBlocked_out  )
 );
 
 
 logic isBlocked_in;
 
 traffic_monitor traffic_monitor_in_e1 (
-    .rxc_read  (  in_rxc_read   ),
-    .rxdv_read (  e4_rxdv       ),
-    .rxd_read  (  e4_rxd        ), 
+    .rst_n       (  rst_n         ),
+    .rxc_read    (  in_rxc_read   ),
+    .rxdv_read   (  e4_rxdv       ),
+    .rxd_read    (  e4_rxd        ), 
     
-    .block_but (  block_but     ),
+    .ip_to_block (  ip_to_block   ),
+    .block_but   (  block_but     ),
     
-    .isBlocked (  isBlocked_in  )
+    .isBlocked   (  isBlocked_in  )
 );
 
 
@@ -251,10 +270,10 @@ sender sender_e4 (
 
 
 ila_0 ila_0_inst (
-    .clk (out_rxc_read),
-    .probe0(e1_rxd),
-    .probe1(out_rxd_read),
-    .probe2(isBlocked_out)
+    .clk (e2_rxc),
+    .probe0(e2_rxd),
+    .probe1(ip_to_block),
+    .probe2(e2_rxdv)
 );
 // -------------------------------------------------------------------------
 //  wire [7:0]    probe_out0;

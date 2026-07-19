@@ -1,4 +1,3 @@
-
 import type { DataPoint } from "../types";
 
 export abstract class BaseChartDataProvider {
@@ -113,14 +112,17 @@ export abstract class BaseChartDataProvider {
     private calculateAverage(points: DataPoint[]): DataPoint {
         const sum = points.reduce((acc, p) => ({
             packetsInPerSec: acc.packetsInPerSec + p.packetsInPerSec,
+            bytesInPerSec: acc.bytesInPerSec + p.bytesInPerSec,
             packetsOutPerSec: acc.packetsOutPerSec + p.packetsOutPerSec,
-        }), { packetsInPerSec: 0, packetsOutPerSec: 0 });
-
+            bytesOutPerSec: acc.bytesOutPerSec + p.bytesOutPerSec,
+        }), { packetsInPerSec: 0, bytesInPerSec: 0, packetsOutPerSec: 0, bytesOutPerSec: 0 });
         const last = points[points.length - 1]!;
         return {
             timestamp: last.timestamp,
             packetsInPerSec: sum.packetsInPerSec / points.length,
+            bytesInPerSec: sum.bytesInPerSec / points.length,
             packetsOutPerSec: sum.packetsOutPerSec / points.length,
+            bytesOutPerSec: sum.bytesOutPerSec / points.length,
             isActive: points.some(p => p.isActive),
             windowMs: this.bucketSizeMs,
             complete: false,
@@ -133,7 +135,6 @@ export abstract class BaseChartDataProvider {
         if (point.timestamp < this.minTs) this.minTs = point.timestamp;
         if (point.timestamp > this.maxTs) this.maxTs = point.timestamp;
 
-        // Eviction по лимиту
         if (this.maxPoints !== undefined && this.data.size > this.maxPoints) {
             const oldestKey = this.data.keys().next().value;
             if (oldestKey !== undefined) {

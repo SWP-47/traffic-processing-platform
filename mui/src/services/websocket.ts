@@ -219,8 +219,15 @@ class WebSocketConnectionService {
             message: event.reason
         });
 
-        if (event.code === AutenticationErrorCode)
-            auth.requestTokenRenewal();
+        // In case of authentication error
+        if (event.code === AutenticationErrorCode) {
+            auth.handleAuthError().then(isRenewed => {
+                if (!isRenewed) return;
+
+                // Try to reconnect with new access token
+                this._connect(this.state.params!);
+            });
+        }
     }
 
     private onMessage(event: MessageEvent<string>) {

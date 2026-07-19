@@ -16,6 +16,7 @@ from core.db import db_channel_exists, db_fetch_channel_history, db_fetch_host_h
 from core.exceptions import ResourceNotFoundError, ValidationError
 from services.api.deps import get_current_user, require_channel_access
 from services.api.schemas import (
+    BucketIntervalResponse,
     ChannelHistoryResponse,
     HistoryPoint,
     HostHistoryPoint,
@@ -32,7 +33,7 @@ RETENTION_DAYS = settings.retention_days
 
 
 # --- Helper Functions ---
-def calculate_optimal_bucket(period_sec: int, target_points: int = 1200) -> int:
+def calculate_optimal_bucket(period_sec: int, target_points: int = 1000) -> int:
     """
     Dynamically calculates the optimal time_bucket size in seconds
     to return approximately `target_points` on the chart.
@@ -41,8 +42,8 @@ def calculate_optimal_bucket(period_sec: int, target_points: int = 1200) -> int:
     # Calculate raw bucket size to hit the target point count
     raw_bucket = max(1, period_sec // target_points)
 
-    # Logical time steps (in seconds) for snapping: 1s, 5s, 10s, 30s, 1m, 5m, 10m, 30m, 1h
-    logical_steps = [1, 5, 10, 30, 60, 300, 600, 1800, 3600]
+    # Logical time steps (in seconds) for snapping
+    logical_steps = [1, 2, 3, 5, 6, 8, 10, 15, 20, 30, 40, 60, 100, 200, 300, 400, 600, 1800, 3600]
 
     # Find the first logical step that is >= raw_bucket
     for step in logical_steps:
@@ -122,6 +123,8 @@ async def get_channel_history(
             timestamp=row["timestamp"],
             packets_in_per_sec=float(row["packets_in_per_sec"]),
             packets_out_per_sec=float(row["packets_out_per_sec"]),
+            bytes_in_per_sec=float(row.get("bytes_in_per_sec", 0.0)),
+            bytes_out_per_sec=float(row.get("bytes_out_per_sec", 0.0)),
             is_active=row["is_active"],
         )
         for row in rows
@@ -180,6 +183,8 @@ async def get_host_history(
             timestamp=row["timestamp"],
             packets_in_per_sec=float(row["packets_in_per_sec"]),
             packets_out_per_sec=float(row["packets_out_per_sec"]),
+            bytes_in_per_sec=float(row.get("bytes_in_per_sec", 0.0)),
+            bytes_out_per_sec=float(row.get("bytes_out_per_sec", 0.0)),
         )
         for row in rows
     ]
@@ -193,3 +198,19 @@ async def get_host_history(
         interval_sec=interval_sec,
         points=points,
     )
+
+
+# ==============================================================================
+# GET /api/v1/utils/bucket-interval
+# ==============================================================================
+@router.get("/utils/bucket-interval", response_model=BucketIntervalResponse)
+async def get_bucket_interval(
+    period_sec: int = Query(..., gt=0, description="Duration of the time window in seconds."),
+    current_user: TokenPayload = Depends(get_current_user),
+) -> BucketIntervalResponse:
+    """
+    Returns the optimal time_bucket interval (interval_sec) for a given period_sec.
+    Pure calculation — no database query is performed.
+    """
+    interval_sec = calculate_optimal_bucket(period_sec)
+    return BucketIntervalResponse(period_sec=period_sec, interval_sec=interval_sec)

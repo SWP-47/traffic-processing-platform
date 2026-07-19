@@ -1,7 +1,9 @@
 export interface DataPoint {
     timestamp: number;
     packetsInPerSec: number;
+    bytesInPerSec: number;
     packetsOutPerSec: number;
+    bytesOutPerSec: number;
     isActive: boolean;
     windowMs: number;
     complete: boolean

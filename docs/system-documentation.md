@@ -46,7 +46,7 @@ To ensure horizontal scalability, fault isolation, and high-performance telemetr
 
 ### 2.3. Control and Status Server (CnSS)
 
-The CnSS is deployed as a set of Docker containers (version `3.0.0`, Python ≥ 3.11). If any container crashes, Docker's `restart: always` policy ensures immediate recovery without affecting the core network forwarding plane.
+The CnSS is deployed as a set of Docker containers. If any container crashes, Docker's `restart: always` policy ensures immediate recovery without affecting the core network forwarding plane.
 
 The CnSS is composed of four independently deployable microservices:
 

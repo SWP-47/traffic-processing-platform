@@ -9,7 +9,6 @@ import nextIcon from '@/assets/next.svg';
 export interface ColumnData {
   name: string;
   id: string;
-  allowSorting: boolean;
 }
 
 export interface FullTableProps {
@@ -95,16 +94,14 @@ function FullTable({
             styles.header,
             column.id === sortColumnId ? styles.sorting : '',
           ].join(' ')}
-          onClick={() => column.allowSorting && handleSortClick(column.id)}
+          onClick={() => handleSortClick(column.id)}
         >
           <p>{column.name}</p>
-          {column.allowSorting && (
-            <div className={`${styles.sort_wrapper} ${sortDirection === 'asc' ? styles.sort_asc : styles.sort_desc}`}>
-              <img src={sortIcon} alt="Sort" className={`${styles.sort_icon} ${styles.sort_select_icon}`} />
-              <img src={sortDownIcon} alt="Sort Down" className={`${styles.sort_icon} ${styles.sort_desc_icon}`} />
-              <img src={sortUpIcon} alt="Sort Up" className={`${styles.sort_icon} ${styles.sort_asc_icon}`} />
-            </div>
-          )}
+          <div className={`${styles.sort_wrapper} ${sortDirection === 'desc' ? styles.sort_asc : styles.sort_desc}`}>
+            <img src={sortIcon} alt="Sort" className={`${styles.sort_icon} ${styles.sort_select_icon}`} />
+            <img src={sortDownIcon} alt="Sort Down" className={`${styles.sort_icon} ${styles.sort_desc_icon}`} />
+            <img src={sortUpIcon} alt="Sort Up" className={`${styles.sort_icon} ${styles.sort_asc_icon}`} />
+          </div>
         </div>
       ))}
 

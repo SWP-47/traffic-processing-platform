@@ -10,15 +10,9 @@ function useDelayedVisibility(condition: boolean, delay: number): boolean {
       timeoutRef.current = null;
     }
 
-    if (condition) {
-      timeoutRef.current = setTimeout(() => {
-        setIsVisible(true);
-      }, delay);
-    } else {
-      timeoutRef.current = setTimeout(() => {
-        setIsVisible(false);
-      }, 0);
-    }
+    timeoutRef.current = setTimeout(() => {
+      setIsVisible(condition);
+    }, delay);
 
     return () => {
       if (timeoutRef.current) {

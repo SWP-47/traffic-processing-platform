@@ -32,3 +32,18 @@ export async function getHostHistory(channelId: string, hostIp: string, period: 
     
     return data;
 }
+
+export type BucketIntervalRequest = paths["/api/v1/utils/bucket-interval"]["get"]["parameters"]["query"];
+export type BucketIntervalResponse = components["schemas"]["BucketIntervalResponse"];
+
+export async function getBucketInterval(period: BucketIntervalRequest["period_sec"]): Promise<BucketIntervalResponse> {
+    const { data, error } = await apiClient.GET('/api/v1/utils/bucket-interval', {
+        params: {
+            query: { period_sec: period }
+        }
+    });
+    
+    if (error) throw error;
+    
+    return data;
+}

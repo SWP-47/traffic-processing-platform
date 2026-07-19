@@ -27,22 +27,6 @@ export class HostDataProvider extends BaseChartDataProvider implements ChartData
         if (this.isInitialized) return;
         this.isInitialized = true;
 
-        const response = await getHostHistory(this.channelId, this.hostIp, timeScale);
-        this.setBucketSize(response.interval_sec * 1000);
-
-        if (response.points) {
-            const completedPoints: DataPoint[] = response.points.map(p => ({
-                timestamp: Date.parse(p.timestamp!),
-                packetsInPerSec: p.packets_in_per_sec ?? 0,
-                packetsOutPerSec: p.packets_out_per_sec ?? 0,
-                isActive: true,
-                windowMs: this.getBucketSize(),
-                complete: true,
-            })).filter(p => !Number.isNaN(p.timestamp));
-
-            this.loadCompletedPoints(completedPoints);
-        }
-
         this.unsubscribeFromTelemetry = subscriptionManager.subscribe(
             "host_details",
             {
@@ -52,6 +36,24 @@ export class HostDataProvider extends BaseChartDataProvider implements ChartData
             (update) => this.handleHostDetailsUpdate(update),
             () => {}
         );
+
+        const response = await getHostHistory(this.channelId, this.hostIp, timeScale);
+        this.setBucketSize(response.interval_sec * 1000);
+
+        if (response.points) {
+            const completedPoints: DataPoint[] = response.points.map(p => ({
+                timestamp: Date.parse(p.timestamp!),
+                packetsInPerSec: p.packets_in_per_sec ?? 0,
+                bytesInPerSec: p.bytes_in_per_sec ?? 0,
+                packetsOutPerSec: p.packets_out_per_sec ?? 0,
+                bytesOutPerSec: p.bytes_out_per_sec ?? 0,
+                isActive: true,
+                windowMs: this.getBucketSize(),
+                complete: true,
+            })).filter(p => !Number.isNaN(p.timestamp));
+
+            this.loadCompletedPoints(completedPoints);
+        }
     }
 
     private handleHostDetailsUpdate(update: Record<string, unknown>): void {
@@ -62,8 +64,10 @@ export class HostDataProvider extends BaseChartDataProvider implements ChartData
 
         const point: DataPoint = {
             timestamp,
-            packetsInPerSec: update.rx_per_sec,
-            packetsOutPerSec: update.tx_per_sec,
+            packetsInPerSec: update.rx_per_sec ?? 0,
+            bytesInPerSec: update.rx_bytes_per_sec ?? 0,
+            packetsOutPerSec: update.tx_per_sec ?? 0,
+            bytesOutPerSec: update.tx_bytes_per_sec ?? 0,
             isActive: true,
             windowMs: 5,
             complete: false,

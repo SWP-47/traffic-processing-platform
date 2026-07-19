@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Implemented a new `useTtlArrayCache` hook to stabilize table data rendering, preventing rows from "jumping" or temporarily disappearing during short server aggregation windows. ([#315](https://github.com/SWP-47/traffic-processing-platform/issues/315))
+- Added client-side IPv4 validation to the Hosts Table IP filter. The filter is now only applied when a valid IP address is entered, with visual error feedback (red shadow) during invalid input to prevent broken API queries. ([#315](https://github.com/SWP-47/traffic-processing-platform/issues/315))
+- Introduced a centralized `sortData` utility with `resolveSortKey` mapping to correctly handle client-side sorting based on the selected display unit (packets vs. bytes). ([#315](https://github.com/SWP-47/traffic-processing-platform/issues/315))
+- Added new reusable `Progress` component for displaying packet/byte rate with progress bar visualization. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Added `TopPortsTable` component showing top ports used by a specific host with protocol information. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Added `FullDestinationsTable` and `FullPortsTable` paginated views for detailed host statistics in modal windows. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Added support for `/api/v1/utils/bucket-interval` endpoint to calculate optimal chart bucket intervals before fetching historical data. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Added `onRowClick` prop to `TopTable` component enabling clickable rows for better navigation. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Added URL query parameter support (`ip`, `location`) for filtering hosts table and maintaining state across navigation. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Added `useHostTopPorts` hook for fetching top ports data for a specific host. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Interactive console utility (`scripts/create_user.py`) for creating new users with secure Argon2id password hashing, role-based access control (`admin`/`viewer`), and channel scope assignment directly from the CLI.
+- New Makefile target `make create-user` to streamline the user provisioning workflow, accepting `USERNAME`, `ROLE`, and `SCOPES` parameters.
+- Automated deployment script (`scripts/deploy.sh`) to orchestrate zero-to-hero backend setup, including environment validation, secure JWT generation, Docker infrastructure startup, Alembic migrations, and interactive test data seeding. ([#309](https://github.com/SWP-47/traffic-processing-platform/issues/309))
+- Production cleanup script (`scripts/clean_prod.sh`) to safely stop and remove all Docker containers, networks, and persistent volumes (including TimescaleDB data) for a clean environment reset. ([#309](https://github.com/SWP-47/traffic-processing-platform/issues/309))
+- Global traffic unit toggle (Packets/Bytes) in the Header and Detailed Host View, allowing users to switch metric displays dynamically. ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
+- React Context (`UnitContext`) to manage and persist the user's traffic unit preference across the application and browser tabs via `localStorage`. ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
+- Utility functions (`formatBytesPerSecond`, `formatSplit`) to automatically format byte rates into human-readable units (B/s, KB/s, MB/s, GB/s). ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
 - Automatic token refresh and request retry mechanism for REST API 401 Unauthorized responses (excluding login and refresh endpoints). ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
 - Automatic WebSocket reconnection with a new access token upon authentication error (close code 4001). ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
 - Session initialization and validation on protected route access to restore authentication state on page load. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
@@ -28,6 +45,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated `FullTable` and `TopTable` components to make all columns sortable by default, removing the redundant `allowSorting` property from column definitions. ([#315](https://github.com/SWP-47/traffic-processing-platform/issues/315))
+- Refactored pagination logic in `HostsTable`, `FullDestinationsTable`, and `FullPortsTable` to correctly calculate page counts and slice data when relying on the client-side TTL cache. ([#315](https://github.com/SWP-47/traffic-processing-platform/issues/315))
+- Increased the default width of the Detailed Host View modal (`wide_modal`) for better readability of nested destination and port tables. ([#315](https://github.com/SWP-47/traffic-processing-platform/issues/315))
+- Improved `Modal` component with dedicated close button, better animation handling using `useDelayedVisibility`, and proper topmost modal detection for Escape key handling. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Reorganized MUI component structure by moving dashboard components to `features/` directory for better code organization. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Changed `HostsTable` filtering to sync with URL parameters. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Updated `Select` component to accept controlled `value` prop for better state management. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Updated `Makefile` to include `deploy` and `clean` targets for streamlined execution of the new deployment and cleanup scripts. ([#309](https://github.com/SWP-47/traffic-processing-platform/issues/309))
+- Updated all traffic visualization components (Column Charts, Line Charts, Hosts Table, Top Destinations, and Top Hosts tables) to dynamically render, calculate max values, and sort data based on the selected unit (packets or bytes). ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
+- Enhanced Line Chart Y-axis labels and tooltips to automatically format and display the correct unit suffixes (e.g., "MB/s", "k pkt/s") based on the active selection. ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
+- Refactored chart data providers (`BaseChartDataProvider`, `ChannelDataProvider`, `HostDataProvider`) to aggregate and expose both packet and byte rates per second (`bytesInPerSec`, `bytesOutPerSec`). ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
+- Renamed `timeUtils.ts` to `time.ts` for better naming consistency across the codebase. ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
 - Replaced the raw text-based regex filter in the Hosts Table with dedicated, user-friendly IP address input and Location dropdown filters. ([#246](https://github.com/SWP-47/traffic-processing-platform/issues/246))
 - Updated chart data providers (`ChannelDataProvider`, `HostDataProvider`) to prevent redundant initializations and ensure proper state cleanup on disposal. ([#246](https://github.com/SWP-47/traffic-processing-platform/issues/246))
 - Enhanced line chart tooltips to display human-readable aggregation window sizes (e.g., "10m" instead of "10 s"). ([#246](https://github.com/SWP-47/traffic-processing-platform/issues/246))
@@ -44,9 +73,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Deprecated
 
 ### Removed
+
 - Deprecated `requestTokenRenewal` method in favor of the new robust `handleAuthError` and `attemptTokenRefresh` flow. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
 
 ### Fixed
+
+- Corrected the sorting icon direction in `FullTable` and `TopTable` to accurately reflect the current sort order (ascending/descending). ([#315](https://github.com/SWP-47/traffic-processing-platform/issues/315))
+- Fixed a bug in `FullPortsTable` and `TopPortsTable` where the "Port" column was incorrectly sorted by the "IP" field due to a copy-paste error in column definitions. ([#315](https://github.com/SWP-47/traffic-processing-platform/issues/315))
+- Fixed race conditions in `PacketsLineChart` component that caused data fetching issues during rapid updates. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Fixed sorting logic in `TopDestinationsTable` and `TopPortsTable` to properly use `sortId` field for unit-aware sorting. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Fixed import paths after component reorganization. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
 - Fixed WebSocket subscription reconnection logic in `SubscriptionManager` to verify `ActivityStatus.Active` before reconnecting, preventing unnecessary reconnection attempts during inactive channel states. ([#246](https://github.com/SWP-47/traffic-processing-platform/issues/246))
 - Style of Verilog code of FPGA part and minor logic errors were fixed ([#308](https://github.com/SWP-47/traffic-processing-platform/issues/308))
 

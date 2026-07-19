@@ -72,6 +72,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+
+    min-width: 156px;
 }
 
 .expand_row .cell {
@@ -89,4 +91,21 @@
 
 .expand_row .cell span {
     color: var(--color-text-muted);
+}
+
+.clickable_row .cell {
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.clickable_row:hover .cell {
+  background-color: var(--color-surface);
+}
+
+.expand_row .cell {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }

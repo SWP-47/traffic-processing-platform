@@ -1,8 +1,11 @@
 .column {
   font-size: 1rem;
   
-  max-width: var(--column-width);
   flex: 1;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 
   --column-height: 135px;
   --column-width: 80px;
@@ -22,13 +25,8 @@
     border-radius: 40px;
 
     overflow: hidden;
-  }
 
-  .value {
-    font-weight: bold;
-    flex-grow: 0;
-
-    z-index: 2;
+    max-width: var(--column-width);
   }
 
   .data_representation {
@@ -41,12 +39,17 @@
     background-repeat: no-repeat;
     background-position: left bottom;
     transition: height 0.5s ease;
+    max-width: var(--column-width);
   }
 
   .value {
-    margin-top: 8px;
     font-weight: bold;
     text-align: center;
+    flex-grow: 0;
+
+    z-index: 2;
+
+    margin-top: 10px;
   }
 
   .label {

@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Implemented a new `useTtlArrayCache` hook to stabilize table data rendering, preventing rows from "jumping" or temporarily disappearing during short server aggregation windows. ([#315](https://github.com/SWP-47/traffic-processing-platform/issues/315))
+- Added client-side IPv4 validation to the Hosts Table IP filter. The filter is now only applied when a valid IP address is entered, with visual error feedback (red shadow) during invalid input to prevent broken API queries. ([#315](https://github.com/SWP-47/traffic-processing-platform/issues/315))
+- Introduced a centralized `sortData` utility with `resolveSortKey` mapping to correctly handle client-side sorting based on the selected display unit (packets vs. bytes). ([#315](https://github.com/SWP-47/traffic-processing-platform/issues/315))
 - Interactive console utility (`scripts/create_user.py`) for creating new users with secure Argon2id password hashing, role-based access control (`admin`/`viewer`), and channel scope assignment directly from the CLI.
 - New Makefile target `make create-user` to streamline the user provisioning workflow, accepting `USERNAME`, `ROLE`, and `SCOPES` parameters.
 - Automated deployment script (`scripts/deploy.sh`) to orchestrate zero-to-hero backend setup, including environment validation, secure JWT generation, Docker infrastructure startup, Alembic migrations, and interactive test data seeding. ([#309](https://github.com/SWP-47/traffic-processing-platform/issues/309))
@@ -35,6 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated `FullTable` and `TopTable` components to make all columns sortable by default, removing the redundant `allowSorting` property from column definitions. ([#315](https://github.com/SWP-47/traffic-processing-platform/issues/315))
+- Refactored pagination logic in `HostsTable`, `FullDestinationsTable`, and `FullPortsTable` to correctly calculate page counts and slice data when relying on the client-side TTL cache. ([#315](https://github.com/SWP-47/traffic-processing-platform/issues/315))
+- Increased the default width of the Detailed Host View modal (`wide_modal`) for better readability of nested destination and port tables. ([#315](https://github.com/SWP-47/traffic-processing-platform/issues/315))
 - Updated `Makefile` to include `deploy` and `clean` targets for streamlined execution of the new deployment and cleanup scripts. ([#309](https://github.com/SWP-47/traffic-processing-platform/issues/309))
 - Updated all traffic visualization components (Column Charts, Line Charts, Hosts Table, Top Destinations, and Top Hosts tables) to dynamically render, calculate max values, and sort data based on the selected unit (packets or bytes). ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
 - Enhanced Line Chart Y-axis labels and tooltips to automatically format and display the correct unit suffixes (e.g., "MB/s", "k pkt/s") based on the active selection. ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
@@ -56,9 +62,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Deprecated
 
 ### Removed
+
 - Deprecated `requestTokenRenewal` method in favor of the new robust `handleAuthError` and `attemptTokenRefresh` flow. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
 
 ### Fixed
+
+- Corrected the sorting icon direction in `FullTable` and `TopTable` to accurately reflect the current sort order (ascending/descending). ([#315](https://github.com/SWP-47/traffic-processing-platform/issues/315))
+- Fixed a bug in `FullPortsTable` and `TopPortsTable` where the "Port" column was incorrectly sorted by the "IP" field due to a copy-paste error in column definitions. ([#315](https://github.com/SWP-47/traffic-processing-platform/issues/315))
 - Fixed WebSocket subscription reconnection logic in `SubscriptionManager` to verify `ActivityStatus.Active` before reconnecting, preventing unnecessary reconnection attempts during inactive channel states. ([#246](https://github.com/SWP-47/traffic-processing-platform/issues/246))
 
 ### Security

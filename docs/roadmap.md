@@ -2,7 +2,7 @@
 
 This document outlines the Sprint-by-Sprint delivery plan for the Traffic Processing Platform.
 
-*Last updated: July 12, 2026*
+*Last updated: July 19, 2026*
 
 ---
 
@@ -43,7 +43,7 @@ Establish the core four-component data pipeline (TP → CN → CnSS → MUI). Th
 
 ---
 
-## Sprint 2: MVP v1 maintenence
+## Sprint 2: MVP v1 Maintenance
 
 **Milestone:** [Sprint 2 Milestone](https://github.com/SWP-47/traffic-processing-platform/milestone/2)
 
@@ -63,7 +63,7 @@ Transition from in-memory storage to a persistent database to handle historical 
 *Supporting PBIs:*
 
 - [Implement `/api/v1/health` database metrics query (distinct/active channels)](https://github.com/SWP-47/traffic-processing-platform/issues/148)
-- [Implementat the correct packet fragmentation in CN](https://github.com/SWP-47/traffic-processing-platform/issues/89)
+- [Implement the correct packet fragmentation in CN](https://github.com/SWP-47/traffic-processing-platform/issues/89)
 - [Create line chart component](https://github.com/SWP-47/traffic-processing-platform/issues/153)
 
 ---
@@ -77,7 +77,7 @@ Transition from in-memory storage to a persistent database to handle historical 
 **Sprint Goal:** Transition to MVP v2 by implementing FPGA-based packet blocking, redesigning a scalable, secure backend architecture, and delivering host tracking and host statistics tables on the MUI dashboard.
 
 **Focus / Expected Outcome:**
-Completely redesigned the CnSS architecture into a decoupled, microservice-oriented backend with Redis buffering and TimescaleDB persistence. Executed a comprehensive MUI redesign introducing the detailed "Host Statistics" table with advanced filtering and sorting. Fully containerized the Traffic Processor (TP) and Communication Node (CN) for reproducible edge deployment, and implemented physical hardware traffic blocking via the FPGA. Removed US-016 (Byte Volume Counting) from the active scope based on customer feedback.
+Completely redesigned the CnSS architecture into a decoupled, microservice-oriented backend with Redis buffering and TimescaleDB persistence. Executed a comprehensive MUI redesign introducing the detailed "Host Statistics" table with advanced filtering and sorting. Fully containerized the Traffic Processor (TP) and Communication Node (CN) for reproducible edge deployment, and implemented physical hardware traffic blocking via the FPGA.
 
 **Linked Planned Items:**
 
@@ -88,9 +88,9 @@ Completely redesigned the CnSS architecture into a decoupled, microservice-orien
 
 *Supporting PBIs:*
 
-- [Backend Architecture Redesign](https://github.com/SWP-47/traffic-processing-platform/issues/208) Decouple CnSS into four distinct components (Database, REST API, UDP Ingestion Listener, WebSocket Service) with Redis buffering for high-throughput ingestion.
-- [Secure User Database](https://github.com/SWP-47/traffic-processing-platform/issues/215) Integrate a persistent user database for authentication, replacing hardcoded credentials.
-- [MUI Dashboard Redesign](https://github.com/SWP-47/traffic-processing-platform/issues/208) Implement the detailed "Host Statistics" table featuring advanced real-time filtering (Direction IN/OUT, IP subnet/regex, RX/TX min/max bounds, LastSeen ranges) and bi-directional sorting. Add summary "Top Hosts" widgets to the main dashboard.
+- [Backend Architecture Redesign](https://github.com/SWP-47/traffic-processing-platform/issues/208): Decouple CnSS into four distinct components (Database, REST API, UDP Ingestion Listener, WebSocket Service) with Redis buffering for high-throughput ingestion.
+- [Secure User Database](https://github.com/SWP-47/traffic-processing-platform/issues/215): Integrate a persistent user database for authentication, replacing hardcoded credentials.
+- [MUI Dashboard Redesign](https://github.com/SWP-47/traffic-processing-platform/issues/208): Implement the detailed "Host Statistics" table featuring advanced real-time filtering and bi-directional sorting. Add summary "Top Hosts" widgets to the main dashboard.
 
 ---
 
@@ -103,7 +103,7 @@ Completely redesigned the CnSS architecture into a decoupled, microservice-orien
 **Sprint Goal:** Deliver a stable Week 6 trial release (MVP v3 candidate), resolve critical hardware stability issues, introduce detailed host statistics, and prepare the initial customer handover documentation.
 
 **Focus / Expected Outcome:**
-Resolve the critical CN/CnSS crash triggered by physical network cable disconnects, ensuring the test stand recovers gracefully. Achieve 70% automated backend test coverage and implement protocol-aware telemetry aggregation in TimescaleDB. Deliver the first iteration of the detailed host statistics page in the MUI. Draft the customer handover documentation.
+Resolved the critical CN/CnSS crash triggered by physical network cable disconnects, ensuring the test stand recovers gracefully. Achieved 70% automated backend test coverage and implemented protocol-aware telemetry aggregation in TimescaleDB. Delivered the first iteration of the detailed host statistics page in the MUI. Drafted the initial customer handover documentation.
 
 **Linked Planned Items:**
 
@@ -129,20 +129,46 @@ Resolve the critical CN/CnSS crash triggered by physical network cable disconnec
 
 **Sprint Goal:** Incorporate customer feedback from the Week 6 trial, implement byte-volume counting, automate deployment, finalize handover documentation, and deliver the final `MVP v3` release.
 
-**Focus / Expected Outcome:**
-Respond to the customer's request for more globally useful network metrics by implementing byte-volume counting (sum of packet sizes) in the backend and adding a UI toggle in the MUI. Automate the database migration process to simplify server deployment. Deploy the previously written fragmented packet fix to the physical FPGA stand to enable live hardware blocking demonstrations. Investigate the 250 Mbps queue overflow, document the maximum stable throughput, and finalize the customer handover documentation to complete the product transition.
+**Delivered Outcome:**
+Successfully responded to the customer's request for more globally useful network metrics by implementing byte-volume counting (sum of packet sizes) in the backend and adding a UI toggle in the MUI. Automated the database migration process via an interactive `make deploy` script. Deployed a dynamic IP blocking script to the physical FPGA stand, enabling configurable live hardware blocking demonstrations (replacing the previous hardcoded limitation). Investigated throughput limits, confirming system stability up to 588 Mbps, and documented this in the handover guide. Finalized the customer handover documentation, achieving the "Ready for independent use" status with explicit customer acceptance.
 
 **Linked Planned Items:**
 
 *User Stories:*
 
-- [US-016: Byte Volume Counting](https://github.com/SWP-47/traffic-processing-platform/issues/104) (Implement byte-volume counting and MUI toggle)
-- [US-017: Traffic Blocking / Dropping](https://github.com/SWP-47/traffic-processing-platform/issues/105) (Deploy fragmented packet fix to physical FPGA stand)
+- [US-016: Byte Volume Counting](https://github.com/SWP-47/traffic-processing-platform/issues/104) (Implemented byte-volume counting and MUI toggle)
+- [US-006: Specific IP Traffic Analysis](https://github.com/SWP-47/traffic-processing-platform/issues/96)
+- [US-017: Traffic Blocking / Dropping](https://github.com/SWP-47/traffic-processing-platform/issues/105) (Deployed dynamic IP blocking script to physical FPGA stand)
 
 *Supporting PBIs:*
 
-- **Byte-Volume Counting Backend & API:** Implement packet size aggregation in the TimescaleDB telemetry buckets and update the API endpoints to expose bytes/second.
-- **MUI Byte/Packet Toggle:** Add a UI toggle in the MUI dashboard to switch between "Packets per second" and "Bytes per second" views.
-- **Deployment Automation:** Update the deployment/startup script to automatically wait for database readiness and execute migration commands, removing the need for manual DB migrations.
-- **FPGA Fragmented Packet Fix Deployment:** Deploy the fix for fragmented packets during hardware blocking to the physical test stand and verify live blocking.
-- **Throughput Limits & Handover Finalization:** Investigate the CN/CnSS queue overflow at >200 Mbps. Update `docs/customer-handover.md` to explicitly state the maximum supported stable throughput and finalize all transition documentation for `MVP v3`.
+- **Byte-Volume Counting Backend & API:** Implemented packet size aggregation in the TimescaleDB telemetry buckets and updated the API endpoints to expose bytes/second.
+- **MUI Byte/Packet Toggle & State Management:** Added a UI toggle in the MUI dashboard to switch between "Packets per second" and "Bytes per second" views. Implemented frontend table state management to maintain IP list stability over a 10-minute window while updating destination/port metrics in real-time.
+- **Deployment Automation:** Created an interactive deployment script (`make deploy`) that handles infrastructure startup, environment configuration, secure JWT key generation, and automatic database migrations.
+- **Throughput Limits & Handover Finalization:** Documented the maximum supported stable throughput (588 Mbps) and finalized all transition documentation for `MVP v3`.
+
+---
+
+## Final Product Status (End of Course)
+
+**Current State:**  
+The Traffic Processing Platform has successfully reached `MVP v3` and is fully transitioned to a **"Ready for independent use"** state, with explicit customer acceptance. The system provides a robust, transparent inline network monitoring solution capable of handling sustained throughput up to 588 Mbps without degradation or state corruption.
+
+**Key Delivered Capabilities:**
+
+- **Transparent Inline Monitoring:** Zero-latency packet forwarding with real-time telemetry extraction (TP → CN).
+- **Advanced Telemetry & Metrics:** Backend aggregation of both packet counts and byte volumes, with a user-friendly MUI toggle to switch between "Packets per second" and "Bytes per second" (bps, Kbps, Mbps) for accurate asymmetric traffic analysis.
+- **Dynamic Hardware Blocking:** Configurable, dynamic IP-based traffic blocking directly on the FPGA, replacing the previous hardcoded limitation and allowing precise targeting of unwanted traffic.
+- **Deep-Dive Host Analytics:** Clickable host tables providing detailed, real-time statistics including Top Destinations and Top Ports, with frontend state management to maintain IP stability while updating metrics dynamically.
+- **Automated Deployment:** Streamlined, interactive deployment scripts that handle infrastructure startup, environment configuration, secure JWT key generation, and automatic database migrations, removing manual setup friction.
+- **Secure Multi-Channel Architecture:** JWT-based authentication, role-based access control (admin/viewer with scoped channel access), session persistence on page refresh, and secure WebSocket telemetry streaming.
+
+**Known Limitations & Post-Course Considerations:**
+
+- **ICMP/Portless Protocols:** Due to strict typing in the current telemetry pipeline, protocols without source/destination ports (e.g., ICMP ping) are intentionally excluded from port-specific statistics, though they are still counted in overall volume metrics.
+
+**Handover Status:**
+
+- **Level Reached:** `Ready for independent use`
+- **Customer Confirmation:** `Accepted`
+- **Documentation:** Complete and up-to-date, including `docs/customer-handover.md`, `CONTRIBUTING.md`, `AGENTS.md`, and the hosted documentation site.

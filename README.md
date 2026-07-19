@@ -24,6 +24,7 @@ This is a monorepo containing a minimally intrusive network traffic monitoring s
 - **Git**
 - **Python** (3.8+)
 - **Node.js** (18+) and **npm**
+- **Docker** and **Docker Compose**
 
 ### 1. Clone the Repository
 
@@ -131,43 +132,11 @@ python3 .\cn_demo_1.py
 
 #### **Control and Status Server (CnSS)**
 
-##### Local Development (Dev Build)
+Follow the iteractive script to deploy CnSS:
 
-Use this configuration for active local development. It includes hot-reload capabilities to reflect code changes instantly.
-
-1. Navigate to the `cnss/` directory:
-
-   ```bash
-   cd cnss/
-   ```
-
-2. (Optional) Create a local `.env` file based on the example:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-3. Start the development environment:
-
-   ```bash
-   make dev-all
-   ```
-
-   *The server will be available at `http://localhost:8000`.*
-
----
-
-##### Production Deployment (VM Build)
-
-Use this configuration for deploying the service on a production Virtual Machine. It is optimized for security (non-root user) and performance (multiple Uvicorn workers).
-
-1. Copy the `cnss/` directory to your target VM.
-2. Ensure a `.env` file is present with production-appropriate values (do not use default dev tokens).
-3. Start the production environment in detached mode:
-
-   ```bash
-   make prod
-   ```
+```bash
+make deploy
+```
 
 #### **Management User Interface (MUI)**
 

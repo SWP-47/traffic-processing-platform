@@ -5,7 +5,7 @@
 
 .PHONY: help install dev prod down test migrate lint format \
         run-api run-ingestion run-reporting run-websocket dev-all stop-dev \
-        deploy clean
+        deploy clean create-user
 
 # Default target: show help
 .DEFAULT_GOAL := help
@@ -60,6 +60,15 @@ lint:
 format:
 	uv run black .
 	uv run ruff check --fix .
+
+## create-user: Create a new user. Usage: make create-user USERNAME=name [ROLE=role] [SCOPES="ch1,ch2"]
+create-user:
+ifndef USERNAME
+	@echo "Error: USERNAME is required."
+	@echo "Usage: make create-user USERNAME=<username> [ROLE=<admin|viewer>] [SCOPES=<channel1,channel2>]"
+	@exit 1
+endif
+	uv run python scripts/create_user.py $(USERNAME) $(if $(ROLE),--role $(ROLE),) $(if $(SCOPES),--scopes "$(SCOPES)",)
 
 ## deploy: Run the automated zero-to-hero deployment script (deploy.sh)
 deploy:

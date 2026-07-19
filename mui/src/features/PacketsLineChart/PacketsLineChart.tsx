@@ -89,7 +89,6 @@ function PacketsLineChart({ dataProvider, timeScale, selectedSeries, unit } : Pa
     let isDisposed = false;
 
     const updateChartFromProvider = () => {
-      console.log(isDisposed, isDataFetching);
       if (isDisposed || isDataFetching) return;
 
       const allData = dataProvider.getData();

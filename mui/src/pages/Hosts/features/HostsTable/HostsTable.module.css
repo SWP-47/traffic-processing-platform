@@ -21,6 +21,12 @@
     outline: none;
 
     color: var(--color-text);
+
+    transition: box-shadow .2s;
+}
+
+.filter.error {
+    box-shadow: 0 0 7px var(--color-fail);
 }
 
 .aggregaion_period {

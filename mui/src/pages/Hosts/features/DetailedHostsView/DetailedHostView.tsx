@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import styles from './DetailedHostView.module.css';
+import pageStyle from '../../Hosts.module.css';
 import HostPacketsColumnChart from '../HostPacketsColumnChart';
 import HostPacketsLineChart from '../HostPacketsLineChart';
 import TopDestinationsTable from '../TopDestinationsTable';
@@ -7,7 +8,7 @@ import AggregationSelector from '../../components/AggregationSelector/Aggregatio
 import useAggregationPeriod from '../../hooks/useAggregationPeriod';
 import { secondsToHumanReadable } from '@/utils/time';
 import UnitToggle from '@/components/Header/components/UnitToggle/UnitToggle';
-import TopPortsTable from '../TopPortsTable/TopPortsTable';
+import TopPortsTable from '../TopPortsTable';
 
 interface DetailedHostsViewOptions {
   ip: string,
@@ -19,7 +20,7 @@ function DetailedHostView({ ip, defaultTimeScale }: DetailedHostsViewOptions) {
   const aggregationPeriod = useAggregationPeriod(timeScale ?? 1);
 
   return (
-    <>
+    <div className={pageStyle.wide_modal}>
       <div className={styles.header}>
         <div className={styles.left}>
           <h1 className={styles.title}>
@@ -44,11 +45,11 @@ function DetailedHostView({ ip, defaultTimeScale }: DetailedHostsViewOptions) {
           <HostPacketsLineChart ip={ip} timeScale={timeScale} />
         </div>
         <div className={styles.row}>
-          <TopDestinationsTable ip={ip} aggregationPeriod={aggregationPeriod} />
-          <TopPortsTable ip={ip} aggregationPeriod={aggregationPeriod} />
+          <TopDestinationsTable ip={ip} timeScale={timeScale} aggregationPeriod={aggregationPeriod} />
+          <TopPortsTable ip={ip} timeScale={timeScale} aggregationPeriod={aggregationPeriod} />
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

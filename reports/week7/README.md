@@ -25,7 +25,7 @@ This is a monorepo containing minimally intrusive network traffic monitoring sys
 
 **Sprint 5 Goal:** Deliver the final `MVP v3` increment by automating server deployment, implementing byte-volume telemetry, finalizing dynamic hardware blocking, and completing the customer handover transition.  
 **Sprint Dates:** July 13, 2026 – July 19, 2026  
-**Total Sprint Size:**  PLACEHOLDER
+**Total Sprint Size:** 44
 
 ### Scope Summary
 
@@ -110,10 +110,10 @@ While the product is accepted, the following technical limitations remain docume
 | Feedback Point (from Week 6 Review) | Resulting PBI / Issue | Status | Response |
 | :--- | :--- | :--- | :--- |
 | **Metric Readability:** "Displaying statistics in packets/sec is confusing for asymmetric TCP streams. Bytes/sec is much more useful." | [US-016: Byte Volume Counting](https://github.com/SWP-47/traffic-processing-platform/issues/104) | **Done** | Backend now sums packet sizes. MUI includes a toggle for Packets/Bytes/KB/MB. |
-| **Table Stability:** "IP addresses in the table jump too fast because of 1-second aggregation. It's hard to read." | [Frontend Table State Management](https://github.com/SWP-47/traffic-processing-platform/issues/285) | **Done** | Implemented frontend state: real-time updates for existing IPs, 10-minute timeout for removal. |
-| **Hardcoded Blocking:** "The blocking IP is hardcoded. It should be dynamic." | [Dynamic FPGA IP Blocking](https://github.com/SWP-47/traffic-processing-platform/issues/278) | **Done** | CLI script now dynamically injects the target IP into the FPGA, defaulting to `0.0.0.0`. |
-| **Deployment Complexity:** "Server deployment requires manual DB migrations." | [Automate DB Migrations](https://github.com/SWP-47/traffic-processing-platform/issues/260) | **Done** | `make deploy` script automatically waits for DB readiness and runs migrations. |
-| **Session Persistence:** "I have to re-login every time I refresh the page." | [Auto Token Refresh](https://github.com/SWP-47/traffic-processing-platform/issues/290) | **Done** | Implemented automatic token refresh; session persists across page reloads. |
+| **Table Stability:** "IP addresses in the table jump too fast because of 1-second aggregation. It's hard to read." | [Frontend Table State Management](https://github.com/SWP-47/traffic-processing-platform/issues/315) | **Done** | Implemented frontend state: real-time updates for existing IPs, 10-minute timeout for removal. |
+| **Hardcoded Blocking:** "The blocking IP is hardcoded. It should be dynamic." | [Dynamic FPGA IP Blocking](https://github.com/SWP-47/traffic-processing-platform/issues/294) | **Done** | CLI script now dynamically injects the target IP into the FPGA, defaulting to `0.0.0.0`. |
+| **Deployment Complexity:** "Server deployment requires manual DB migrations." | [Automate DB Migrations](https://github.com/SWP-47/traffic-processing-platform/issues/309) | **Done** | `make deploy` script automatically waits for DB readiness and runs migrations. |
+| **Session Persistence:** "I have to re-login every time I refresh the page." | [Auto Token Refresh](https://github.com/SWP-47/traffic-processing-platform/issues/291) | **Done** | Implemented automatic token refresh; session persists across page reloads. |
 
 ---
 
@@ -133,7 +133,7 @@ The team conducted final UAT scenarios with the customer during the Week 7 revie
 
 * **Final SemVer Release (MVP v3):** [v3.1.0](https://github.com/SWP-47/traffic-processing-platform/releases/tag/v3.1.0)
 * **Changelog:** [CHANGELOG.md](../../CHANGELOG.md)
-* **Public Sanitized Demo Video:** [Watch Final Demo (< 2 mins)] PLACEHOLDER
+* **Public Sanitized Demo Video:** [Watch Final Demo (< 2 mins)](https://disk.yandex.ru/i/LOFpltaaJH-mBA)
 
 ---
 

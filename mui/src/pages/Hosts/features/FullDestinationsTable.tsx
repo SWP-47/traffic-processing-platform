@@ -1,14 +1,23 @@
 import FullTable from "@/components/FullTable";
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useUnit } from "@/contexts/UnitContext/useUnit";
 import Progress from "@/components/Progress/Progress";
 import { useHostTopDestinations, type HostTopDestinationsParams, type HostTopDestinationsUpdate } from "@/hooks/useHostTopDestinations";
 import { useNavigate, useSearchParams } from "react-router";
 import { useTtlArrayCache } from "@/hooks/useTtlArrayCache";
+import { resolveSortKey, sortData } from "@/utils/sortData";
 
 type SortColumn = Exclude<HostTopDestinationsParams['sort_by'], undefined>;
+type Destination = HostTopDestinationsUpdate['destinations'][number];
 
-function FullDestinationsTable({ ip, timeScale, aggregationPeriod, defaultSorting }: { ip: string, timeScale: number, aggregationPeriod: number,defaultSorting: SortColumn }) {
+const COLUMNS = [
+  { id: 'location', name: 'Location' },
+  { id: 'ip', name: 'IP' },
+  { id: 'received', name: 'Received' },
+  { id: 'last_seen', name: 'Last Seen' },
+];
+
+function FullDestinationsTable({ ip, timeScale, aggregationPeriod, defaultSorting }: { ip: string, timeScale: number, aggregationPeriod: number, defaultSorting: SortColumn }) {
   const { unit } = useUnit();
   const [searchParams] = useSearchParams(); 
   const navigate = useNavigate();
@@ -18,27 +27,22 @@ function FullDestinationsTable({ ip, timeScale, aggregationPeriod, defaultSortin
   const [sortColumn, setSortColumn] = useState<SortColumn>(defaultSorting);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
-  const columns: { id: SortColumn, name: string, allowSorting: boolean, sortId?: string }[] = [
-    { id: 'location', name: 'Location', allowSorting: true },
-    { id: 'ip', name: 'IP', allowSorting: true },
-    { id: 'received', sortId: unit === 'bytes' ? 'received_bytes_per_sec' : 'received_per_sec', name: 'Received', allowSorting: true },
-    { id: 'last_seen', name: 'Last Seen', allowSorting: true },
-  ];
-
   const destinationsTable = useHostTopDestinations({
     host_ip: ip,
     period_sec: Math.max(aggregationPeriod, 5),
     sort_by: sortColumn,
     sort_order: sortDir,
-    limit: limit,
+    limit,
     offset: limit * (currentPage - 1)
   });
 
-  const getUnitRxValue = (host: HostTopDestinationsUpdate['destinations'][number]): number => (unit === 'bytes' ? host.received_bytes_per_sec : host.received_per_sec) ?? 0;
+  const getUnitValue = useCallback((dest: Destination): number => 
+    (unit === 'bytes' ? dest.received_bytes_per_sec : dest.received_per_sec) ?? 0, 
+  [unit]);
 
-  const maxReceivedValue = destinationsTable && destinationsTable.destinations.length > 0
-    ? Math.max(...destinationsTable.destinations.map(data => getUnitRxValue(data)))
-    : 0;
+  const maxReceivedValue = useMemo(() => 
+    destinationsTable?.destinations.length ? Math.max(...destinationsTable.destinations.map(getUnitValue)) : 0, 
+  [destinationsTable, getUnitValue]);
 
   const tableData = useTtlArrayCache(
     destinationsTable?.destinations ?? null,
@@ -49,66 +53,38 @@ function FullDestinationsTable({ ip, timeScale, aggregationPeriod, defaultSortin
     (dest) => ({ ...dest, received_bytes_per_sec: 0, received_per_sec: 0 })
   );
 
-  const sortedHosts = tableData.sort((a, b) => {
-    const sortKey = columns.find(c => c.id == sortColumn)?.sortId ?? sortColumn;
+  const displayData = useMemo(() => {
+    const sortKey = resolveSortKey(sortColumn, unit);
+    const sorted = sortData(tableData, sortKey, sortDir, ['last_seen']);
+    const start = (currentPage - 1) * limit;
+    return sorted.slice(start, start + limit);
+  }, [tableData, sortColumn, sortDir, limit, currentPage, unit]);
 
-    const valA = a[sortKey as keyof typeof a];
-    const valB = b[sortKey as keyof typeof b];
+  const data = useMemo(() => displayData.map(d => [
+    d.location,
+    d.ip,
+    Progress(getUnitValue(d), maxReceivedValue, unit),
+    new Date(d.last_seen).toLocaleTimeString()
+  ]), [displayData, getUnitValue, maxReceivedValue, unit]);
 
-    if (valA == null) return 1;
-    if (valB == null) return -1;
-
-    if (sortColumn === 'last_seen') {
-      const dateA = new Date(valA as string).getTime();
-      const dateB = new Date(valB as string).getTime();
-      return sortDir === 'asc' ? dateA - dateB : dateB - dateA;
-    }
-
-    if (typeof valA === 'number' && typeof valB === 'number') {
-      return sortDir === 'asc' ? valA - valB : valB - valA;
-    }
-
-    if (typeof valA === 'string' && typeof valB === 'string') {
-      return sortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-    }
-
-    return 0;
-  }).slice(0, limit);
-
-  const data = sortedHosts.map(d => 
-    [
-      d.location,
-      d.ip,
-      Progress(getUnitRxValue(d), maxReceivedValue, unit),
-      new Date(d.last_seen).toLocaleTimeString()
-    ]
-  );
-
-  const maxPages = Math.max(destinationsTable?.total_count ?? 0, tableData.length);
+  const amountOfPages = Math.ceil(tableData.length / limit);
 
   return (
     <FullTable
-      columns={columns}
-      
+      columns={COLUMNS}
       data={data}
       sortColumnId={sortColumn}
       sortDirection={sortDir}
       onSortChange={(col, dir) => { setSortColumn(col as SortColumn); setSortDir(dir); setCurrentPage(1); }}
-
-      // Pagination
       currentPage={currentPage}
-      amountOfPages={Math.ceil(maxPages / limit)}
+      amountOfPages={amountOfPages}
       limit={limit}
       onPageChange={setCurrentPage}
       onLimitChange={(newLimit) => { setLimit(newLimit); setCurrentPage(1); }}
-
-      // Interactions
       onRowClick={(_, rowData) => {
-        const clickedIp = rowData.at(columns.findIndex(el => el.id === 'ip')) as string;
-        
+        const clickedIp = rowData.at(COLUMNS.findIndex(el => el.id === 'ip')) as string;
         const newSearchParams = new URLSearchParams(searchParams);
         newSearchParams.set('ip', clickedIp);
-        
         navigate(`/hosts?${newSearchParams.toString()}`);
       }}
     />

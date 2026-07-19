@@ -7,7 +7,6 @@ import { useEffect, useState } from 'react';
 export interface ColumnData {
   name: string;
   id: string;
-  allowSorting: boolean;
 }
 
 export interface TableData {
@@ -53,20 +52,18 @@ function TopTable({
           <div 
             key={i} 
             className={`${styles.header_column} ${sortingColumn === column.id ? styles.sorting : ''}`}
-            onClick={() => column.allowSorting && handleSortClick(column.id)}
+            onClick={() => handleSortClick(column.id)}
           >
             <span className={styles.column_name}>{column.name}</span>
-            {column.allowSorting && (
-              <img 
-                src={sortIcon} 
-                alt="Sort" 
-                className={styles.sort_icon} 
-                style={{
-                  transform: sortingColumn === column.id && sortDirection === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.2s ease'
-                }}
-              />
-            )}
+            <img 
+              src={sortIcon} 
+              alt="Sort" 
+              className={styles.sort_icon} 
+              style={{
+                transform: sortingColumn === column.id && sortDirection === 'desc' ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease'
+              }}
+            />
           </div>
         ))}
       </div>

@@ -1,14 +1,15 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 
 /**
- * Универсальный хук для стабилизации массива данных с помощью TTL-кэша.
+ * Universal hook for stabilizing array data using a TTL (Time-To-Live) cache.
  * 
- * @param incomingItems Новые данные, пришедшие с сервера (или null/undefined, если потока нет)
- * @param ttlSeconds Время жизни элемента в секундах без обновлений
- * @param getKey Функция, возвращающая уникальный ключ элемента (например, IP или порт)
- * @param getTimestamp Функция, возвращающая время последнего обновления элемента
- * @param mergeItem Функция слияния старого и нового элемента. По умолчанию делает shallow merge.
- * @returns Стабилизированный массив элементов
+ * @param incomingItems New data received from the server (or null/undefined if the stream is disconnected)
+ * @param ttlSeconds Time-to-live for an item in seconds without updates
+ * @param getKey Function returning a unique key for the item (e.g., IP or port)
+ * @param getTimestamp Function returning the timestamp of the item's last update
+ * @param mergeItem Function to merge old and new items. Defaults to a shallow merge.
+ * @param resetItem Optional function to reset an item's state when it's missing from the new update (e.g., zeroing out metrics)
+ * @returns Stabilized array of items
  */
 export function useTtlArrayCache<T>(
   incomingItems: readonly T[] | null | undefined,
@@ -25,6 +26,7 @@ export function useTtlArrayCache<T>(
   const mergeItemRef = useRef(mergeItem);
   const resetItemRef = useRef(resetItem);
 
+  // Update refs after every render to keep callbacks fresh without triggering effect re-runs
   useEffect(() => {
     getKeyRef.current = getKey;
     getTimestampRef.current = getTimestamp;
@@ -34,6 +36,9 @@ export function useTtlArrayCache<T>(
 
   useEffect(() => {
     if (!incomingItems) {
+      // This is a valid state reset pattern. We only clear the cache when the incoming 
+      // data stream is explicitly disconnected (null). The condition guarantees no infinite loop
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCache(new Map());
       return;
     }
@@ -64,6 +69,7 @@ export function useTtlArrayCache<T>(
     });
   }, [incomingItems]);
 
+  // Periodic cleanup of expired items based on TTL
   useEffect(() => {
     const intervalId = setInterval(() => {
       setCache((prevCache) => {
@@ -81,7 +87,7 @@ export function useTtlArrayCache<T>(
         }
 
         return newCache;
-      });
+        });
     }, 1000);
 
     return () => clearInterval(intervalId);

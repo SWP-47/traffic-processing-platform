@@ -83,8 +83,8 @@ def get_json_payload(pkt, direction):
             src_port = pkt[IP].payload.sport
             dst_port = pkt[IP].payload.dport
         except AttributeError:
-            src_port = None
-            dst_port = None
+            src_port = 0
+            dst_port = 0
 
         try:
             proto = pkt[IP].payload.name
@@ -96,8 +96,8 @@ def get_json_payload(pkt, direction):
     else:
         src_ip = None
         dst_ip = None
-        src_port = None
-        dst_port = None
+        src_port = 0
+        dst_port = 0
         proto = None
 
     json_payload = {

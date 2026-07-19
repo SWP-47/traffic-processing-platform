@@ -84,6 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed sorting logic in `TopDestinationsTable` and `TopPortsTable` to properly use `sortId` field for unit-aware sorting. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
 - Fixed import paths after component reorganization. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
 - Fixed WebSocket subscription reconnection logic in `SubscriptionManager` to verify `ActivityStatus.Active` before reconnecting, preventing unnecessary reconnection attempts during inactive channel states. ([#246](https://github.com/SWP-47/traffic-processing-platform/issues/246))
+- Style of Verilog code of FPGA part and minor logic errors were fixed ([#308](https://github.com/SWP-47/traffic-processing-platform/issues/308))
 
 ### Security
 

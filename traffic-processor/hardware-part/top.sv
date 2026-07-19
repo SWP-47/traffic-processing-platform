@@ -176,6 +176,7 @@ receiver receiver_inst_out_e1 (
 logic isBlocked_out;
 
 traffic_monitor traffic_monitor_out_e1 (
+    .rst_n       (  rst_n          ),
     .rxc_read    (  out_rxc_read   ),
     .rxdv_read   (  e1_rxdv        ),
     .rxd_read    (  e1_rxd         ), 
@@ -190,6 +191,7 @@ traffic_monitor traffic_monitor_out_e1 (
 logic isBlocked_in;
 
 traffic_monitor traffic_monitor_in_e1 (
+    .rst_n       (  rst_n         ),
     .rxc_read    (  in_rxc_read   ),
     .rxdv_read   (  e4_rxdv       ),
     .rxd_read    (  e4_rxd        ), 

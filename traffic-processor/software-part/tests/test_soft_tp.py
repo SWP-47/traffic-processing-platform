@@ -37,8 +37,8 @@ class TestGetJsonPayload:
             "direction": 1,
             "src_ip": "192.168.100.1",
             "dst_ip": "192.168.100.2",
-            "src_port": None,
-            "dst_port": None,
+            "src_port": 0,
+            "dst_port": 0,
             "protocol": "ICMP",
             "size": 54,
         }
@@ -54,8 +54,8 @@ class TestGetJsonPayload:
             "direction": 1,
             "src_ip": None,
             "dst_ip": None,
-            "src_port": None,
-            "dst_port": None,
+            "src_port": 0,
+            "dst_port": 0,
             "protocol": None,
             "size": 54,
         }
@@ -92,8 +92,8 @@ class TestGetJsonPayload:
             "direction": 1,
             "src_ip": "192.168.100.1",
             "dst_ip": "192.168.100.2",
-            "src_port": None,
-            "dst_port": None,
+            "src_port": 0,
+            "dst_port": 0,
             "protocol": "ICMP",
             "size": 164,
         }
@@ -109,8 +109,8 @@ class TestGetJsonPayload:
             "direction": 1,
             "src_ip": None,
             "dst_ip": None,
-            "src_port": None,
-            "dst_port": None,
+            "src_port": 0,
+            "dst_port": 0,
             "protocol": None,
             "size": 26,
         }

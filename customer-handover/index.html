@@ -145,7 +145,7 @@
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#7-known-limitations-unfinished-areas-and-important-risks" class="nav-link">7. Known Limitations, Unfinished Areas, and Important Risks</a>
+            <li class="nav-item" data-bs-level="2"><a href="#7-known-limitations-and-important-risks" class="nav-link">7. Known Limitations and Important Risks</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -170,25 +170,24 @@
 
 <h1 id="customer-handover-document">Customer Handover Document<a class="headerlink" href="#customer-handover-document" title="Permanent link">&para;</a></h1>
 <h2 id="1-current-product-status-and-handover-scope">1. Current Product Status and Handover Scope<a class="headerlink" href="#1-current-product-status-and-handover-scope" title="Permanent link">&para;</a></h2>
-<p><strong>Product Status:</strong> 
-The Traffic Processing Platform is fully functional and has been successfully validated in a live testing environment. The core telemetry pipeline (Traffic Processor → Communication Node → Control and Status Server → Management User Interface) is fully operational. The system currently supports transparent inline packet forwarding, real-time bidirectional packet counting, historical data retention via TimescaleDB, and real-time host table visualization.</p>
-<p><strong>Handover Scope:</strong>
-This handover includes the complete monorepo source code, Dockerized deployment configurations for all software components (CnSS, MUI, Infrastructure), and comprehensive instructions for deploying the Traffic Processor (TP) and Communication Node (CN) on your hardware. 
-* <strong>Note on Physical Hardware:</strong> The physical FPGA development board is currently retained by the development team to finalize remaining software tasks. The full hardware programming guide and bitstream generation instructions are included in this document so you can independently deploy and program the FPGA on your own monitoring device upon final handover.</p>
+<p><strong>Product Status:</strong><br />
+The Traffic Processing Platform is fully functional, stable, and has been successfully validated in a live testing environment. The core telemetry pipeline (Traffic Processor → Communication Node → Control and Status Server → Management User Interface) is fully operational. The system supports transparent inline packet forwarding, real-time bidirectional packet and byte-volume counting, historical data retention via TimescaleDB, dynamic IP-based traffic blocking, and real-time host table visualization. Recent stress testing has verified system stability at sustained throughput up to 588 Mbps.</p>
+<p><strong>Handover Scope:</strong><br />
+This handover includes the complete monorepo source code, automated Dockerized deployment configurations for all software components, and comprehensive instructions for deploying and programming the Traffic Processor (TP) and Communication Node (CN) on your hardware. The product is now ready for independent customer use.</p>
 <h2 id="2-how-the-customer-accesses-and-uses-the-product">2. How the Customer Accesses and Uses the Product<a class="headerlink" href="#2-how-the-customer-accesses-and-uses-the-product" title="Permanent link">&para;</a></h2>
-<p><strong>Web Interface (MUI):</strong> 
-The Management User Interface is accessed via any modern web browser.
-* <strong>URL:</strong> <code>https://&lt;your-domain-or-ip&gt;</code> (routed through the Edge Nginx reverse proxy, which handles TLS termination).
-* <strong>Authentication:</strong> Log in using the provisioned administrative credentials.
-* <strong>Usage:</strong> 
-  1. Select a monitored channel from the dropdown menu in the header.
-  2. View real-time RX/TX packet rates via the column chart or numerical display.
-  3. Analyze historical trends using the interactive line chart (supports 1h, 24h, 7d, and 30d views).
-  4. Inspect network activity via the Top LAN and Top WAN host tables, which can be expanded to a full paginated view.</p>
-<p><strong>Current Access Method:</strong> 
-Currently, you are accessing the deployed Web UI via the university network to test the latest sprint increment. Because the development team retains the physical FPGA hardware for ongoing work, the live channel monitoring is simulated via our test stand. After handover, you will access the UI hosted on your own infrastructure.</p>
+<p><strong>Web Interface (MUI):</strong><br />
+The Management User Interface is accessed via any modern web browser.</p>
+<ul>
+<li><strong>URL:</strong> <code>https://&lt;your-domain-or-ip&gt;</code> (routed through the Edge Nginx reverse proxy, which handles TLS termination).</li>
+<li><strong>Authentication:</strong> Log in using the provisioned administrative credentials. <em>Note: The system now features automatic session persistence; refreshing the page will maintain your authenticated session without requiring re-login.</em></li>
+<li><strong>Usage:</strong></li>
+<li>Select a monitored channel from the dropdown menu in the header.</li>
+<li>View real-time RX/TX rates via the column chart or numerical display. Use the new toggle to switch between <strong>packets per second</strong> and <strong>bytes per second</strong> (bps, Kbps, Mbps) for more accurate asymmetric traffic analysis.</li>
+<li>Analyze historical trends using the interactive line chart.</li>
+<li>Inspect network activity via the Top LAN and Top WAN host tables. Click on any specific host to view detailed statistics, including Top Destinations and Top Ports.</li>
+</ul>
 <h2 id="3-installation-and-deployment-instructions">3. Installation and Deployment Instructions<a class="headerlink" href="#3-installation-and-deployment-instructions" title="Permanent link">&para;</a></h2>
-<p>The platform is designed to be deployed using Docker and Docker Compose. </p>
+<p>The platform is designed for streamlined deployment using Docker, Docker Compose, and automated helper scripts.</p>
 <h3 id="31-prerequisites">3.1. Prerequisites<a class="headerlink" href="#31-prerequisites" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Docker and Docker Compose installed on the host machine(s).</li>
@@ -196,26 +195,23 @@ Currently, you are accessing the deployed Web UI via the university network to t
 <li>AMD Vivado Design Suite installed on the machine that will program the FPGA.</li>
 </ul>
 <h3 id="32-backend-deployment-cnss">3.2. Backend Deployment (CnSS)<a class="headerlink" href="#32-backend-deployment-cnss" title="Permanent link">&para;</a></h3>
-<p><strong>Getting Started (Setup &amp; Infrastructure):</strong></p>
+<p>We have introduced an <strong>interactive deployment script</strong> to eliminate manual database migrations and environment setup.</p>
 <ol>
-<li><strong>Installation</strong>: Install all dependencies (including dev extras for linting and testing) using <code>uv</code>:
-   <code>bash
-   make install</code></li>
-<li><strong>Environment Setup</strong>: Copy the example environment file and adjust the variables if necessary. 
-   <em>Note: For production, ensure you change the <code>JWT_SECRET_KEY</code> to a secure, random string.</em>
-   <code>bash
-   cp .env.example .env</code></li>
-<li><strong>Running Infrastructure</strong>: Start the required infrastructure services (TimescaleDB, Redis, pgAdmin) in detached mode using Docker Compose:
-   <code>bash
-   make dev</code></li>
-<li><strong>Database Migrations</strong>: Apply the initial database schema, TimescaleDB hypertables, and continuous aggregates:
-   <code>bash
-   make migrate</code></li>
+<li>Navigate to the <code>cnss/</code> directory.</li>
+<li>Run the interactive deployment command:</li>
 </ol>
-<p><strong>Production Deployment:</strong></p>
-<p>For production deployment, all services run in Docker containers. Run the following command to build and start the complete stack (including all 4 microservices, TimescaleDB, Redis, and Nginx):</p>
-<pre><code class="language-bash">make prod
-</code></pre>
+<p><code>bash
+   make deploy</code></p>
+<ol>
+<li>Follow the on-screen prompts. The script will automatically:</li>
+<li>Warn and safely stop any existing containers, removing old networks and volumes.</li>
+<li>Start the required infrastructure services (TimescaleDB, Redis, pgAdmin).</li>
+<li>Copy the <code>.env.example</code> to <code>.env</code> and generate a secure, random <code>JWT_SECRET_KEY</code>.</li>
+<li>Automatically wait for the database to be ready and execute all necessary schema migrations and TimescaleDB hypertable setups.</li>
+<li>Prompt you to optionally seed the database with default test users (<code>admin</code> and <code>viewer</code>).</li>
+<li>Select your deployment type (<code>development</code> or <code>production</code>) when prompted to start the complete stack.</li>
+</ol>
+<p><em>(Optional) CLI User Management:</em> You can add or manage users directly via the CLI tool provided in the CnSS directory, which securely hashes passwords and updates the database.</p>
 <h3 id="33-frontend-deployment-mui">3.3. Frontend Deployment (MUI)<a class="headerlink" href="#33-frontend-deployment-mui" title="Permanent link">&para;</a></h3>
 <ol>
 <li>Navigate to the frontend directory: <code>cd mui/</code></li>
@@ -225,31 +221,33 @@ Currently, you are accessing the deployed Web UI via the university network to t
 <ol>
 <li>Navigate to the infrastructure directory: <code>cd infrastructure/</code></li>
 <li>Generate self-signed TLS certificates: <code>make certs</code></li>
-<li>Start the reverse proxy: <code>make up</code></li>
-<li><em>This connects to the <code>cnss-network</code> and <code>mui-network</code> Docker networks created in the previous steps.</em></li>
+<li>Start the reverse proxy: <code>make up</code><br />
+<em>(This connects to the <code>cnss-network</code> and <code>mui-network</code> Docker networks created in the previous steps.)</em></li>
 </ol>
 <h3 id="35-traffic-processor-tp-communication-node-cn-deployment">3.5. Traffic Processor (TP) &amp; Communication Node (CN) Deployment<a class="headerlink" href="#35-traffic-processor-tp-communication-node-cn-deployment" title="Permanent link">&para;</a></h3>
-<p><strong>Software Part:</strong>
-<em>Note: The whole TP and CN code is containerized using Docker. The <code>docker-compose.yml</code> file builds both TP and CN systems simultaneously.</em>
-1. Navigate to the joint deployment directory: <code>cd cn-tp-deployment/</code>
-2. Create the environment files for both components using the command <code>cp .env.example .env</code> (for bash) or <code>copy .env.example .env</code> (for PowerShell). Edit the <code>.env</code> files if necessary to configure network interfaces and IP addresses.
-3. Build and run the containers using the command: <code>docker-compose up --build</code></p>
-<p><strong>Hardware Part (FPGA Programming):</strong>
-<em>Note: Ensure you have AMD Vivado Design Suite installed on your system. The folder <code>traffic-processor/hardware-part</code> contains SystemVerilog source files (<code>*.sv</code>) and target constraint files (<code>*.xdc</code>) used to program the ARTIX-7 FPGA Development Board AX7201.</em>
-1. Run the Vivado IDE and create a new project targeting the ARTIX-7 FPGA Development Board AX7201.
-2. Add all source files (<code>*.sv</code>) from the <code>./traffic-processor/hardware-part/</code> folder to your project.
-3. Add the constraint file (<code>top.xdc</code>) from the <code>./traffic-processor/hardware-part/</code> folder to your project.
-4. Run the Synthesis and Implementation processes, then generate the bitstream (<code>top.bit</code>).
-5. Connect the FPGA board to your computer using a JTAG programmer.
-6. Open the "Hardware Manager" in Vivado and program the connected device.
-7. Connect the cables: LAN to Ethernet1, OUT sniffing interface of the device to Ethernet2, IN sniffing interface to Ethernet3, and WAN to Ethernet4. (These are the physical Ethernet ports on the FPGA board, with names printed directly on the PCB).</p>
+<p><strong>Software Part:</strong><br />
+The TP and CN code is fully containerized.</p>
+<ol>
+<li>Navigate to the joint deployment directory: <code>cd cn-tp-deployment/</code></li>
+<li>Create the environment files: <code>cp .env.example .env</code> (bash) or <code>copy .env.example .env</code> (PowerShell). Edit the <code>.env</code> files to configure the correct physical network interfaces (e.g., <code>eth1</code>, <code>eth2</code>) for your specific hardware.</li>
+<li>Build and run the containers: <code>docker-compose up --build</code></li>
+</ol>
+<p><strong>Hardware Part (FPGA Programming &amp; Dynamic Blocking):</strong>  </p>
+<ol>
+<li>Download and extract the <code>viva.zip</code> file containing the compiled Vivado project for the ARTIX-7 FPGA Development Board AX7201.</li>
+<li>Run Vivado IDE and open the <code>ax7201-ethernet-loopback.xpr</code> project.</li>
+<li>Connect the FPGA board to your computer using a JTAG programmer.</li>
+<li>Open "Hardware Manager" and program the connected device.</li>
+<li><strong>Cable Mapping:</strong> Connect LAN to Ethernet1, OUT sniffing interface to Ethernet2, IN sniffing interface to Ethernet3, and WAN to Ethernet4 (names are printed on the board).</li>
+<li><strong>Dynamic IP Blocking:</strong> A script is now available on the FPGA environment to dynamically set the target IP for traffic blocking. By default, it is set to <code>0.0.0.0</code> (no blocking). You can input any specific IP address (e.g., a laptop or proxy IP) to instantly block its traffic, which will be reflected as a drop to zero packets in the MUI.</li>
+</ol>
 <h2 id="4-required-configuration-and-secrets-handling">4. Required Configuration and Secrets Handling<a class="headerlink" href="#4-required-configuration-and-secrets-handling" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Environment Variables:</strong> All components use <code>.env</code> files (which are strictly ignored by Git). Templates are provided as <code>.env.example</code>.</li>
-<li><strong>Secrets Management:</strong> </li>
-<li><code>JWT_SECRET_KEY</code> (CnSS): Must be changed from the default development value before production deployment to prevent token forgery.</li>
-<li>Database credentials (<code>POSTGRES_USER</code>, <code>POSTGRES_PASSWORD</code>): Configured in <code>cnss/.env</code>.</li>
-<li><strong>Network Configuration:</strong> The TP and CN require precise mapping to the physical Ethernet interfaces of the host machine (e.g., <code>eth1</code>, <code>eth2</code>). These must be verified using <code>ip a</code> or <code>ifconfig</code> on the target hardware before launching the containers to ensure packets are captured correctly.</li>
+<li><strong>Environment Variables:</strong> All components use <code>.env</code> files (strictly ignored by Git). Templates are provided as <code>.env.example</code>.</li>
+<li><strong>Secrets Management:</strong></li>
+<li>The <code>make deploy</code> script now auto-generates a secure <code>JWT_SECRET_KEY</code>. Do not use the default development value in production.</li>
+<li>Database credentials (<code>POSTGRES_USER</code>, <code>POSTGRES_PASSWORD</code>) are managed securely within <code>cnss/.env</code>.</li>
+<li><strong>Network Configuration:</strong> The TP and CN require precise mapping to the physical Ethernet interfaces of the host machine. Verify interface names using <code>ip a</code> or <code>ifconfig</code> on the target hardware before launching the containers to ensure packets are captured correctly.</li>
 </ul>
 <h2 id="5-operational-notes-for-normal-use">5. Operational Notes for Normal Use<a class="headerlink" href="#5-operational-notes-for-normal-use" title="Permanent link">&para;</a></h2>
 <ul>
@@ -261,32 +259,34 @@ Currently, you are accessing the deployed Web UI via the university network to t
 <ul>
 <li><strong>502 Bad Gateway on <code>/</code> or <code>/api/</code></strong>: Ensure the MUI and CnSS containers are running and healthy (<code>docker ps</code>). The Edge Nginx proxy requires the <code>mui-network</code> and <code>cnss-network</code> Docker networks to be active.</li>
 <li><strong>WebSocket Disconnects / Auth Errors (4001)</strong>: Check if the JWT token has expired (default 24h) or if the <code>jwt:revoked</code> set in Redis contains the token's <code>jti</code> (e.g., after a logout).</li>
-<li><strong>No Telemetry Data:</strong> Verify that the TP and CN are correctly capturing packets on the specified network interfaces. Check CnSS Ingestion Worker logs (<code>docker logs cnss-ingestion</code>) for UDP reception errors.</li>
+<li><strong>No Telemetry Data</strong>: Verify that the TP and CN are correctly capturing packets on the specified network interfaces. Check CnSS Ingestion Worker logs (<code>docker logs cnss-ingestion</code>) for UDP reception errors.</li>
+<li><strong>Missing ICMP Data in Port Stats</strong>: ICMP (ping) packets do not contain source or destination port information. Due to strict typing in the current telemetry pipeline, these packets are intentionally excluded from port-specific statistics, though they are still counted in overall packet/byte volumes.</li>
 </ul>
-<h2 id="7-known-limitations-unfinished-areas-and-important-risks">7. Known Limitations, Unfinished Areas, and Important Risks<a class="headerlink" href="#7-known-limitations-unfinished-areas-and-important-risks" title="Permanent link">&para;</a></h2>
+<h2 id="7-known-limitations-and-important-risks">7. Known Limitations and Important Risks<a class="headerlink" href="#7-known-limitations-and-important-risks" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>FPGA Hardware Retention:</strong> The physical FPGA board is currently retained by the development team. You will need to program and set up the hardware on your own device using the Vivado instructions provided in Section 3.5.</li>
-<li><strong>Hardware Button Debounce:</strong> The physical button (Key1) on the FPGA board used for hardware traffic blocking currently suffers from contact bounce (debounce issue), which may trigger multiple unintended state toggles.</li>
-<li><strong>System Crash on Interface Disconnect:</strong> If the physical Ethernet cable connected to the FPGA/TP is unplugged and reconnected, the system may experience state corruption or stop transmitting data, requiring a manual container restart.</li>
-<li><strong>Docker/Ubuntu Compatibility:</strong> The Dockerized TP and CN containers have known compatibility issues with the specific Ubuntu version currently running on the physical monitoring stand. (Currently bypassed by running scripts directly on the host, but Docker is the intended deployment method for your new hardware).</li>
-<li><strong>UI Filtering:</strong> The host table filtering in the MUI currently relies on strict text-based syntax (e.g., <code>location: LAN</code>), which is not user-friendly. Structured UI controls (dropdowns/sidebars) are planned for a future update.</li>
+<li><strong>Hardware Button Debounce</strong>: The physical button (Key1) on the FPGA board used for hardware traffic blocking may occasionally experience contact bounce, which can trigger multiple unintended state toggles. Using the dynamic IP blocking script is the recommended method for precise control.</li>
+<li><strong>UI Filtering</strong>: The host table filtering in the MUI currently relies on text-based syntax (e.g., <code>location: LAN</code>). While functional, structured UI controls (dropdowns/sidebars) are planned for a future post-course update to improve user experience.</li>
+<li><strong>Extreme Load Thresholds</strong>: The system has been stress-tested and verified stable up to <strong>588 Mbps</strong>. Sustained traffic significantly beyond this threshold may require monitoring of the CN/CnSS queue limits, though normal enterprise network loads are well within safe operating margins.</li>
 </ul>
 <h2 id="8-current-handover-status">8. Current Handover Status<a class="headerlink" href="#8-current-handover-status" title="Permanent link">&para;</a></h2>
-<p><strong>Handover Level:</strong> <code>Deployed or operated on customer side</code></p>
-<p><em>Context:</em> The customer has tested the deployed setup and accessed the Web UI to validate the previous sprint increment. However, because the development team retains the physical FPGA hardware to finalize software tasks, the customer has not yet completely set up the hardware to monitor their own live channel activity. Upon final handover, the customer will independently deploy the FPGA on their own device.</p>
+<p><strong>Handover Level:</strong> <code>Ready for independent use</code><br />
+<strong>Customer Confirmation Status:</strong> <code>Accepted</code></p>
+<p><em>Context:</em> The customer has reviewed the final <code>MVP v3</code> increment, tested the deployed setup, and validated the updated customer-facing documentation. The customer has explicitly confirmed that the product is ready for independent use and accepts the current handover scope. All core software components, deployment automation, and hardware programming guides have been transferred.</p>
 <h2 id="9-remaining-actions">9. Remaining Actions<a class="headerlink" href="#9-remaining-actions" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Customer Action:</strong> Program the ARTIX-7 FPGA board using the provided Vivado instructions and deploy the TP/CN software on the target monitoring hardware.</li>
-<li><strong>Team Action:</strong> Provide final support for any Vivado compilation or network interface mapping issues during your independent hardware setup.</li>
-<li><strong>Blockers:</strong> None. The software is fully ready; the remaining action is purely the physical hardware deployment on the customer's side.</li>
+<li><strong>Customer Action:</strong> Independently deploy the TP/CN software and program the ARTIX-7 FPGA board on your target monitoring hardware using the provided instructions.</li>
+<li><strong>Team Action:</strong> The development team remains available to provide final, time-bound support for any Vivado compilation or network interface mapping issues encountered during your independent hardware setup.</li>
+<li><strong>Blockers:</strong> None. The software and documentation are fully complete and handed over.</li>
 </ul>
 <h2 id="10-links-to-related-documentation">10. Links to Related Documentation<a class="headerlink" href="#10-links-to-related-documentation" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../docs/system-documentation.md">System Architecture &amp; Data Flow Specification</a></li>
-<li><a href="../cnss/docs/api.md">API Documentation</a></li>
+<li><a href="../api/README.md">API Documentation</a></li>
 <li><a href="../docs/roadmap.md">Project Roadmap</a></li>
 <li><a href="../docs/user-acceptance-tests.md">User Acceptance Tests &amp; Known Issues</a></li>
 <li><a href="../README.md">Local Setup &amp; Deployment Guide</a></li>
+<li><a href="../CONTRIBUTING.md">Contributor Guide</a></li>
+<li><a href="../AGENTS.md">Agent Guide</a></li>
 </ul></div>
             </div>
         </div>

@@ -197,7 +197,7 @@
 </ul>
 <p><strong>Note:</strong> The current CN implementation (<code>cn_demo_1.py</code>) does not include the <code>protocol</code> field in packet metadata — the CnSS Ingestion Worker defaults this to <code>"UNKNOWN"</code> for backward compatibility.</p>
 <h3 id="23-control-and-status-server-cnss">2.3. Control and Status Server (CnSS)<a class="headerlink" href="#23-control-and-status-server-cnss" title="Permanent link">&para;</a></h3>
-<p>The CnSS is deployed as a set of Docker containers (version <code>3.0.0</code>, Python ≥ 3.11). If any container crashes, Docker's <code>restart: always</code> policy ensures immediate recovery without affecting the core network forwarding plane.</p>
+<p>The CnSS is deployed as a set of Docker containers. If any container crashes, Docker's <code>restart: always</code> policy ensures immediate recovery without affecting the core network forwarding plane.</p>
 <p>The CnSS is composed of four independently deployable microservices:</p>
 <table>
 <thead>

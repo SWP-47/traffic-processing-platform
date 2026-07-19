@@ -2,78 +2,78 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://swp-47.github.io/traffic-processing-platform/</loc>
-         <lastmod>2026-07-12</lastmod>
+         <lastmod>2026-07-19</lastmod>
     </url>
     <url>
          <loc>https://swp-47.github.io/traffic-processing-platform/customer-handover/</loc>
-         <lastmod>2026-07-12</lastmod>
+         <lastmod>2026-07-19</lastmod>
     </url>
     <url>
          <loc>https://swp-47.github.io/traffic-processing-platform/definition-of-done/</loc>
-         <lastmod>2026-07-12</lastmod>
+         <lastmod>2026-07-19</lastmod>
     </url>
     <url>
          <loc>https://swp-47.github.io/traffic-processing-platform/development-process/</loc>
-         <lastmod>2026-07-12</lastmod>
+         <lastmod>2026-07-19</lastmod>
     </url>
     <url>
          <loc>https://swp-47.github.io/traffic-processing-platform/process-requirements/</loc>
-         <lastmod>2026-07-12</lastmod>
+         <lastmod>2026-07-19</lastmod>
     </url>
     <url>
          <loc>https://swp-47.github.io/traffic-processing-platform/quality-requirement-tests/</loc>
-         <lastmod>2026-07-12</lastmod>
+         <lastmod>2026-07-19</lastmod>
     </url>
     <url>
          <loc>https://swp-47.github.io/traffic-processing-platform/quality-requirements/</loc>
-         <lastmod>2026-07-12</lastmod>
+         <lastmod>2026-07-19</lastmod>
     </url>
     <url>
          <loc>https://swp-47.github.io/traffic-processing-platform/roadmap/</loc>
-         <lastmod>2026-07-12</lastmod>
+         <lastmod>2026-07-19</lastmod>
     </url>
     <url>
          <loc>https://swp-47.github.io/traffic-processing-platform/system-documentation/</loc>
-         <lastmod>2026-07-12</lastmod>
+         <lastmod>2026-07-19</lastmod>
     </url>
     <url>
          <loc>https://swp-47.github.io/traffic-processing-platform/testing/</loc>
-         <lastmod>2026-07-12</lastmod>
+         <lastmod>2026-07-19</lastmod>
     </url>
     <url>
          <loc>https://swp-47.github.io/traffic-processing-platform/user-acceptance-tests/</loc>
-         <lastmod>2026-07-12</lastmod>
+         <lastmod>2026-07-19</lastmod>
     </url>
     <url>
          <loc>https://swp-47.github.io/traffic-processing-platform/user-stories/</loc>
-         <lastmod>2026-07-12</lastmod>
+         <lastmod>2026-07-19</lastmod>
     </url>
     <url>
          <loc>https://swp-47.github.io/traffic-processing-platform/architecture/</loc>
-         <lastmod>2026-07-12</lastmod>
+         <lastmod>2026-07-19</lastmod>
     </url>
     <url>
          <loc>https://swp-47.github.io/traffic-processing-platform/architecture/adr/adr-001-hardware-software-separation/</loc>
-         <lastmod>2026-07-12</lastmod>
+         <lastmod>2026-07-19</lastmod>
     </url>
     <url>
          <loc>https://swp-47.github.io/traffic-processing-platform/architecture/adr/adr-002-ephemeral-redis-buffering/</loc>
-         <lastmod>2026-07-12</lastmod>
+         <lastmod>2026-07-19</lastmod>
     </url>
     <url>
          <loc>https://swp-47.github.io/traffic-processing-platform/architecture/adr/adr-003-microservice-decomposition/</loc>
-         <lastmod>2026-07-12</lastmod>
+         <lastmod>2026-07-19</lastmod>
     </url>
     <url>
          <loc>https://swp-47.github.io/traffic-processing-platform/architecture/deployment-view/</loc>
-         <lastmod>2026-07-12</lastmod>
+         <lastmod>2026-07-19</lastmod>
     </url>
     <url>
          <loc>https://swp-47.github.io/traffic-processing-platform/architecture/dynamic-view/</loc>
-         <lastmod>2026-07-12</lastmod>
+         <lastmod>2026-07-19</lastmod>
     </url>
     <url>
          <loc>https://swp-47.github.io/traffic-processing-platform/architecture/static-view/</loc>
-         <lastmod>2026-07-12</lastmod>
+         <lastmod>2026-07-19</lastmod>
     </url>
 </urlset>

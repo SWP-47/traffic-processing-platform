@@ -189,9 +189,6 @@ As a network administrator, I want to quickly and accurately count the numeric v
 <li><strong>Execution Date:</strong> July 4, 2026</li>
 <li><strong>Result:</strong> Passed with minor feedback</li>
 <li><strong>Observations:</strong> The dashboard rendered correctly and the toggle between chart and numerical display worked as expected. However, the displayed values hovered around ~3 packets/second regardless of activity, leading the customer to question whether the value was a hardcoded constant. The team confirmed the values were real but acknowledged the low throughput was due to the university network segment and lack of active high-traffic scenarios during the test.</li>
-</ul>
-<h3 id="uat-001-customer-comments-resulting-pbis">UAT-001 Customer Comments &amp; Resulting PBIs<a class="headerlink" href="#uat-001-customer-comments-resulting-pbis" title="Permanent link">&para;</a></h3>
-<ul>
 <li><strong>Comments:</strong> "It's as if three packets per second is some hardcoded constant." — The customer questioned whether the data was real or stubbed. After clarification, the customer accepted the values but noted that higher-traffic test scenarios (Speedtest, online radio, streaming) should be prepared for future demos to properly validate the counters.</li>
 <li><strong>Resulting PBIs/Issues:</strong></li>
 <li>Prepare dedicated high-traffic test tabs (Speedtest, Wikipedia, online radio/TV) for future UAT sessions to generate meaningful packet rates.</li>
@@ -205,6 +202,14 @@ As a network administrator, I want to quickly and accurately count the numeric v
 <li><strong>Resulting PBIs/Issues:</strong></li>
 <li>Implement byte-volume counting (sum of packet sizes) in the backend TimescaleDB telemetry buckets and update the API endpoints.</li>
 <li>Add a UI toggle in the MUI to switch between "Packets per second" and "Bytes per second" views. (Prioritized over remaining UI map features).</li>
+</ul>
+<h3 id="uat-001-execution-results-week-7">UAT-001 Execution Results (Week 7)<a class="headerlink" href="#uat-001-execution-results-week-7" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Execution Date:</strong> July 18, 2026</li>
+<li><strong>Result:</strong> Passed</li>
+<li><strong>Observations:</strong> The team demonstrated the newly implemented toggle to switch between "packets per second" and "bytes per second" (bps, Kbps, Mbps). The customer verified that this successfully resolves the previous feedback regarding asymmetric TCP traffic (e.g., streaming), providing a much more accurate and useful metric for network load analysis.</li>
+<li><strong>Comments:</strong> The customer confirmed the feature works as expected and directly addresses the prior concern. The implementation was approved.</li>
+<li><strong>Resulting PBIs/Issues:</strong> None. The feature is complete and validated.</li>
 </ul>
 <hr />
 <h2 id="uat-002-a-retrospective-analysis-of-channel-activity">UAT-002: A retrospective analysis of channel activity<a class="headerlink" href="#uat-002-a-retrospective-analysis-of-channel-activity" title="Permanent link">&para;</a></h2>
@@ -245,13 +250,19 @@ As a network administrator, I want to find the moment of an anomaly or load surg
 <li><strong>Execution Date:</strong> July 4, 2026</li>
 <li><strong>Result:</strong> Failed</li>
 <li><strong>Observations:</strong> The historical chart rendered and was scalable, but the graph appeared as a flatline at ~3 packets/second and did not visibly react when traffic blocking was toggled. The bottom tables aggregate data over five-minute windows, and the top graphs have a per-second delay, but the smoothing/aggregation makes real-time changes nearly invisible. The customer noted the graph should visibly drop when blocking is activated.</li>
-</ul>
-<h3 id="uat-002-customer-comments-resulting-pbis">UAT-002 Customer Comments &amp; Resulting PBIs<a class="headerlink" href="#uat-002-customer-comments-resulting-pbis" title="Permanent link">&para;</a></h3>
-<ul>
 <li><strong>Comments:</strong> "It doesn't react very actively to changes, unfortunately." The customer requested adding a smaller time-scale division — a minimum window of 1 minute or 5 minutes — so the graph can be fully zoomed in for near real-time observation. "So the graph is fully zoomed in, and you can look at it almost in real-time and change things."</li>
 <li><strong>Resulting PBIs/Issues:</strong></li>
 <li>Add a 1-minute / 5-minute minimum time window toggle to the historical chart to improve real-time reactivity and visibility of traffic state changes.</li>
 <li>Investigate why the chart does not visually reflect traffic drops when hardware blocking is engaged (possible over-aggregation or smoothing issue).</li>
+</ul>
+<h3 id="uat-002-execution-results-week-7">UAT-002 Execution Results (Week 7)<a class="headerlink" href="#uat-002-execution-results-week-7" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Execution Date:</strong> July 18, 2026</li>
+<li><strong>Result:</strong> Passed with minor feedback</li>
+<li><strong>Observations:</strong> The historical chart and real-time tables were reviewed. The customer noted that IP addresses in the real-time table jump around due to the 1-second aggregation window. The team and customer collaboratively designed a solution: manage the table state on the frontend to maintain existing IPs, zero out their metrics if no new data arrives, and remove them after a 10-minute timeout. This keeps the left side (IPs/Locations) stable while the right side (Unique Destinations, Ports) updates in real-time.</li>
+<li><strong>Comments:</strong> "Excellent idea. On the frontend, this will be much simpler. We periodically request new data, update the state, and use a 10-minute timeout to clear outdated records."</li>
+<li><strong>Resulting PBIs/Issues:</strong></li>
+<li>Refactor the frontend host table state management to maintain IP stability over a longer window (e.g., 10 minutes) while allowing real-time updates for destination/port metrics.</li>
 </ul>
 <hr />
 <h2 id="uat-003-fast-identification-of-the-top-consumer-in-the-network">UAT-003: Fast identification of the top consumer in the network<a class="headerlink" href="#uat-003-fast-identification-of-the-top-consumer-in-the-network" title="Permanent link">&para;</a></h2>
@@ -297,9 +308,6 @@ As a network administrator, I want to quickly understand who is generating the m
 <li><strong>Execution Date:</strong> July 4, 2026</li>
 <li><strong>Result:</strong> Failed</li>
 <li><strong>Observations:</strong> The table initially rendered and displayed the LAN host IP dynamically. However, during the test the team disconnected the Ethernet cable from the board to verify that the host would be marked as inactive. After this, the system stopped transmitting and receiving data entirely and did not recover. The customer attributed this to a system component "getting tired from working too long" and suggested a restart, but noted this needs to be investigated.</li>
-</ul>
-<h3 id="uat-003-customer-comments-resulting-pbis">UAT-003 Customer Comments &amp; Resulting PBIs<a class="headerlink" href="#uat-003-customer-comments-resulting-pbis" title="Permanent link">&para;</a></h3>
-<ul>
 <li><strong>Comments:</strong> "I think one of the system components just got tired, it worked for a long time. Alright, let's just restart it, and it will most likely work." The customer was understanding but flagged this as a stability concern that must be addressed.</li>
 <li><strong>Resulting PBIs/Issues:</strong></li>
 <li><strong>[Critical]</strong> Investigate and fix CN/CnSS state corruption or crash when a network interface is physically disconnected and reconnected. The system must recover gracefully without requiring a manual restart.</li>
@@ -312,6 +320,14 @@ As a network administrator, I want to quickly understand who is generating the m
 <li><strong>Comments:</strong> "Great. So the local address and the address it sends data to." The customer approved the basic layout but noted it currently only shows packet counts, tying back to the need for byte-volume counting discussed in UAT-001.</li>
 <li><strong>Resulting PBIs/Issues:</strong></li>
 <li>Update the detailed host statistics page to support and display the new byte-volume counting metric once the backend feature is implemented.</li>
+</ul>
+<h3 id="uat-003-execution-results-week-7">UAT-003 Execution Results (Week 7)<a class="headerlink" href="#uat-003-execution-results-week-7" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Execution Date:</strong> July 18, 2026</li>
+<li><strong>Result:</strong> Passed</li>
+<li><strong>Observations:</strong> The detailed host statistics page was fully demonstrated. The customer verified that clicking on a specific host successfully opens a detailed view showing packet transfer statistics, a historical activity graph, Top Destinations, and Top Ports.</li>
+<li><strong>Comments:</strong> "Great. So the local address and the address it sends data to." The customer approved the detailed statistics layout and functionality.</li>
+<li><strong>Resulting PBIs/Issues:</strong> None. The feature is complete and validated.</li>
 </ul>
 <hr />
 <h2 id="uat-004-overview-of-the-list-of-active-network-hosts">UAT-004: Overview of the list of active network hosts<a class="headerlink" href="#uat-004-overview-of-the-list-of-active-network-hosts" title="Permanent link">&para;</a></h2>
@@ -362,9 +378,6 @@ As a network administrator, I want to see the full picture of network activity a
 <li><strong>Execution Date:</strong> July 4, 2026</li>
 <li><strong>Result:</strong> Passed with minor feedback</li>
 <li><strong>Observations:</strong> The hosts page rendered correctly with the full table. Basic text-based filtering (<code>location: LAN</code>) worked and correctly filtered to show only LAN hosts. Sorting by columns functioned as expected. The customer acknowledged the filtering works but emphasized that text-based filter fields are a poor UX choice and referenced prior feedback on this topic. The team acknowledged that sidebar-style filters could be added with minimal code changes.</li>
-</ul>
-<h3 id="uat-004-customer-comments-resulting-pbis">UAT-004 Customer Comments &amp; Resulting PBIs<a class="headerlink" href="#uat-004-customer-comments-resulting-pbis" title="Permanent link">&para;</a></h3>
-<ul>
 <li><strong>Comments:</strong> "I assume you already feel how hard it is to work with text fields for filtering?" / "This is exactly what I was talking about last time." The customer reiterated that strict text syntax (case-sensitive, space-sensitive) is not user-friendly and should be replaced or supplemented with structured filter controls.</li>
 <li><strong>Resulting PBIs/Issues:</strong></li>
 <li>Redesign the host table filtering UI to use structured controls (dropdowns, tags, or sidebar filters) instead of raw text-field syntax queries.</li>
@@ -418,9 +431,6 @@ As a network administrator, I want to physically stop unwanted traffic and make 
 <li><strong>Execution Date:</strong> July 4, 2026</li>
 <li><strong>Result:</strong> Passed with minor feedback</li>
 <li><strong>Observations:</strong> Pressing Key1 successfully blocked traffic — the LED1 turned off and the laptop lost internet access immediately. Pressing the button again restored connectivity. The customer tested with Wikipedia (fast loading when unblocked, no access when blocked) and attempted streaming to observe sustained blocking behavior. The customer observed via the board LEDs that requests arrive but are not forwarded back, and noted the router would see broken packets. The team acknowledged the current implementation is a basic version that drops traffic at the IP level and that contact bounce (debounce) on the physical button has not yet been fixed. Blocking is currently hardcoded to a single device IP.</li>
-</ul>
-<h3 id="uat-005-customer-comments-resulting-pbis">UAT-005 Customer Comments &amp; Resulting PBIs<a class="headerlink" href="#uat-005-customer-comments-resulting-pbis" title="Permanent link">&para;</a></h3>
-<ul>
 <li><strong>Comments:</strong> "So the router sees a bunch of broken packets." / "With video, it's a bit harder to see because video has a 10-15-30 second buffer." The customer understood the current implementation limitations and was satisfied that blocking works at a functional level. Requested that future demos prepare active streaming/radio tabs to better visualize the blocking effect in real time.</li>
 <li><strong>Resulting PBIs/Issues:</strong></li>
 <li>Fix hardware button debounce (contact bounce) on Key1 to prevent multiple unintended state toggles.</li>
@@ -434,6 +444,14 @@ As a network administrator, I want to physically stop unwanted traffic and make 
 <li><strong>Comments:</strong> "The fix is already written, but it hasn't been deployed to the stand yet, so the hardware blocking function won't be demonstrated today."</li>
 <li><strong>Resulting PBIs/Issues:</strong></li>
 <li>Deploy the fragmented packet fix to the physical FPGA stand and verify hardware blocking live in Week 7.</li>
+</ul>
+<h3 id="uat-005-execution-results-week-7">UAT-005 Execution Results (Week 7)<a class="headerlink" href="#uat-005-execution-results-week-7" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Execution Date:</strong> July 18, 2026</li>
+<li><strong>Result:</strong> Passed</li>
+<li><strong>Observations:</strong> The team demonstrated the new dynamic IP blocking feature on the FPGA. Instead of a hardcoded IP, a script is now used to dynamically set the target IP for blocking (e.g., the demo laptop's IP). When the IP was entered, the laptop immediately lost connection, and the MUI correctly showed the packet count dropping to zero. The customer also inquired about ICMP (ping) visibility, and the team clarified that protocols without ports are currently filtered out of port statistics due to strict typing, which is an accepted limitation for the current scope. Additionally, the system successfully handled a stress test of 588 Mbps without hanging or crashing.</li>
+<li><strong>Comments:</strong> "So <code>0.0.0.0</code> is not perceived as a mask, but blocks a specific address? ... Yes, this is a specific address. But now you can enter any IP that needs to be blocked." The customer was satisfied with the dynamic blocking demonstration and the system's stability under load.</li>
+<li><strong>Resulting PBIs/Issues:</strong> None. The feature is complete and validated.</li>
 </ul></div>
             </div>
         </div>

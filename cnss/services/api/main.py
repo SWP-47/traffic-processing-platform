@@ -76,7 +76,7 @@ app = FastAPI(
     title="CnSS REST API",
     description="Control and Status Server - HTTP gateway for authentication,"
     " channel discovery, and historical data retrieval",
-    version="3.0.0",
+    version="3.1.0",
     lifespan=lifespan,
     docs_url="/api/docs",  # Swagger UI
     redoc_url="/api/redoc",  # ReDoc
@@ -203,7 +203,7 @@ async def root() -> dict[str, str]:
     return {
         "service": "CnSS REST API",
         "status": "running",
-        "version": "3.0.0",
+        "version": "3.1.0",
     }
 
 

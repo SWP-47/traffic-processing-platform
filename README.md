@@ -1,6 +1,6 @@
 # Traffic Processing Platform
 
-[![Release](https://img.shields.io/badge/release-v3.0.0-orange)](https://github.com/SWP-47/traffic-processing-platform/releases/tag/v3.0.0)
+[![Release](https://img.shields.io/badge/release-v3.1.0-orange)](https://github.com/SWP-47/traffic-processing-platform/releases/tag/v3.1.0)
 
 ## Project Overview
 

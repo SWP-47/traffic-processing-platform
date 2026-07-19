@@ -48,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Fixed WebSocket subscription reconnection logic in `SubscriptionManager` to verify `ActivityStatus.Active` before reconnecting, preventing unnecessary reconnection attempts during inactive channel states. ([#246](https://github.com/SWP-47/traffic-processing-platform/issues/246))
+- Style of Verilog code of FPGA part and minor logic errors were fixed ([#308](https://github.com/SWP-47/traffic-processing-platform/issues/308))
 
 ### Security
 

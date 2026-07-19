@@ -69,6 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Integration tests (`tests/integration/test_api.py`): Updated `test_api_login_success_viewer`, `test_api_login_success_admin`, and `test_api_token_refresh_lifecycle` to validate nested user profile fields in authentication responses.
 - Updated authentication error handling in `AuthenticationService` to prevent concurrent token refresh requests using promise deduplication. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
 - Changed JSON format in payload of packets from TP to CN for packets from CN be received by CnSS successfully ([#298](https://github.com/SWP-47/traffic-processing-platform/issues/298))
+- Format of ports changed from None to 0 in case of having no port ([#323](https://github.com/SWP-47/traffic-processing-platform/issues/323))
 
 ### Deprecated
 

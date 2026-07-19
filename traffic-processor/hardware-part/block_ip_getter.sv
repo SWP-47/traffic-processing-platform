@@ -20,7 +20,7 @@ BUFG e_rx_clk_buf
 
 // localparam [31:0] ip_to_block = 32'hC0A84D8E;
 
-logic [7:0] byte_counter;
+logic [11:0] byte_counter;
 
 logic [15:0] Ethertype_r;
 
@@ -83,7 +83,7 @@ end
 
 always_ff @(  posedge rxc_read  ) begin
     if (e_rxdv) begin
-        if (byte_counter == 8'd20)
+        if (byte_counter == 12'd20)
             Ethertype_r[15:8] <= e_rxd;
         else if (byte_counter == 21)
             Ethertype_r[7:0] <= e_rxd;
@@ -100,6 +100,6 @@ always_ff @(  posedge rxc_read  ) begin
     if (e_rxdv)
         byte_counter <= byte_counter + 1'b1;
     else
-        byte_counter <= 8'b0;
+        byte_counter <= 11'b0;
 end
 endmodule

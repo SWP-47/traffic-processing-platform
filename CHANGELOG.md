@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added new reusable `Progress` component for displaying packet/byte rate with progress bar visualization. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Added `TopPortsTable` component showing top ports used by a specific host with protocol information. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Added `FullDestinationsTable` and `FullPortsTable` paginated views for detailed host statistics in modal windows. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Added support for `/api/v1/utils/bucket-interval` endpoint to calculate optimal chart bucket intervals before fetching historical data. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Added `onRowClick` prop to `TopTable` component enabling clickable rows for better navigation. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Added URL query parameter support (`ip`, `location`) for filtering hosts table and maintaining state across navigation. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Added `useHostTopPorts` hook for fetching top ports data for a specific host. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
 - Global traffic unit toggle (Packets/Bytes) in the Header and Detailed Host View, allowing users to switch metric displays dynamically. ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
 - React Context (`UnitContext`) to manage and persist the user's traffic unit preference across the application and browser tabs via `localStorage`. ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
 - Utility functions (`formatBytesPerSecond`, `formatSplit`) to automatically format byte rates into human-readable units (B/s, KB/s, MB/s, GB/s). ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
@@ -31,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Improved `Modal` component with dedicated close button, better animation handling using `useDelayedVisibility`, and proper topmost modal detection for Escape key handling. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Reorganized MUI component structure by moving dashboard components to `features/` directory for better code organization. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Changed `HostsTable` filtering to sync with URL parameters. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Updated `Select` component to accept controlled `value` prop for better state management. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
 - Updated all traffic visualization components (Column Charts, Line Charts, Hosts Table, Top Destinations, and Top Hosts tables) to dynamically render, calculate max values, and sort data based on the selected unit (packets or bytes). ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
 - Enhanced Line Chart Y-axis labels and tooltips to automatically format and display the correct unit suffixes (e.g., "MB/s", "k pkt/s") based on the active selection. ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
 - Refactored chart data providers (`BaseChartDataProvider`, `ChannelDataProvider`, `HostDataProvider`) to aggregate and expose both packet and byte rates per second (`bytesInPerSec`, `bytesOutPerSec`). ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
@@ -54,6 +65,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deprecated `requestTokenRenewal` method in favor of the new robust `handleAuthError` and `attemptTokenRefresh` flow. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
 
 ### Fixed
+
+- Fixed race conditions in `PacketsLineChart` component that caused data fetching issues during rapid updates. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Fixed sorting logic in `TopDestinationsTable` and `TopPortsTable` to properly use `sortId` field for unit-aware sorting. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
+- Fixed import paths after component reorganization. ([#238](https://github.com/SWP-47/traffic-processing-platform/issues/238))
 - Fixed WebSocket subscription reconnection logic in `SubscriptionManager` to verify `ActivityStatus.Active` before reconnecting, preventing unnecessary reconnection attempts during inactive channel states. ([#246](https://github.com/SWP-47/traffic-processing-platform/issues/246))
 
 ### Security

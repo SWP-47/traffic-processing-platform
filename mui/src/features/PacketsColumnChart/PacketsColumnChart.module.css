@@ -1,6 +1,6 @@
 .chart {
     padding: 30px;
-    width: 275px;
+    width: 300px;
     flex-shrink: 0;
 
     .header {
@@ -35,18 +35,26 @@
 }
 
 .numerical {
-    display: flex;
+    display: grid;
     align-items: center;
-    justify-content: space-around;
-
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
     height: 100%;
+
+    .data {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
 
     .value {
         font-size: 2.3rem;
         font-weight: bold;
         text-align: center;
-
         margin-bottom: 13px;
+        min-height: 2.8rem;
+        display: flex;
+        align-items: center;
     }
     
     .label {

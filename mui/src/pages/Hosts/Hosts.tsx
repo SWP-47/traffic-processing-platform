@@ -1,4 +1,4 @@
-import HostsTable from "@/features/HostsTable/HostsTable";
+import HostsTable from "@/pages/Hosts/features/HostsTable/HostsTable";
 import styles from './Hosts.module.css';
 
 function Hosts() {

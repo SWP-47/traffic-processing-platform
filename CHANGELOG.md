@@ -8,11 +8,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Interactive console utility (`scripts/create_user.py`) for creating new users with secure Argon2id password hashing, role-based access control (`admin`/`viewer`), and channel scope assignment directly from the CLI.
+- New Makefile target `make create-user` to streamline the user provisioning workflow, accepting `USERNAME`, `ROLE`, and `SCOPES` parameters.
+- Automated deployment script (`scripts/deploy.sh`) to orchestrate zero-to-hero backend setup, including environment validation, secure JWT generation, Docker infrastructure startup, Alembic migrations, and interactive test data seeding. ([#309](https://github.com/SWP-47/traffic-processing-platform/issues/309))
+- Production cleanup script (`scripts/clean_prod.sh`) to safely stop and remove all Docker containers, networks, and persistent volumes (including TimescaleDB data) for a clean environment reset. ([#309](https://github.com/SWP-47/traffic-processing-platform/issues/309))
+- Global traffic unit toggle (Packets/Bytes) in the Header and Detailed Host View, allowing users to switch metric displays dynamically. ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
+- React Context (`UnitContext`) to manage and persist the user's traffic unit preference across the application and browser tabs via `localStorage`. ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
+- Utility functions (`formatBytesPerSecond`, `formatSplit`) to automatically format byte rates into human-readable units (B/s, KB/s, MB/s, GB/s). ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
+- Automatic token refresh and request retry mechanism for REST API 401 Unauthorized responses (excluding login and refresh endpoints). ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
+- Automatic WebSocket reconnection with a new access token upon authentication error (close code 4001). ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
+- Session initialization and validation on protected route access to restore authentication state on page load. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
+- Logout functionality triggered by clicking the user avatar in the Header, which now invokes the `/api/v1/auth/logout` endpoint. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
+- Added new unit tests for TP to check the correctness of size and protocol fields of telemetry batch ([#298](https://github.com/SWP-47/traffic-processing-platform/issues/298))
+- Packet size field (`size` in bytes) to `PacketMeta` UDP contract, enabling end-to-end bandwidth/throughput metrics across the entire CnSS pipeline. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- Alembic migration `004_add_size_field.py` adding a `size BIGINT NOT NULL DEFAULT 0` column to the `packet_flows` hypertable, with backward compatibility for older CNs that do not send the `size` field. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- Bytes aggregation (`bytes_in`, `bytes_out`) to the `telemetry_1s` continuous aggregate via `SUM(size) FILTER (WHERE direction = 0/1)`, enabling real-time bytes-per-second calculations in the Reporting Worker. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- `bytes_per_sec` and `bytes` metrics to the `telemetry_update` WebSocket payload via `TelemetryHandler`, calculated using the actual bucket count from `telemetry_1s` for accurate rates. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- `tx_bytes_per_sec`/`rx_bytes_per_sec` to the `host_details_update`, `hosts_table_update`, `host_top_destinations_update`, and `host_top_ports_update` WebSocket payloads, computed from raw `packet_flows.size` aggregations in their respective handlers. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- `bytes_in_per_sec`/`bytes_out_per_sec` fields to the REST History API (`HistoryPoint` and `HostHistoryPoint` schemas) and corresponding route handlers, returned from `telemetry_1s` continuous aggregate queries. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- Buffer manager serialization and background flusher INSERT statements updated to include the `size` field, with fallback to `0` for legacy buffered records missing the field. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- Integration tests `test_telemetry_packet_size_aggregation` and `test_telemetry_packet_size_across_multiple_buckets` validating correct `bytes`/`bytes_per_sec` aggregation in `telemetry_1s` for single and multi-bucket scenarios. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- Updated unit tests across `test_buffer_manager`, `test_flusher`, `test_state_manager`, and `test_udp_server` to include the `size` field in `PacketMeta` fixtures. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- Added to hardware pert of TP shift register to detect packet to block before the transmission starts([#250](https://github.com/SWP-47/traffic-processing-platform/issues/250))
+- New module added with receiving IP address form specific packets sent by TP-CN device to FPGA board([#294](https://github.com/SWP-47/traffic-processing-platform/issues/294))
+- Lightweight `GET /api/v1/utils/bucket-interval` endpoint that returns the optimal `interval_sec` for a given `period_sec` without querying the database, enabling the MUI to configure chart bucket sizing independently. ([#303](https://github.com/SWP-47/traffic-processing-platform/issues/303))
+
+### Changed
+
+- Updated `Makefile` to include `deploy` and `clean` targets for streamlined execution of the new deployment and cleanup scripts. ([#309](https://github.com/SWP-47/traffic-processing-platform/issues/309))
+- Updated all traffic visualization components (Column Charts, Line Charts, Hosts Table, Top Destinations, and Top Hosts tables) to dynamically render, calculate max values, and sort data based on the selected unit (packets or bytes). ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
+- Enhanced Line Chart Y-axis labels and tooltips to automatically format and display the correct unit suffixes (e.g., "MB/s", "k pkt/s") based on the active selection. ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
+- Refactored chart data providers (`BaseChartDataProvider`, `ChannelDataProvider`, `HostDataProvider`) to aggregate and expose both packet and byte rates per second (`bytesInPerSec`, `bytesOutPerSec`). ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
+- Renamed `timeUtils.ts` to `time.ts` for better naming consistency across the codebase. ([#306](https://github.com/SWP-47/traffic-processing-platform/issues/306))
+- Replaced the raw text-based regex filter in the Hosts Table with dedicated, user-friendly IP address input and Location dropdown filters. ([#246](https://github.com/SWP-47/traffic-processing-platform/issues/246))
+- Updated chart data providers (`ChannelDataProvider`, `HostDataProvider`) to prevent redundant initializations and ensure proper state cleanup on disposal. ([#246](https://github.com/SWP-47/traffic-processing-platform/issues/246))
+- Enhanced line chart tooltips to display human-readable aggregation window sizes (e.g., "10m" instead of "10 s"). ([#246](https://github.com/SWP-47/traffic-processing-platform/issues/246))
+- Reduced the default target point count for history endpoints from 1200 to 1000 points in `calculate_optimal_bucket`, lowering the number of data points returned by the `/history` and `/hosts/{host_ip}/history` endpoints.
+- Updated `docs/api.md` and `docs/architecture.md` to document the new `size` field in `TelemetryBatch`/`PacketMeta` and the bytes-per-second metrics in all WebSocket push payloads and REST history responses. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- Updated OpenAPI schema (`api/openapi.yaml`) to include `size` in the UDP ingestion payload and `bytes_in_per_sec`/`bytes_out_per_sec` in history and telemetry responses. ([#295](https://github.com/SWP-47/traffic-processing-platform/issues/295))
+- REST API (`POST /api/v1/auth/login` and `POST /api/v1/auth/refresh`): Response structure now includes a nested `user` object containing `id`, `username`, `role`, and `scope` fields. Flat `role` and `scope` fields at the root level have been removed.
+- REST API (`POST /api/v1/auth/refresh`): Now fetches the latest user profile from the database to ensure real-time scope updates and role changes are immediately reflected upon page reload.
+- CnSS: Added `db_fetch_user_profile()` function to centralized database query module `core/db.py` for fetching complete user profiles with current scope information.
+- Integration tests (`tests/integration/test_api.py`): Updated `test_api_login_success_viewer`, `test_api_login_success_admin`, and `test_api_token_refresh_lifecycle` to validate nested user profile fields in authentication responses.
+- Updated authentication error handling in `AuthenticationService` to prevent concurrent token refresh requests using promise deduplication. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
+- Changed JSON format in payload of packets from TP to CN for packets from CN be received by CnSS successfully ([#298](https://github.com/SWP-47/traffic-processing-platform/issues/298))
+
+### Deprecated
+
+### Removed
+- Deprecated `requestTokenRenewal` method in favor of the new robust `handleAuthError` and `attemptTokenRefresh` flow. ([#262](https://github.com/SWP-47/traffic-processing-platform/issues/262))
+
+### Fixed
+- Fixed WebSocket subscription reconnection logic in `SubscriptionManager` to verify `ActivityStatus.Active` before reconnecting, preventing unnecessary reconnection attempts during inactive channel states. ([#246](https://github.com/SWP-47/traffic-processing-platform/issues/246))
+
+### Security
+
+## [3.0.0] - 2026-07-12
+
+### Added
+
 - Centralized database query module `core/db.py` consolidating SQL query definitions for all microservices. ([#263](https://github.com/SWP-47/traffic-processing-platform/issues/263))
 - Dedicated unit test suite in `tests/unit/test_db.py` achieving 98% coverage for the centralized database helper functions. ([#227](https://github.com/SWP-47/traffic-processing-platform/issues/227))
 - Comprehensive end-to-end integration tests in `tests/integration/test_reporting.py` simulating active traffic and multi-target subscriptions validation. ([#227](https://github.com/SWP-47/traffic-processing-platform/issues/227))
 - Interactive end-to-end system verification scripts `scripts/verify_system.py` and `scripts/verify_all_subscriptions.py` to test websocket push updates under concurrent stress load. ([#227](https://github.com/SWP-47/traffic-processing-platform/issues/227))
 - Added to hardware pert of TP shift register to detect packet to block before the transmission starts([#250](https://github.com/SWP-47/traffic-processing-platform/issues/250))
+- New module added with receiving IP address form specific packets sent by TP-CN device to FPGA board([#294](https://github.com/SWP-47/traffic-processing-platform/issues/294))
 
 ### Changed
 
@@ -33,7 +93,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- N/A
+- Fixed the way of working with queues to gain correct working of whole demo stend. TP now extracts packets from queue more often so all demo stand works without delays ([#251](https://github.com/SWP-47/traffic-processing-platform/issues/251))
+- Fixed missing `channel_id` field in WebSocket subscription examples in `docs/system-documentation.md`.
+- Fixed outdated Vivado project setup instructions in `docs/customer-handover.md`, aligning them with the SystemVerilog/constraints source compilation workflow.
 
 ### Security
 
@@ -255,8 +317,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added JWT-based authentication for all REST and WebSocket endpoints to protect telemetry data and prevent unauthorized access. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 - CnSS now sanitizes access logs to prevent `access_token` leakage via query parameters. ([#75](https://github.com/SWP-47/traffic-processing-platform/issues/75))
 
-[Unreleased]: https://github.com/SWP-47/traffic-processing-platform/compare/v2.0.1...HEAD
-[2.0.1]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v2.0.0
+[Unreleased]: https://github.com/SWP-47/traffic-processing-platform/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v3.0.0
+[2.0.1]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v2.0.1
 [2.0.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v2.0.0
 [1.1.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.1.0
 [1.0.0]: https://github.com/SWP-47/traffic-processing-platform/releases/tag/v1.0.0

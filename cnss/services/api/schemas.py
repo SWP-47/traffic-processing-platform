@@ -21,17 +21,28 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=1, description="Plaintext password for verification.")
 
 
+class UserProfile(BaseModel):
+    """
+    User profile information included in authentication responses.
+    Contains user identity and access scope information.
+    """
+
+    id: str = Field(..., description="Unique user identifier (UUID).")
+    username: str = Field(..., description="Unique username for the user.")
+    role: Literal["admin", "viewer"] = Field(..., description="User role for authorization.")
+    scope: List[str] = Field(default_factory=list, description="List of accessible channel IDs.")
+
+
 class TokenResponse(BaseModel):
     """
-    Response payload containing the issued JWT access token and metadata.
+    Response payload containing the issued JWT access token, user profile, and metadata.
     """
 
     access_token: str = Field(..., description="Signed JWT access token.")
     token_type: str = Field(default="Bearer", description="Token type identifier.")
     expires_in: int = Field(..., description="Token lifetime in seconds.")
     issued_at: datetime = Field(..., description="ISO 8601 timestamp of token issuance.")
-    role: Literal["admin", "viewer"] = Field(..., description="User role for authorization.")
-    scope: List[str] = Field(default_factory=list, description="List of accessible channel IDs.")
+    user: UserProfile = Field(..., description="User profile information containing role and scope.")
 
 
 class RefreshTokenResponse(BaseModel):
@@ -43,6 +54,7 @@ class RefreshTokenResponse(BaseModel):
     token_type: str = Field(default="Bearer", description="Token type identifier.")
     expires_in: int = Field(..., description="Token lifetime in seconds.")
     issued_at: datetime = Field(..., description="ISO 8601 timestamp of token issuance.")
+    user: UserProfile = Field(..., description="User profile information containing role and scope.")
 
 
 class LogoutResponse(BaseModel):
@@ -98,6 +110,8 @@ class HistoryPoint(BaseModel):
     timestamp: datetime = Field(..., description="ISO 8601 timestamp of the data point.")
     packets_in_per_sec: float = Field(..., description="Aggregated incoming packet rate.")
     packets_out_per_sec: float = Field(..., description="Aggregated outgoing packet rate.")
+    bytes_in_per_sec: float = Field(default=0.0, description="Aggregated incoming bytes-per-second.")
+    bytes_out_per_sec: float = Field(default=0.0, description="Aggregated outgoing bytes-per-second.")
     is_active: Optional[bool] = Field(
         None, description="Channel activity status at this specific timestamp (Channel History only)."
     )
@@ -125,6 +139,8 @@ class HostHistoryPoint(BaseModel):
     timestamp: datetime = Field(..., description="ISO 8601 timestamp of the data point.")
     packets_in_per_sec: float = Field(..., description="Aggregated incoming packet rate for the host.")
     packets_out_per_sec: float = Field(..., description="Aggregated outgoing packet rate for the host.")
+    bytes_in_per_sec: float = Field(default=0.0, description="Aggregated incoming bytes-per-second for the host.")
+    bytes_out_per_sec: float = Field(default=0.0, description="Aggregated outgoing bytes-per-second for the host.")
 
 
 class HostHistoryResponse(BaseModel):
@@ -140,6 +156,16 @@ class HostHistoryResponse(BaseModel):
     end_time: datetime = Field(..., description="Actual end of the returned time range.")
     interval_sec: int = Field(..., description="Calculated time bucket size in seconds.")
     points: List[HostHistoryPoint] = Field(..., description="Array of aggregated data points.")
+
+
+# --- Utility Response Schema ---
+class BucketIntervalResponse(BaseModel):
+    """
+    Response payload for the lightweight bucket-interval utility endpoint.
+    """
+
+    period_sec: int = Field(..., description="Requested period duration in seconds.")
+    interval_sec: int = Field(..., description="Calculated optimal time bucket size in seconds.")
 
 
 # --- Error Response Schema ---

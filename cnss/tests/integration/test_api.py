@@ -6,9 +6,11 @@
 # Requires Redis and TimescaleDB to be running (e.g., via `make dev`).
 # ==============================================================================
 
+import asyncio
 import uuid
 from datetime import datetime, timedelta, timezone
 
+import asyncpg
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -16,6 +18,25 @@ from core.database import close_db_pool, get_db_pool, init_db_pool
 from core.redis.client import close_redis_client, get_redis_client, init_redis_client
 from core.security.passwords import hash_password
 from services.api.main import app
+
+
+async def refresh_telemetry_1s(conn):
+    """
+    Refreshes the telemetry_1s continuous aggregate with retries to handle
+    LockNotAvailableError due to concurrent background refresh policies.
+    """
+    for attempt in range(5):
+        try:
+            await conn.execute(
+                "CALL refresh_continuous_aggregate"
+                "('telemetry_1s', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 second')"
+            )
+            return
+        except asyncpg.exceptions.LockNotAvailableError:
+            if attempt == 4:
+                raise
+            await asyncio.sleep(0.1)
+
 
 # --- Test Constants ---
 TEST_VIEWER_USERNAME = "test-viewer"
@@ -128,8 +149,9 @@ async def test_api_login_success_viewer(redis_setup, db_pool_setup, api_client):
     # Verify Response Body
     assert data["token_type"] == "Bearer"
     assert "access_token" in data
-    assert data["role"] == "viewer"
-    assert data["scope"] == [TEST_CHANNEL_API_1]
+    assert data["user"]["role"] == "viewer"
+    assert data["user"]["scope"] == [TEST_CHANNEL_API_1]
+    assert data["user"]["username"] == TEST_VIEWER_USERNAME
 
     # Verify HttpOnly Cookie
     assert "refresh_token" in response.cookies
@@ -168,9 +190,10 @@ async def test_api_login_success_admin(redis_setup, db_pool_setup, api_client):
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["role"] == "admin"
+    assert data["user"]["role"] == "admin"
     # Admin has all registered channels in their scope (subset assertion to accommodate existing DB seeding)
-    assert {TEST_CHANNEL_API_1, TEST_CHANNEL_API_2}.issubset(set(data["scope"]))
+    assert {TEST_CHANNEL_API_1, TEST_CHANNEL_API_2}.issubset(set(data["user"]["scope"]))
+    assert data["user"]["username"] == TEST_ADMIN_USERNAME
 
 
 async def test_api_login_invalid_credentials(redis_setup, db_pool_setup, api_client):
@@ -219,6 +242,10 @@ async def test_api_token_refresh_lifecycle(redis_setup, db_pool_setup, api_clien
     refresh_data = refresh_response.json()
     assert "access_token" in refresh_data
     assert refresh_data["access_token"] != initial_access_token
+    # Verify user profile is included in refresh response
+    assert "user" in refresh_data
+    assert refresh_data["user"]["username"] == TEST_VIEWER_USERNAME
+    assert refresh_data["user"]["role"] == "viewer"
 
     # 3. Logout (revokes refresh token JTI in Redis)
     logout_response = await api_client.post("/api/v1/auth/logout")
@@ -399,9 +426,7 @@ async def test_api_channel_history_and_validation(redis_setup, db_pool_setup, ap
         )
         # Refresh the continuous aggregate. Per architecture §3.1, end_offset=1s
         # means the upper bound must be at least NOW()-1s to include 10s/11s old data.
-        await conn.execute(
-            "CALL refresh_continuous_aggregate('telemetry_1s', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 second')"
-        )
+        await refresh_telemetry_1s(conn)
 
     # Login as Viewer
     login_viewer = await api_client.post(
@@ -671,3 +696,49 @@ async def test_api_health_check_redis_unhealthy(redis_setup, db_pool_setup, api_
         assert response.status_code == 503
         data = response.json()
         assert data["error"] == "unhealthy"
+
+
+async def test_api_utils_bucket_interval(redis_setup, db_pool_setup, api_client):
+    """
+    Architecture §3.4: Test GET /api/v1/utils/bucket-interval endpoint.
+    Verifies pure calculation (no DB query), validation errors, and auth enforcement.
+    """
+    db_pool = db_pool_setup
+    viewer_id = uuid.uuid4()
+
+    # Seed viewer
+    async with db_pool.acquire() as conn:
+        pwd_hash = hash_password(TEST_PASSWORD)
+        await conn.execute(
+            "INSERT INTO users (id, username, password_hash, role) VALUES ($1, $2, $3, $4)",
+            viewer_id,
+            TEST_VIEWER_USERNAME,
+            pwd_hash,
+            "viewer",
+        )
+
+    # Login to obtain auth token
+    login_response = await api_client.post(
+        "/api/v1/auth/login", json={"username": TEST_VIEWER_USERNAME, "password": TEST_PASSWORD}
+    )
+    token = login_response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Case 1: Valid request (period_sec=3600) returns calculated interval_sec
+    resp = await api_client.get("/api/v1/utils/bucket-interval?period_sec=3600", headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["period_sec"] == 3600
+    assert data["interval_sec"] == 3  # raw_bucket=3600//1000=3, snaps to 3 in logical_steps
+
+    # Case 2: Missing period_sec returns 422 validation error
+    resp_missing = await api_client.get("/api/v1/utils/bucket-interval", headers=headers)
+    assert resp_missing.status_code == 422
+
+    # Case 3: Invalid period_sec (<= 0) returns 422 validation error
+    resp_invalid = await api_client.get("/api/v1/utils/bucket-interval?period_sec=0", headers=headers)
+    assert resp_invalid.status_code == 422
+
+    # Case 4: Unauthenticated request returns 401
+    resp_unauth = await api_client.get("/api/v1/utils/bucket-interval?period_sec=3600")
+    assert resp_unauth.status_code == 401

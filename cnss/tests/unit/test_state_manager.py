@@ -58,8 +58,8 @@ def sample_batch():
         sequence=100,
         window_ms=1000,
         packets=[
-            PacketMeta(direction=0, src_ip="10.0.0.1", dst_ip="10.0.0.2", src_port=1234, dst_port=80),
-            PacketMeta(direction=1, src_ip="10.0.0.2", dst_ip="10.0.0.1", src_port=80, dst_port=1234),
+            PacketMeta(direction=0, src_ip="10.0.0.1", dst_ip="10.0.0.2", src_port=1234, dst_port=80, size=64),
+            PacketMeta(direction=1, src_ip="10.0.0.2", dst_ip="10.0.0.1", src_port=80, dst_port=1234, size=128),
         ],
     )
 

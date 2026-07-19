@@ -4,12 +4,13 @@ module traffic_monitor (
     input [7:0]                     rxd_read,
 
     input                           block_but,
+    input [31:0]                    ip_to_block,
     
     output                          isBlocked
 );
 
 // assign isBlocked = 1'b1;
-localparam [31:0] ip_to_block = 32'hC0A84D8F;
+// localparam [31:0] ip_to_block = 32'hC0A84D8F;
 
 logic [7:0] byte_counter;
 

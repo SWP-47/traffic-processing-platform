@@ -81,6 +81,7 @@ async def test_flush_channel_happy_path(flusher, mock_lua_script, mock_db_pool):
         "src_port": 1234,
         "dst_port": 80,
         "protocol": "TCP",
+        "size": 128,
     }
     record2 = {
         "time": "2023-10-27T10:00:01+00:00",
@@ -91,6 +92,7 @@ async def test_flush_channel_happy_path(flusher, mock_lua_script, mock_db_pool):
         "src_port": 80,
         "dst_port": 1234,
         "protocol": "UDP",
+        "size": 64,
     }
 
     mock_lua_script.return_value = [json.dumps(record1), json.dumps(record2)]
@@ -110,13 +112,14 @@ async def test_flush_channel_happy_path(flusher, mock_lua_script, mock_db_pool):
     query = call_args[0][0]
     records = call_args[0][1]
 
-    # Verify SQL query includes protocol column
+    # Verify SQL query includes protocol and size columns
     assert "INSERT INTO packet_flows" in query
     assert "protocol" in query
+    assert "size" in query
     assert len(records) == 2
 
-    # Verify first record tuple structure (now with 8 fields including protocol)
-    t1, ch1, dir1, src1, dst1, sport1, dport1, proto1 = records[0]
+    # Verify first record tuple structure (now with 9 fields including protocol and size)
+    t1, ch1, dir1, src1, dst1, sport1, dport1, proto1, size1 = records[0]
     assert isinstance(t1, datetime)
     assert ch1 == "test-ch"
     assert dir1 == 0
@@ -125,10 +128,12 @@ async def test_flush_channel_happy_path(flusher, mock_lua_script, mock_db_pool):
     assert sport1 == 1234
     assert dport1 == 80
     assert proto1 == "TCP"
+    assert size1 == 128
 
-    # Verify second record protocol
-    t2, ch2, dir2, src2, dst2, sport2, dport2, proto2 = records[1]
+    # Verify second record protocol and size
+    t2, ch2, dir2, src2, dst2, sport2, dport2, proto2, size2 = records[1]
     assert proto2 == "UDP"
+    assert size2 == 64
 
 
 async def test_flush_channel_empty_buffer(flusher, mock_lua_script, mock_db_pool):
@@ -316,8 +321,9 @@ async def test_flush_channel_extracts_protocol_from_json(flusher, mock_lua_scrip
     assert len(records) == 1
 
     # Verify protocol is in the tuple
-    t, ch, dir_, src, dst, sport, dport, proto = records[0]
+    t, ch, dir_, src, dst, sport, dport, proto, size = records[0]
     assert proto == "ICMP"
+    assert size == 0  # defaults to 0 since no size field in record
 
 
 async def test_flush_channel_protocol_defaults_to_unknown(flusher, mock_lua_script, mock_db_pool):
@@ -348,8 +354,9 @@ async def test_flush_channel_protocol_defaults_to_unknown(flusher, mock_lua_scri
     assert len(records) == 1
 
     # Verify protocol defaults to 'UNKNOWN'
-    t, ch, dir_, src, dst, sport, dport, proto = records[0]
+    t, ch, dir_, src, dst, sport, dport, proto, size = records[0]
     assert proto == "UNKNOWN"
+    assert size == 0  # defaults to 0 since no size field in record
 
 
 async def test_flush_channel_sql_query_includes_protocol(flusher, mock_lua_script, mock_db_pool):
@@ -380,5 +387,6 @@ async def test_flush_channel_sql_query_includes_protocol(flusher, mock_lua_scrip
     # Verify query structure
     assert "INSERT INTO packet_flows" in query
     assert "protocol" in query
-    assert "$8" in query  # 8th placeholder for protocol
-    assert "VALUES ($1, $2, $3, $4, $5, $6, $7, $8)" in query
+    assert "size" in query
+    assert "$9" in query  # 9th placeholder for size
+    assert "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)" in query

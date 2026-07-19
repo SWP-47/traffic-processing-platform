@@ -457,6 +457,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/utils/bucket-interval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Calculate Optimal Chart Bucket Interval
+         * @description Calculates the optimal time bucket size (`interval_sec`) for chart rendering based on the requested period.
+         *     This allows the MUI to set up the X-axis scale and pagination *before* requesting the heavy historical data payload.
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description Duration of the time window in seconds (e.g., 3600 for 1 hour, 86400 for 24h). */
+                    period_sec: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Optimal bucket interval calculated successfully. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BucketIntervalResponse"];
+                    };
+                };
+                /** @description Bad request (invalid period_sec) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ws/telemetry": {
         parameters: {
             query?: never;
@@ -519,6 +571,32 @@ export interface components {
              */
             password: string;
         };
+        /** @description User context required by the frontend to restore UI state. */
+        UserProfile: {
+            /**
+             * @description Internal user identifier (UUID).
+             * @example usr_8f7a9b2c
+             */
+            id: string;
+            /**
+             * @description Human-readable username for UI display.
+             * @example admin
+             */
+            username: string;
+            /**
+             * @description User role.
+             * @enum {string}
+             */
+            role: "admin" | "viewer";
+            /**
+             * @description List of accessible channel_ids. Empty or omitted for admin role.
+             * @example [
+             *       "bridge-berlin-01",
+             *       "bridge-prague-01"
+             *     ]
+             */
+            scope: string[];
+        };
         TokenResponse: {
             /** @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... */
             access_token: string;
@@ -531,18 +609,22 @@ export interface components {
             expires_in: number;
             /** Format: date-time */
             issued_at: string;
-            /** @enum {string} */
-            role: "admin" | "viewer";
-            /** @description List of accessible channel_ids. Empty for admin. */
-            scope: string[];
+            user: components["schemas"]["UserProfile"];
         };
+        /** @description Response for token refresh. Includes user profile to allow frontend state restoration on page reload without additional requests. */
         RefreshTokenResponse: {
+            /** @example new_access_token_eyJhbG... */
             access_token: string;
-            /** @enum {string} */
+            /**
+             * @example Bearer
+             * @enum {string}
+             */
             token_type: "Bearer";
+            /** @example 86400 */
             expires_in: number;
             /** Format: date-time */
             issued_at: string;
+            user: components["schemas"]["UserProfile"];
         };
         LogoutResponse: {
             /** @example Successfully logged out. */
@@ -605,6 +687,16 @@ export interface components {
              * @description Aggregated outgoing packet rate.
              */
             packets_out_per_sec: number;
+            /**
+             * Format: float
+             * @description Aggregated incoming bytes rate.
+             */
+            bytes_in_per_sec: number;
+            /**
+             * Format: float
+             * @description Aggregated outgoing bytes rate.
+             */
+            bytes_out_per_sec: number;
             /** @description Channel activity status at this specific timestamp (Channel History only). */
             is_active: boolean;
         };
@@ -646,6 +738,29 @@ export interface components {
              * @description Aggregated outgoing packet rate for the host.
              */
             packets_out_per_sec: number;
+            /**
+             * Format: float
+             * @description Aggregated incoming bytes rate for the host.
+             */
+            bytes_in_per_sec: number;
+            /**
+             * Format: float
+             * @description Aggregated outgoing bytes rate for the host.
+             */
+            bytes_out_per_sec: number;
+        };
+        /** @description Response containing the requested period and the calculated optimal bucket interval. */
+        BucketIntervalResponse: {
+            /**
+             * @description The requested period duration in seconds.
+             * @example 86400
+             */
+            period_sec: number;
+            /**
+             * @description The calculated optimal time bucket size in seconds.
+             * @example 60
+             */
+            interval_sec: number;
         };
         ErrorResponse: {
             /**
@@ -684,11 +799,10 @@ export interface components {
             dst_ip: string;
             src_port: number;
             dst_port: number;
-            /**
-             * @description Protocol (e.g., TCP/UDP). Required for accurate host_top_ports protocol reporting.
-             * @enum {string}
-             */
-            protocol: "TCP" | "UDP";
+            /** @description Network protocol identifier (e.g., TCP, UDP, ICMP). Defaults to 'UNKNOWN'. */
+            protocol: string;
+            /** @description Packet size in bytes. */
+            size: number;
         };
         /**
          * @description Text frame sent from MUI to CnSS to manage WebSocket subscriptions.
@@ -785,10 +899,14 @@ export interface components {
                 direction_out: {
                     packets_per_sec: number;
                     packets: number;
+                    bytes_per_sec: number;
+                    bytes: number;
                 };
                 direction_in: {
                     packets_per_sec: number;
                     packets: number;
+                    bytes_per_sec: number;
+                    bytes: number;
                 };
             };
             /** Format: date-time */
@@ -815,6 +933,8 @@ export interface components {
             unique_destinations: number;
             tx_per_sec: number;
             rx_per_sec: number;
+            tx_bytes_per_sec: number;
+            rx_bytes_per_sec: number;
             /** Format: date-time */
             last_activity: string;
         };
@@ -828,6 +948,8 @@ export interface components {
             timestamp: string;
             tx_per_sec: number;
             rx_per_sec: number;
+            tx_bytes_per_sec: number;
+            rx_bytes_per_sec: number;
         };
         HostTopDestinationsUpdate: {
             /** @enum {string} */
@@ -845,6 +967,7 @@ export interface components {
             /** @enum {string} */
             location: "LAN" | "WAN";
             received_per_sec: number;
+            received_bytes_per_sec: number;
             /** Format: date-time */
             last_seen: string;
         };
@@ -861,9 +984,10 @@ export interface components {
         };
         PortEntry: {
             port: number;
-            /** @enum {string} */
-            protocol: "TCP" | "UDP";
+            /** @description Network protocol identifier (e.g., TCP, UDP, ICMP). */
+            protocol: string;
             packets_per_sec: number;
+            bytes_per_sec: number;
         };
     };
     responses: never;

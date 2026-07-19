@@ -12,7 +12,7 @@
     background: linear-gradient(#262626ff 60%, #26262600);
 }
 
-.left {
+.left, .right {
     display: flex;
     align-items: center;
     gap: 40px;
@@ -26,6 +26,8 @@
     .avatar {
         height: 42px;
         width: 42px;
+
+        cursor: pointer;
     }
 }
 

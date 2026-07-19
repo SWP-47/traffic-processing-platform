@@ -13,6 +13,7 @@ export interface ChannelDataProviderOptions {
 export class ChannelDataProvider extends BaseChartDataProvider implements ChartDataProvider {
     private readonly channelId: string;
     private readonly windowSec: number;
+    private isInitialized: boolean = false;
     private unsubscribeFromTelemetry?: () => void;
 
     constructor(options: ChannelDataProviderOptions) {
@@ -22,21 +23,8 @@ export class ChannelDataProvider extends BaseChartDataProvider implements ChartD
     }
 
     async initialize(timeScale: number): Promise<void> {
-        const response = await getHistory(this.channelId, timeScale);
-        this.setBucketSize(response.interval_sec * 1000);
-
-        if (response.points) {
-            const completedPoints: DataPoint[] = response.points.map(p => ({
-                timestamp: Date.parse(p.timestamp!),
-                packetsInPerSec: p.packets_in_per_sec ?? 0,
-                packetsOutPerSec: p.packets_out_per_sec ?? 0,
-                isActive: p.is_active ?? false,
-                windowMs: this.getBucketSize(),
-                complete: true,
-            })).filter(p => !Number.isNaN(p.timestamp));
-
-            this.loadCompletedPoints(completedPoints);
-        }
+        if (this.isInitialized) return;
+        this.isInitialized = true;
 
         this.unsubscribeFromTelemetry = subscriptionManager.subscribe(
             "telemetry",
@@ -44,6 +32,24 @@ export class ChannelDataProvider extends BaseChartDataProvider implements ChartD
             (update) => this.handleTelemetryUpdate(update),
             () => {}
         );
+
+        const response = await getHistory(this.channelId, timeScale);
+        this.setBucketSize(response.interval_sec * 1000);
+
+        if (response.points) {
+            const completedPoints: DataPoint[] = response.points.map(p => ({
+                timestamp: Date.parse(p.timestamp!),
+                packetsInPerSec: p.packets_in_per_sec ?? 0,
+                bytesInPerSec: p.bytes_in_per_sec ?? 0,
+                packetsOutPerSec: p.packets_out_per_sec ?? 0,
+                bytesOutPerSec: p.bytes_out_per_sec ?? 0,
+                isActive: p.is_active ?? false,
+                windowMs: this.getBucketSize(),
+                complete: true,
+            })).filter(p => !Number.isNaN(p.timestamp));
+
+            this.loadCompletedPoints(completedPoints);
+        }
     }
 
     private handleTelemetryUpdate(update: Record<string, unknown>): void {
@@ -54,8 +60,10 @@ export class ChannelDataProvider extends BaseChartDataProvider implements ChartD
 
         const point: DataPoint = {
             timestamp,
-            packetsInPerSec: update.metrics.direction_in.packets_per_sec,
-            packetsOutPerSec: update.metrics.direction_out.packets_per_sec,
+            packetsInPerSec: update.metrics.direction_in.packets_per_sec ?? 0,
+            bytesInPerSec: update.metrics.direction_in.bytes_per_sec ?? 0,
+            packetsOutPerSec: update.metrics.direction_out.packets_per_sec ?? 0,
+            bytesOutPerSec: update.metrics.direction_out.bytes_per_sec ?? 0,
             isActive: update.is_active === true,
             windowMs: update.window_ms,
             complete: false,
@@ -66,6 +74,9 @@ export class ChannelDataProvider extends BaseChartDataProvider implements ChartD
     }
 
     dispose(): void {
+        if (!this.isInitialized) return;
+        this.isInitialized = false;
+
         this.unsubscribeFromTelemetry?.();
         this.unsubscribeFromTelemetry = undefined;
         super.dispose();

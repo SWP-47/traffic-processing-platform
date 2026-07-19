@@ -161,6 +161,8 @@ class HostsTableHandler(BaseSubscriptionHandler):
                         "unique_destinations": int(row["unique_destinations"]),
                         "tx_per_sec": float(row["tx_per_sec"]),
                         "rx_per_sec": float(row["rx_per_sec"]),
+                        "tx_bytes_per_sec": float(row.get("tx_bytes_per_sec", 0.0)),
+                        "rx_bytes_per_sec": float(row.get("rx_bytes_per_sec", 0.0)),
                         "last_activity": (row["last_activity"].isoformat() if row["last_activity"] else None),
                     }
                 )
